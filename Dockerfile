@@ -1,7 +1,7 @@
 # ==========================================
-# STAGE 1: Build file biner Go
+# STAGE 1: Build file biner Go dengan Go 1.26
 # ==========================================
-FROM golang:1.21-bullseye AS builder
+FROM golang:1.26-bookworm AS builder
 
 WORKDIR /app
 
@@ -12,15 +12,15 @@ RUN go mod download
 # Menyalin seluruh kode sumber
 COPY . .
 
-# Membangun aplikasi (CGO_ENABLED=0 agar binernya standalone)
+# Membangun aplikasi
 RUN CGO_ENABLED=0 GOOS=linux go build -o algonova-api ./cmd/api/main.go
 
 # ==========================================
-# STAGE 2: Runtime Minimalis dengan Chrome
+# STAGE 2: Runtime Minimalis dengan Chrome (Debian 12 Bookworm)
 # ==========================================
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
-# ⚠️ SANGAT PENTING UNTUK PDF: Instal Chromium, Sertifikat SSL, dan Fonts!
+# SANGAT PENTING: Instal Chromium dan Fonts
 RUN apt-get update && apt-get install -y \
     chromium \
     fonts-liberation \
