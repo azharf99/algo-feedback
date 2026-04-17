@@ -1,0 +1,3 @@
+.env*
+mediafiles/*.pdf
+app/mediafiles/
