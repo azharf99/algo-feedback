@@ -122,8 +122,8 @@ func main() {
 	feedbackRepo := repository.NewFeedbackRepository(db)
 	feedbackUsecase := usecase.NewFeedbackUsecase(feedbackRepo, lessonRepo, pdfService, waService, pool)
 
-	// 6. Routing API (v1)
-	api := r.Group("/api/v1")
+	// 6. Routing API
+	api := r.Group("/api")
 	{
 		// Endpoint Publik (Tanpa Login)
 		api.GET("/health", func(c *gin.Context) {
