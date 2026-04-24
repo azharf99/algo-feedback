@@ -4,20 +4,24 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/rand"
+	"os"
 	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/curriculum"
 	"github.com/azharf99/algo-feedback/pkg/pdfgen"
+	"github.com/azharf99/algo-feedback/pkg/taskqueue"
 	"github.com/azharf99/algo-feedback/pkg/whatsapp"
 )
 
 type feedbackUsecase struct {
 	feedRepo   domain.FeedbackRepository
-	lessonRepo domain.LessonRepository // Kita butuh ini untuk Seeder
+	lessonRepo domain.LessonRepository
 	pdfGen     pdfgen.PDFGenerator
 	waService  whatsapp.WhatsappService
+	taskQueue  taskqueue.WorkerPool
 }
 
 func NewFeedbackUsecase(
@@ -25,12 +29,14 @@ func NewFeedbackUsecase(
 	lr domain.LessonRepository,
 	pdf pdfgen.PDFGenerator,
 	wa whatsapp.WhatsappService,
+	tq taskqueue.WorkerPool,
 ) domain.FeedbackUsecase {
 	return &feedbackUsecase{
 		feedRepo:   fr,
 		lessonRepo: lr,
 		pdfGen:     pdf,
 		waService:  wa,
+		taskQueue:  tq,
 	}
 }
 
@@ -128,21 +134,27 @@ func (u *feedbackUsecase) GeneratePDFAsync(ctx context.Context, studentID *uint,
 			StudentClass:        *f.Course,
 			StudentLevel:        *f.Level,
 			StudentProjectLink:  *f.ProjectLink,
-			StudentReferralLink: "https://algonova.id/invite?utm_source=refferal...",
-			StudentModuleLink:   "https://drive.google.com/...",
+			StudentReferralLink: "https://algonova.id/invite?utm_source=refferal&utm_medium=employee&utm_campaign=social_network&utm_content=hidin466",
+			StudentModuleLink:   "https://drive.google.com/drive/u/0/folders/1lErW_RKjHOkAgqCr9yymELg3yUZzvBEb",
 			ModuleTopic:         *f.Topic,
 			ModuleResult:        *f.Result,
 			SkillResult:         *f.Competency,
-			// Kita asumsikan ada fungsi curriculum.GetScoredFeedback
-			TeacherFeedback: *f.TutorFeedback,
+				TeacherFeedback: curriculum.GetFeedback(
+					f.Student.Fullname,
+					f.AttendanceScore,
+					f.ActivityScore,
+					f.TaskScore,
+				),
 		}
 
 		// Menentukan path output
 		fileName := fmt.Sprintf("Rapor %s Bulan ke-%d.pdf", f.Student.Fullname, f.Number)
 		outputPath := fmt.Sprintf("mediafiles/%s/%s", *f.GroupName, fileName)
 
-		// ⚡ GOROUTINE ACTION ⚡: Memanggil PDF Generator secara asinkron!
-		u.pdfGen.GeneratePDFAsync(ctx, pdfData, "index.html", outputPath)
+		// ⚡ TASK QUEUE ACTION ⚡: Memasukkan ke antrian background!
+		u.taskQueue.Submit(taskqueue.TaskFunc(func(ctx context.Context) error {
+			return u.pdfGen.Generate(ctx, pdfData, outputPath)
+		}))
 
 		response = append(response, map[string]interface{}{
 			"student": f.Student.Fullname,
@@ -158,8 +170,8 @@ func (u *feedbackUsecase) GeneratePDFAsync(ctx context.Context, studentID *uint,
 // Menerjemahkan views.py -> send_feedback_pdf
 // -------------------------------------------------------------------------
 func (u *feedbackUsecase) SendFeedbackPDF(ctx context.Context, feedbackID *uint) ([]map[string]interface{}, error) {
-	// Ambil data yang belum terkirim (Bisa 1 ID atau semuanya)
-	feedbacks, err := u.feedRepo.GetUnsentFeedbacks(ctx, nil, nil, nil) // Disederhanakan untuk contoh
+	// Ambil data yang belum terkirim
+	feedbacks, err := u.feedRepo.GetUnsentFeedbacks(ctx, feedbackID, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -167,25 +179,51 @@ func (u *feedbackUsecase) SendFeedbackPDF(ctx context.Context, feedbackID *uint)
 	var responseList []map[string]interface{}
 
 	for _, f := range feedbacks {
-		// Path file PDF yang sudah digenerate sebelumnya
+		// Pastikan file PDF ada
 		fileName := fmt.Sprintf("Rapor %s Bulan ke-%d.pdf", f.Student.Fullname, f.Number)
 		filePath := fmt.Sprintf("mediafiles/%s/%s", *f.GroupName, fileName)
 
-		// 1. Upload ke Wablas
-		uploadRes, err := u.waService.UploadDocument(*f.GroupName, f.Student.Fullname, *f.Course, f.Number, filePath)
-		if err != nil || uploadRes == nil {
-			continue // Skip jika gagal upload
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			log.Printf("[SEND-WA] File not found: %s", filePath)
+			continue
 		}
 
-		// Ambil URL dari response Wablas
-		// Asumsi struktur JSON Wablas: data -> messages -> url
-		dataMap := uploadRes["data"].(map[string]interface{})
-		msgMap := dataMap["messages"].(map[string]interface{})
-		pdfURL := msgMap["url"].(string)
+		// 1. Upload ke Wablas
+		uploadRes, err := u.waService.UploadDocument(*f.GroupName, f.Student.Fullname, *f.Course, f.Number, filePath)
+		if err != nil {
+			log.Printf("[SEND-WA] Upload failed: %v", err)
+			continue
+		}
 
-		// 2. Siapkan Jadwal (Schedule) - Tambah 2 jam + detik acak dari waktu lesson
+		// Ambil URL dan ID dari response Wablas
+		// Struktur: {"data": {"messages": {"url": "...", "id": "..."}}}
+		data, ok := uploadRes["data"].(map[string]interface{})
+		if !ok {
+			log.Printf("[SEND-WA] Invalid response format (no data)")
+			continue
+		}
+		messages, ok := data["messages"].(map[string]interface{})
+		if !ok {
+			log.Printf("[SEND-WA] Invalid response format (no messages)")
+			continue
+		}
+
+		pdfURL, _ := messages["url"].(string)
+		wablasMsgID, _ := messages["id"].(string)
+
+		if pdfURL == "" {
+			log.Printf("[SEND-WA] PDF URL is empty in response")
+			continue
+		}
+
+		// 2. Siapkan Jadwal (Schedule) - Tambah 2 jam + detik acak
 		randSeconds := time.Duration(randomInt(1, 59)) * time.Second
-		scheduledTime := f.LessonDate.Add(2 * time.Hour).Add(randSeconds)
+		// Gunakan LessonDate dan LessonTime untuk menghitung waktu kirim
+		// Di model, LessonTime adalah time.Time yang jam/menitnya berisi waktu mulai
+		scheduledTime := f.LessonDate.Add(time.Duration(f.LessonTime.Hour())*time.Hour +
+			time.Duration(f.LessonTime.Minute())*time.Minute +
+			2*time.Hour + randSeconds)
+
 		scheduleStr := scheduledTime.Format("2006-01-02 15:04:05")
 
 		scheduleData := []map[string]interface{}{
@@ -194,21 +232,25 @@ func (u *feedbackUsecase) SendFeedbackPDF(ctx context.Context, feedbackID *uint)
 				"phone":        *f.Student.ParentContact,
 				"scheduled_at": scheduleStr,
 				"url":          pdfURL,
-				"text":         *f.TutorFeedback,
+				"text":         curriculum.GetTutorIntro(f.Student.Fullname), // Menggunakan Intro template
 			},
 		}
 
 		// 3. Eksekusi Create Schedule
-		u.waService.CreateSchedule(scheduleData)
+		_, err = u.waService.CreateSchedule(scheduleData)
+		if err != nil {
+			log.Printf("[SEND-WA] Create schedule failed: %v", err)
+			continue
+		}
 
 		// 4. Update Database
 		f.IsSent = true
 		f.URLPDF = &pdfURL
-		// Asumsikan kita dapat ID dari scheduleRes
-		scheduleID := "SCH-WABLAS-123"
-		f.ScheduleID = &scheduleID
+		f.ScheduleID = &wablasMsgID
 
-		u.feedRepo.Update(ctx, &f)
+		if err := u.feedRepo.Update(ctx, &f); err != nil {
+			log.Printf("[SEND-WA] Failed to update feedback record: %v", err)
+		}
 
 		responseList = append(responseList, scheduleData[0])
 	}

@@ -1,3 +1,6 @@
 .env*
 mediafiles/*.pdf
 app/mediafiles/
+python_legacy_code/
+implementation_plan*
+tmp_build

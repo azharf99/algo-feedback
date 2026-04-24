@@ -1,6 +1,6 @@
 services:
   api:
-    build: .
+    image: azharfa/algo-feedback:latest
     container_name: algonova_api
     restart: unless-stopped
     ports:
@@ -13,16 +13,17 @@ services:
       - .env
     environment:
       - TZ=Asia/Jakarta
-      - DB_HOST=gothub_db 
-      - DB_USER=${DB_USER:-postgres}
+      - DB_HOST=${DB_HOST}
+      - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME}
-      - DB_PORT=5432
+      - DB_PORT=${DB_PORT}
       - JWT_SECRET=${JWT_SECRET}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-      - GIN_MODE=release
+      - GIN_MODE=${GIN_MODE}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
     deploy:
       resources:
         limits:

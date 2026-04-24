@@ -5,11 +5,18 @@ import "fmt"
 
 // Levels Map (Menerjemahkan level.py)
 var levels = map[string]string{
-	"Artificial Intelligence, AI ENG": "Artificial Intelligence",
-	"Visual programming INDONESIA":    "IT GENIUS level 3",
-	"Frontend Development_ENG":        "Frontend Development",
-	"Python Start 1st year IND":       "IT HERO level 6",
-	// ... (Tambahkan sisa map levelmu di sini)
+	"Artificial Intelligence, AI ENG":   "Artificial Intelligence",
+	"Visual programming INDONESIA":      "IT GENIUS level 3",
+	"Frontend Development_ENG":          "Frontend Development",
+	"Python Start 1st year IND":         "IT HERO level 6",
+	"Python Start 1st year ENG":         "IT HERO level 6",
+	"Python Start 2d year IND":          "IT HERO level 7",
+	"Python Start 2d year ENG":          "IT HERO level 7",
+	"Python Pro 1st year 2021-2022 ind": "IT HERO level 8",
+	"Python Pro_1_ENG":                  "IT HERO level 8",
+	"Python Pro 2 IND":                  "IT HERO level 9",
+	"Python Pro 2 ENG":                  "IT HERO level 9",
+	"Building Websites_ENG":             "IT HERO level 9",
 }
 
 func GetCourseLevel(module string) string {
@@ -21,40 +28,26 @@ func GetCourseLevel(module string) string {
 
 // Topics Map (Menerjemahkan topic.py)
 // Menggunakan map bersarang: map[Nama_Modul]map[Nomor_Bulan]String_Topik
-var topics = map[string]map[int]string{
-	"Python Start 1st year IND": {
-		1: "Variabel dan Tipe Data",
-		2: "Operator Kondisi dan Perulangan",
-		3: "Fungsi dan bulan",
-		// ...
-	},
-	// ...
-}
-
-var results = map[string]map[int]string{
-	// Pindahkan data modules_result dari topic.py ke sini
-}
-
-var competencies = map[string]map[int]string{
-	// Pindahkan data competency_result dari topic.py ke sini
-}
+// var topics = Topics
+// var results = ModulesResult
+// var competencies = CompetencyResult
 
 func GetTopic(topicName string, number int) string {
-	if mods, ok := topics[topicName]; ok {
+	if mods, ok := Topics[topicName]; ok {
 		return mods[number]
 	}
 	return ""
 }
 
 func GetResult(topicName string, number int) string {
-	if mods, ok := results[topicName]; ok {
+	if mods, ok := ModulesResult[topicName]; ok {
 		return mods[number]
 	}
 	return ""
 }
 
 func GetCompetency(topicName string, number int) string {
-	if mods, ok := competencies[topicName]; ok {
+	if mods, ok := CompetencyResult[topicName]; ok {
 		return mods[number]
 	}
 	return ""

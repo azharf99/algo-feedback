@@ -40,7 +40,9 @@ func NewWhatsappService(cfg WhatsappConfig) WhatsappService {
 
 // fungsi bantuan untuk menyematkan header otorisasi
 func (w *whatsappService) setAuthHeader(req *http.Request) {
-	req.Header.Set("X-API-Key", fmt.Sprintf("%s", w.config.ApiKey))
+	req.Header.Set("Authorization", w.config.ApiKey) // Wablas modern biasanya pakai Authorization: API_KEY atau X-API-Key
+	// Jika user bilang X-API-Key secara spesifik:
+	req.Header.Set("X-API-Key", w.config.ApiKey)
 }
 
 func (w *whatsappService) CreateSchedule(dataList []map[string]interface{}) (map[string]interface{}, error) {
@@ -48,7 +50,7 @@ func (w *whatsappService) CreateSchedule(dataList []map[string]interface{}) (map
 		return nil, nil
 	}
 
-	url := fmt.Sprintf("%s/api/schedule", w.config.BaseURL)
+	url := fmt.Sprintf("%s/api/v2/schedule", w.config.BaseURL)
 	jsonData, _ := json.Marshal(dataList)
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
@@ -67,7 +69,7 @@ func (w *whatsappService) UpdateSchedule(dataList []map[string]interface{}, sche
 		return nil, nil
 	}
 
-	url := fmt.Sprintf("%s/api/schedule/%s", w.config.BaseURL, scheduleID)
+	url := fmt.Sprintf("%s/api/v2/schedule/%s", w.config.BaseURL, scheduleID)
 	jsonData, _ := json.Marshal(dataList)
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
@@ -103,9 +105,8 @@ func (w *whatsappService) UploadDocument(groupName, studentName, courseName stri
 	}
 	writer.Close()
 
-	// Eksekusi request (Whatsapp API untuk upload biasanya memiliki endpoint spesifik,
-	// kita asumsikan /api/v2/document/upload berdasarkan standar Whatsapp)
-	url := fmt.Sprintf("%s/api/document/upload", w.config.BaseURL)
+	// URL sesuai legacy Python: /api/upload/document
+	url := fmt.Sprintf("%s/api/upload/document", w.config.BaseURL)
 	req, err := http.NewRequest("POST", url, payload)
 	if err != nil {
 		return nil, err

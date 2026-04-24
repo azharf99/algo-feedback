@@ -16,6 +16,7 @@ import (
 	"github.com/azharf99/algo-feedback/internal/usecase"
 	"github.com/azharf99/algo-feedback/pkg/auth"
 	"github.com/azharf99/algo-feedback/pkg/pdfgen"
+	"github.com/azharf99/algo-feedback/pkg/taskqueue"
 	"github.com/azharf99/algo-feedback/pkg/whatsapp"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -86,10 +87,18 @@ func main() {
 	pdfService := pdfgen.NewPDFGenerator("templates")
 
 	waConfig := whatsapp.WhatsappConfig{
-		ApiKey:  os.Getenv("TOKEN"),
+		ApiKey:  os.Getenv("API_KEY"),
 		BaseURL: os.Getenv("BASE_URL"),
 	}
+	if waConfig.ApiKey == "" {
+		waConfig.ApiKey = os.Getenv("TOKEN") // Fallback
+	}
 	waService := whatsapp.NewWhatsappService(waConfig)
+
+	// Inisialisasi Task Queue (Worker Pool) - 5 workers, 100 queue size
+	pool := taskqueue.NewWorkerPool(5, 100)
+	pool.Start()
+	defer pool.Stop()
 
 	// 5. Inisialisasi Layer (Dependency Injection)
 
@@ -111,7 +120,7 @@ func main() {
 
 	// --- Feedback ---
 	feedbackRepo := repository.NewFeedbackRepository(db)
-	feedbackUsecase := usecase.NewFeedbackUsecase(feedbackRepo, lessonRepo, pdfService, waService)
+	feedbackUsecase := usecase.NewFeedbackUsecase(feedbackRepo, lessonRepo, pdfService, waService, pool)
 
 	// 6. Routing API (v1)
 	api := r.Group("/api/v1")
