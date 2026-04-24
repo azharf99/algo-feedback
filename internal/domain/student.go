@@ -27,6 +27,7 @@ type StudentRepository interface {
 	Create(ctx context.Context, student *Student) error
 	GetByID(ctx context.Context, id uint) (*Student, error)
 	GetAll(ctx context.Context) ([]Student, error)
+	GetPaginated(ctx context.Context, params PaginationParams) ([]Student, int64, error)
 	Update(ctx context.Context, student *Student) error
 	Delete(ctx context.Context, id uint) error
 
@@ -46,6 +47,7 @@ type StudentUsecase interface {
 	Create(ctx context.Context, student *Student) error
 	GetByID(ctx context.Context, id uint) (*Student, error)
 	GetAll(ctx context.Context) ([]Student, error)
+	GetPaginated(ctx context.Context, params PaginationParams) (*PaginatedResult[Student], error)
 	Update(ctx context.Context, id uint, req *Student) error
 	Delete(ctx context.Context, id uint) error
 	ImportCSV(ctx context.Context, fileReader io.Reader) (*ImportResult, error)

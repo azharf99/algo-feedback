@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/pagination"
 	"gorm.io/gorm"
 )
 
@@ -42,6 +43,23 @@ func (r *lessonRepository) GetAll(ctx context.Context) ([]domain.Lesson, error) 
 		Preload("StudentsAttended").
 		Find(&lessons).Error
 	return lessons, err
+}
+
+// GetPaginated: Mengambil data lesson dengan pagination
+func (r *lessonRepository) GetPaginated(ctx context.Context, params domain.PaginationParams) ([]domain.Lesson, int64, error) {
+	var lessons []domain.Lesson
+	var total int64
+
+	r.db.WithContext(ctx).Model(&domain.Lesson{}).Count(&total)
+	err := r.db.WithContext(ctx).
+		Preload("Group").
+		Preload("StudentsAttended").
+		Scopes(pagination.Paginate(params)).
+		Find(&lessons).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	return lessons, total, nil
 }
 
 func (r *lessonRepository) Update(ctx context.Context, lesson *domain.Lesson) error {

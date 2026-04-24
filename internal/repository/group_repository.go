@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/pagination"
 	"gorm.io/gorm"
 )
 
@@ -35,6 +36,19 @@ func (r *groupRepository) GetAll(ctx context.Context) ([]domain.Group, error) {
 	var groups []domain.Group
 	err := r.db.WithContext(ctx).Preload("Students").Find(&groups).Error
 	return groups, err
+}
+
+// GetPaginated: Mengambil data grup dengan pagination
+func (r *groupRepository) GetPaginated(ctx context.Context, params domain.PaginationParams) ([]domain.Group, int64, error) {
+	var groups []domain.Group
+	var total int64
+
+	r.db.WithContext(ctx).Model(&domain.Group{}).Count(&total)
+	err := r.db.WithContext(ctx).Preload("Students").Scopes(pagination.Paginate(params)).Find(&groups).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	return groups, total, nil
 }
 
 func (r *groupRepository) Update(ctx context.Context, group *domain.Group) error {

@@ -32,7 +32,24 @@ func NewStudentHandler(r *gin.RouterGroup, us domain.StudentUsecase) {
 }
 
 // GetAll: GET /students
+// Mendukung pagination opsional via query params: ?page=1&limit=10
+// Jika tidak ada query params, mengembalikan seluruh data (backward-compatible).
 func (h *StudentHandler) GetAll(c *gin.Context) {
+	if c.Query("page") != "" || c.Query("limit") != "" {
+		var params domain.PaginationParams
+		if err := c.ShouldBindQuery(&params); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Parameter pagination tidak valid"})
+			return
+		}
+		result, err := h.usecase.GetPaginated(c.Request.Context(), params)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, result)
+		return
+	}
+
 	students, err := h.usecase.GetAll(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

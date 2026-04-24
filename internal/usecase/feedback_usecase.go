@@ -5,12 +5,14 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"os"
 	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/curriculum"
+	"github.com/azharf99/algo-feedback/pkg/pagination"
 	"github.com/azharf99/algo-feedback/pkg/pdfgen"
 	"github.com/azharf99/algo-feedback/pkg/taskqueue"
 	"github.com/azharf99/algo-feedback/pkg/whatsapp"
@@ -276,6 +278,23 @@ func (u *feedbackUsecase) GetByID(ctx context.Context, id uint) (*domain.Feedbac
 // GetAll mengambil seluruh data feedback
 func (u *feedbackUsecase) GetAll(ctx context.Context) ([]domain.Feedback, error) {
 	return u.feedRepo.GetAll(ctx)
+}
+
+// GetPaginated mengambil data feedback dengan pagination
+func (u *feedbackUsecase) GetPaginated(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedResult[domain.Feedback], error) {
+	params = pagination.Normalize(params)
+	feedbacks, total, err := u.feedRepo.GetPaginated(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	totalPages := int(math.Ceil(float64(total) / float64(params.Limit)))
+	return &domain.PaginatedResult[domain.Feedback]{
+		Data:       feedbacks,
+		Page:       params.Page,
+		Limit:      params.Limit,
+		Total:      total,
+		TotalPages: totalPages,
+	}, nil
 }
 
 // Update memperbarui data feedback yang sudah ada (misalnya jika Tutor ingin mengedit teks)

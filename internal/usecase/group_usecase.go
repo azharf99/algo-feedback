@@ -6,11 +6,13 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/pagination"
 )
 
 type groupUsecase struct {
@@ -31,6 +33,23 @@ func (u *groupUsecase) GetByID(ctx context.Context, id uint) (*domain.Group, err
 	return u.repo.GetByID(ctx, id)
 }
 func (u *groupUsecase) GetAll(ctx context.Context) ([]domain.Group, error) { return u.repo.GetAll(ctx) }
+
+// GetPaginated mengambil data grup dengan pagination
+func (u *groupUsecase) GetPaginated(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedResult[domain.Group], error) {
+	params = pagination.Normalize(params)
+	groups, total, err := u.repo.GetPaginated(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	totalPages := int(math.Ceil(float64(total) / float64(params.Limit)))
+	return &domain.PaginatedResult[domain.Group]{
+		Data:       groups,
+		Page:       params.Page,
+		Limit:      params.Limit,
+		Total:      total,
+		TotalPages: totalPages,
+	}, nil
+}
 func (u *groupUsecase) Update(ctx context.Context, id uint, req *domain.Group) error {
 	req.ID = id
 	return u.repo.Update(ctx, req)

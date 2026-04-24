@@ -7,10 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/pagination"
 )
 
 type studentUsecase struct {
@@ -38,6 +40,23 @@ func (u *studentUsecase) GetByID(ctx context.Context, id uint) (*domain.Student,
 // GetAll mengambil semua data siswa
 func (u *studentUsecase) GetAll(ctx context.Context) ([]domain.Student, error) {
 	return u.repo.GetAll(ctx)
+}
+
+// GetPaginated mengambil data siswa dengan pagination
+func (u *studentUsecase) GetPaginated(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedResult[domain.Student], error) {
+	params = pagination.Normalize(params)
+	students, total, err := u.repo.GetPaginated(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	totalPages := int(math.Ceil(float64(total) / float64(params.Limit)))
+	return &domain.PaginatedResult[domain.Student]{
+		Data:       students,
+		Page:       params.Page,
+		Limit:      params.Limit,
+		Total:      total,
+		TotalPages: totalPages,
+	}, nil
 }
 
 // Update memperbarui data siswa

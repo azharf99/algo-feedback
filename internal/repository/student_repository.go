@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/pagination"
 	"gorm.io/gorm"
 )
 
@@ -44,6 +45,19 @@ func (r *studentRepository) GetAll(ctx context.Context) ([]domain.Student, error
 		return nil, err
 	}
 	return students, nil
+}
+
+// GetPaginated: Mengambil data siswa dengan pagination
+func (r *studentRepository) GetPaginated(ctx context.Context, params domain.PaginationParams) ([]domain.Student, int64, error) {
+	var students []domain.Student
+	var total int64
+
+	r.db.WithContext(ctx).Model(&domain.Student{}).Count(&total)
+	err := r.db.WithContext(ctx).Scopes(pagination.Paginate(params)).Find(&students).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	return students, total, nil
 }
 
 // Update: Memperbarui data siswa yang sudah ada

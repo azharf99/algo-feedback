@@ -69,6 +69,7 @@ type FeedbackRepository interface {
 	Create(ctx context.Context, feedback *Feedback) error
 	GetByID(ctx context.Context, id uint) (*Feedback, error)
 	GetAll(ctx context.Context) ([]Feedback, error)
+	GetPaginated(ctx context.Context, params PaginationParams) ([]Feedback, int64, error)
 	Update(ctx context.Context, feedback *Feedback) error
 	Delete(ctx context.Context, id uint) error
 
@@ -84,6 +85,7 @@ type FeedbackUsecase interface {
 	Create(ctx context.Context, feedback *Feedback) error
 	GetByID(ctx context.Context, id uint) (*Feedback, error)
 	GetAll(ctx context.Context) ([]Feedback, error)
+	GetPaginated(ctx context.Context, params PaginationParams) (*PaginatedResult[Feedback], error)
 	Update(ctx context.Context, id uint, req *Feedback) error
 	Delete(ctx context.Context, id uint) error
 

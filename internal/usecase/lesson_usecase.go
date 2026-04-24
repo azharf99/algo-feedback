@@ -6,11 +6,13 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/pagination"
 )
 
 type lessonUsecase struct {
@@ -29,6 +31,23 @@ func (u *lessonUsecase) GetByID(ctx context.Context, id uint) (*domain.Lesson, e
 }
 func (u *lessonUsecase) GetAll(ctx context.Context) ([]domain.Lesson, error) {
 	return u.repo.GetAll(ctx)
+}
+
+// GetPaginated mengambil data lesson dengan pagination
+func (u *lessonUsecase) GetPaginated(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedResult[domain.Lesson], error) {
+	params = pagination.Normalize(params)
+	lessons, total, err := u.repo.GetPaginated(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	totalPages := int(math.Ceil(float64(total) / float64(params.Limit)))
+	return &domain.PaginatedResult[domain.Lesson]{
+		Data:       lessons,
+		Page:       params.Page,
+		Limit:      params.Limit,
+		Total:      total,
+		TotalPages: totalPages,
+	}, nil
 }
 func (u *lessonUsecase) Update(ctx context.Context, id uint, req *domain.Lesson) error {
 	req.ID = id

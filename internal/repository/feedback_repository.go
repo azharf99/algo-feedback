@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/pagination"
 	"gorm.io/gorm"
 )
 
@@ -31,6 +32,19 @@ func (r *feedbackRepository) GetAll(ctx context.Context) ([]domain.Feedback, err
 	var feedbacks []domain.Feedback
 	err := r.db.WithContext(ctx).Preload("Student").Find(&feedbacks).Error
 	return feedbacks, err
+}
+
+// GetPaginated: Mengambil data feedback dengan pagination
+func (r *feedbackRepository) GetPaginated(ctx context.Context, params domain.PaginationParams) ([]domain.Feedback, int64, error) {
+	var feedbacks []domain.Feedback
+	var total int64
+
+	r.db.WithContext(ctx).Model(&domain.Feedback{}).Count(&total)
+	err := r.db.WithContext(ctx).Preload("Student").Scopes(pagination.Paginate(params)).Find(&feedbacks).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	return feedbacks, total, nil
 }
 
 func (r *feedbackRepository) Update(ctx context.Context, feedback *domain.Feedback) error {

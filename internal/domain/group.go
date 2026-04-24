@@ -30,6 +30,7 @@ type GroupRepository interface {
 	Create(ctx context.Context, group *Group) error
 	GetByID(ctx context.Context, id uint) (*Group, error)
 	GetAll(ctx context.Context) ([]Group, error)
+	GetPaginated(ctx context.Context, params PaginationParams) ([]Group, int64, error)
 	Update(ctx context.Context, group *Group) error
 	Delete(ctx context.Context, id uint) error
 	// Upsert dengan tambahan array ID siswa untuk Many-to-Many
@@ -40,6 +41,7 @@ type GroupUsecase interface {
 	Create(ctx context.Context, group *Group) error
 	GetByID(ctx context.Context, id uint) (*Group, error)
 	GetAll(ctx context.Context) ([]Group, error)
+	GetPaginated(ctx context.Context, params PaginationParams) (*PaginatedResult[Group], error)
 	Update(ctx context.Context, id uint, req *Group) error
 	Delete(ctx context.Context, id uint) error
 	// Kita akan menggunakan kembali struct ImportResult yang sudah ada di package usecase
