@@ -59,8 +59,15 @@ func RoleMiddleware(allowedRoles ...domain.Role) gin.HandlerFunc {
 		}
 
 		isAllowed := false
+		roleStr, ok := userRole.(string)
+		if !ok {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Format role tidak valid"})
+			c.Abort()
+			return
+		}
+
 		for _, role := range allowedRoles {
-			if domain.Role(userRole.(domain.Role)) == role {
+			if domain.Role(roleStr) == role {
 				isAllowed = true
 				break
 			}
