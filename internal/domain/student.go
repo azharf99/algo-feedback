@@ -12,7 +12,7 @@ type Student struct {
 	ID            uint      `json:"id" gorm:"primaryKey"`
 	Fullname      string    `json:"fullname" gorm:"type:varchar(150);not null"`
 	Surname       string    `json:"surname" gorm:"type:varchar(50);not null"`
-	Username      string    `json:"username" gorm:"type:varchar(30);unique;not null"`
+	Username      string    `json:"username" gorm:"type:varchar(50);unique;not null"`
 	Password      string    `json:"-" gorm:"type:varchar(128);not null"`  // json:"-" agar password tidak ikut terkirim saat response API
 	PhoneNumber   *string   `json:"phone_number" gorm:"type:varchar(15)"` // Pointer (*) digunakan agar bisa bernilai NULL di database
 	ParentName    *string   `json:"parent_name" gorm:"type:varchar(60)"`
