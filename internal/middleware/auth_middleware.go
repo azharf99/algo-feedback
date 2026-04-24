@@ -51,7 +51,7 @@ func AuthMiddleware() gin.HandlerFunc {
 // RoleMiddleware membatasi akses berdasarkan Role (RBAC)
 func RoleMiddleware(allowedRoles ...domain.Role) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userRole, exists := c.Get("user_role")
+		userRole, exists := c.Get("role")
 		if !exists {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Akses ditolak"})
 			c.Abort()
