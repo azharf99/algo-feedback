@@ -52,8 +52,26 @@ func (r *studentRepository) GetPaginated(ctx context.Context, params domain.Pagi
 	var students []domain.Student
 	var total int64
 
-	r.db.WithContext(ctx).Model(&domain.Student{}).Count(&total)
-	err := r.db.WithContext(ctx).Scopes(pagination.Paginate(params)).Find(&students).Error
+	query := r.db.WithContext(ctx).Model(&domain.Student{})
+	if params.Search != "" {
+		query = query.Where("fullname ILIKE ? OR surname ILIKE ? OR parent_contact ILIKE ?", "%"+params.Search+"%", "%"+params.Search+"%", "%"+params.Search+"%")
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if params.SortBy != "" {
+		sortDir := "ASC" // Default arah sort
+		if params.SortDir != "" {
+			sortDir = params.SortDir
+		}
+		query = query.Order(params.SortBy + " " + sortDir)
+	} else {
+		// Fallback default: urutkan dari data terbaru
+		query = query.Order("id DESC")
+	}
+	err := query.Scopes(pagination.Paginate(params)).Find(&students).Error
 	if err != nil {
 		return nil, 0, err
 	}

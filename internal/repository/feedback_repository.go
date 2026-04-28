@@ -39,8 +39,24 @@ func (r *feedbackRepository) GetPaginated(ctx context.Context, params domain.Pag
 	var feedbacks []domain.Feedback
 	var total int64
 
-	r.db.WithContext(ctx).Model(&domain.Feedback{}).Count(&total)
-	err := r.db.WithContext(ctx).Preload("Student").Scopes(pagination.Paginate(params)).Find(&feedbacks).Error
+	query := r.db.WithContext(ctx).Model(&domain.Feedback{})
+	if params.Search != "" {
+		query = query.Where("course ILIKE ? OR group_name ILIKE ?", "%"+params.Search+"%", "%"+params.Search+"%")
+	}
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	if params.SortBy != "" {
+		sortDir := "ASC" // Default arah sort
+		if params.SortDir != "" {
+			sortDir = params.SortDir
+		}
+		query = query.Order(params.SortBy + " " + sortDir)
+	} else {
+		// Fallback default: urutkan dari data terbaru
+		query = query.Order("id DESC")
+	}
+	err := query.Preload("Student").Scopes(pagination.Paginate(params)).Find(&feedbacks).Error
 	if err != nil {
 		return nil, 0, err
 	}
