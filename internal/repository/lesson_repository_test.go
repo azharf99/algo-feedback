@@ -12,39 +12,43 @@ import (
 )
 
 func TestLessonRepository_Upsert_CreateNew(t *testing.T) {
-	gormDB, mock := setupGroupMockDB(t) // Kita gunakan helper yang sama
+	gormDB, mock := setupGroupMockDB(t) // Gunakan helper yang sudah ada dari test group
 	repo := repository.NewLessonRepository(gormDB)
 
-	lesson := &domain.Lesson{ID: 1, Title: "Go Intro", GroupID: 1}
-	studentIDs := []uint{101}
+	lesson := &domain.Lesson{ID: 1, Title: "Go Intro", CourseID: 10}
 
-	// 1. Cek Lesson
+	// 1. Cek Lesson (Kosong -> Trigger Create)
 	mock.ExpectQuery(`SELECT \* FROM "lessons"`).WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
-	// 2. Create Lesson
+	// 2. Create Lesson (Sederhana, tanpa many-to-many transaction)
 	mock.ExpectBegin()
 	mock.ExpectQuery(`INSERT INTO "lessons"`).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	mock.ExpectCommit()
 
-	// 3. Cari Siswa
-	mock.ExpectQuery(`SELECT \* FROM "students"`).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(101))
-
-	// 4. Replace Association (Double Transaction Pattern)
-	// Transaksi A: Append
-	mock.ExpectBegin()
-	mock.ExpectExec(`UPDATE "lessons"`).WillReturnResult(sqlmock.NewResult(1, 1))
-	mock.ExpectQuery(`INSERT INTO "students"`).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(101))
-	mock.ExpectExec(`INSERT INTO "lesson_students_attended"`).WillReturnResult(sqlmock.NewResult(1, 1))
-	mock.ExpectCommit()
-
-	// Transaksi B: Clear
-	mock.ExpectBegin()
-	mock.ExpectExec(`DELETE FROM "lesson_students_attended"`).WillReturnResult(sqlmock.NewResult(1, 0))
-	mock.ExpectCommit()
-
-	isCreated, err := repo.Upsert(context.Background(), lesson, studentIDs)
+	isCreated, err := repo.Upsert(context.Background(), lesson)
 
 	assert.NoError(t, err)
 	assert.True(t, isCreated)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestLessonRepository_Upsert_UpdateExisting(t *testing.T) {
+	gormDB, mock := setupGroupMockDB(t)
+	repo := repository.NewLessonRepository(gormDB)
+
+	lesson := &domain.Lesson{ID: 2, Title: "Go Update", CourseID: 10}
+
+	// 1. Cek Lesson (Ketemu -> Trigger Update)
+	mock.ExpectQuery(`SELECT \* FROM "lessons"`).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(2))
+
+	// 2. Update Lesson
+	mock.ExpectBegin()
+	mock.ExpectExec(`UPDATE "lessons"`).WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
+
+	isCreated, err := repo.Upsert(context.Background(), lesson)
+
+	assert.NoError(t, err)
+	assert.False(t, isCreated) // Karena record sudah ada, status created = false
 	assert.NoError(t, mock.ExpectationsWereMet())
 }

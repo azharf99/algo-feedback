@@ -24,12 +24,8 @@ func (r *lessonRepository) Create(ctx context.Context, lesson *domain.Lesson) er
 
 func (r *lessonRepository) GetByID(ctx context.Context, id uint) (*domain.Lesson, error) {
 	var lesson domain.Lesson
-	// Mengambil data Lesson beserta relasi Group dan StudentsAttended
-	err := r.db.WithContext(ctx).
-		Preload("Group").
-		Preload("StudentsAttended").
-		First(&lesson, id).Error
-
+	// Preload diganti ke "Course" karena Lesson sekarang bergantung pada Course
+	err := r.db.WithContext(ctx).Preload("Course").First(&lesson, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -38,28 +34,29 @@ func (r *lessonRepository) GetByID(ctx context.Context, id uint) (*domain.Lesson
 
 func (r *lessonRepository) GetAll(ctx context.Context) ([]domain.Lesson, error) {
 	var lessons []domain.Lesson
-	err := r.db.WithContext(ctx).
-		Preload("Group").
-		Preload("StudentsAttended").
-		Find(&lessons).Error
+	err := r.db.WithContext(ctx).Preload("Course").Find(&lessons).Error
 	return lessons, err
 }
 
-// GetPaginated: Mengambil data lesson dengan pagination
 func (r *lessonRepository) GetPaginated(ctx context.Context, params domain.PaginationParams) ([]domain.Lesson, int64, error) {
 	var lessons []domain.Lesson
-	var total int64
+	var totalRows int64
 
-	r.db.WithContext(ctx).Model(&domain.Lesson{}).Count(&total)
-	err := r.db.WithContext(ctx).
-		Preload("Group").
-		Preload("StudentsAttended").
-		Scopes(pagination.Paginate(params)).
-		Find(&lessons).Error
-	if err != nil {
+	query := r.db.WithContext(ctx).Model(&domain.Lesson{})
+	if params.Search != "" {
+		query = query.Where("title ILIKE ? OR module ILIKE ?", "%"+params.Search+"%", "%"+params.Search+"%")
+	}
+
+	if err := query.Count(&totalRows).Error; err != nil {
 		return nil, 0, err
 	}
-	return lessons, total, nil
+
+	err := query.Preload("Course").
+		Scopes(pagination.Paginate(params)).
+		Order(params.SortBy + " " + params.SortDir).
+		Find(&lessons).Error
+
+	return lessons, totalRows, err
 }
 
 func (r *lessonRepository) Update(ctx context.Context, lesson *domain.Lesson) error {
@@ -70,12 +67,11 @@ func (r *lessonRepository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Delete(&domain.Lesson{}, id).Error
 }
 
-// Upsert menangani pembuatan/pembaruan Lesson dan relasi kehadirannya
-func (r *lessonRepository) Upsert(ctx context.Context, lesson *domain.Lesson, studentIDs []uint) (bool, error) {
+// Upsert HANYA memperbarui atau membuat record Lesson
+func (r *lessonRepository) Upsert(ctx context.Context, lesson *domain.Lesson) (bool, error) {
 	var existing domain.Lesson
 	var isCreated bool
 
-	// 1. Cek keberadaan Lesson
 	err := r.db.WithContext(ctx).First(&existing, lesson.ID).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -92,22 +88,7 @@ func (r *lessonRepository) Upsert(ctx context.Context, lesson *domain.Lesson, st
 		if errUpdate := r.db.WithContext(ctx).Model(&existing).Updates(lesson).Error; errUpdate != nil {
 			return false, errUpdate
 		}
-		lesson.ID = existing.ID // Sinkronisasi ID untuk relasi di bawah
-	}
-
-	// 2. Tangani Relasi Many-to-Many (Kehadiran Siswa)
-	if len(studentIDs) > 0 {
-		var students []domain.Student
-		r.db.WithContext(ctx).Where("id IN ?", studentIDs).Find(&students)
-
-		// Perhatikan nama association di sini harus sama persis dengan nama field di Struct Lesson
-		errAssoc := r.db.WithContext(ctx).Model(lesson).Association("StudentsAttended").Replace(&students)
-		if errAssoc != nil {
-			return isCreated, errAssoc
-		}
-	} else {
-		// Kosongkan kehadiran jika tidak ada ID siswa yang dikirim
-		r.db.WithContext(ctx).Model(lesson).Association("StudentsAttended").Clear()
+		lesson.ID = existing.ID
 	}
 
 	return isCreated, nil

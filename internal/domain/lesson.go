@@ -5,35 +5,26 @@ import (
 	"context"
 	"io"
 	"time"
+
+	"gorm.io/gorm"
 )
 
-// Lesson merepresentasikan tabel lessons di database.
 type Lesson struct {
-	ID          uint      `json:"id" gorm:"primaryKey"`
-	Title       string    `json:"title" gorm:"type:varchar(100);not null"`
-	Category    *string   `json:"category" gorm:"type:varchar(100)"`
-	Module      string    `json:"module" gorm:"type:varchar(50);not null"`
-	Level       string    `json:"level" gorm:"type:varchar(50);not null"`
-	Number      uint      `json:"number" gorm:"not null"`
-	Description *string   `json:"description" gorm:"type:text"`
-	DateStart   time.Time `json:"date_start" gorm:"type:date"`
-	TimeStart   time.Time `json:"time_start" gorm:"type:time"`
-	MeetingLink *string   `json:"meeting_link" gorm:"type:text"`
-	Feedback    *string   `json:"feedback" gorm:"type:text"`
-	IsActive    bool      `json:"is_active" gorm:"default:true"`
-	CreatedAt   time.Time `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt   time.Time `json:"updated_at" gorm:"autoUpdateTime"`
-
-	// Relasi Foreign Key (One-to-Many) ke Group
-	// OnDelete:CASCADE memastikan jika Group dihapus, Lesson ini juga ikut terhapus
-	GroupID uint   `json:"group_id" gorm:"not null"`
-	Group   *Group `json:"group,omitempty" gorm:"foreignKey:GroupID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-
-	// Relasi Many-to-Many ke Student (Siswa yang hadir)
-	StudentsAttended []Student `json:"students_attended" gorm:"many2many:lesson_students_attended;"`
+	ID          uint           `gorm:"primaryKey" json:"id"`
+	CourseID    uint           `json:"course_id"`
+	Course      *Course        `json:"course,omitempty"` // Relasi ke Course
+	Title       string         `gorm:"type:varchar(255);not null" json:"title"`
+	Category    *string        `gorm:"type:varchar(100)" json:"category"`
+	Module      string         `gorm:"type:varchar(100)" json:"module"`
+	Level       string         `gorm:"type:varchar(50)" json:"level"`
+	Number      uint           `json:"number"`
+	Description *string        `gorm:"type:text" json:"description"`
+	IsActive    bool           `json:"is_active" gorm:"default:true"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
-// LessonRepository mendefinisikan operasi ke database
 type LessonRepository interface {
 	Create(ctx context.Context, lesson *Lesson) error
 	GetByID(ctx context.Context, id uint) (*Lesson, error)
@@ -42,11 +33,9 @@ type LessonRepository interface {
 	Update(ctx context.Context, lesson *Lesson) error
 	Delete(ctx context.Context, id uint) error
 
-	// Upsert untuk keperluan Import CSV (menyimpan relasi Many-to-Many Siswa)
-	Upsert(ctx context.Context, lesson *Lesson, studentIDs []uint) (bool, error)
+	Upsert(ctx context.Context, lesson *Lesson) (bool, error)
 }
 
-// LessonUsecase mendefinisikan logika bisnis
 type LessonUsecase interface {
 	Create(ctx context.Context, lesson *Lesson) error
 	GetByID(ctx context.Context, id uint) (*Lesson, error)
@@ -55,6 +44,5 @@ type LessonUsecase interface {
 	Update(ctx context.Context, id uint, req *Lesson) error
 	Delete(ctx context.Context, id uint) error
 
-	// Kita pinjam struct ImportResult yang ada di package usecase
-	ImportCSV(ctx context.Context, fileReader io.Reader) (interface{}, error)
+	ImportCSV(ctx context.Context, fileReader io.Reader) (*ImportResult, error)
 }

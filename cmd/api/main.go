@@ -47,8 +47,10 @@ func main() {
 	db.AutoMigrate(
 		&domain.User{},
 		&domain.Student{},
+		&domain.Course{},
 		&domain.Group{},
 		&domain.Lesson{},
+		&domain.Session{},
 		&domain.Feedback{},
 	)
 
@@ -114,13 +116,27 @@ func main() {
 	groupRepo := repository.NewGroupRepository(db)
 	groupUsecase := usecase.NewGroupUsecase(groupRepo)
 
+	// --- Modul Course ---
+	courseRepo := repository.NewCourseRepository(db)
+	courseUsecase := usecase.NewCourseUsecase(courseRepo)
+
 	// --- Lesson ---
 	lessonRepo := repository.NewLessonRepository(db)
 	lessonUsecase := usecase.NewLessonUsecase(lessonRepo)
 
+	// --- Modul Session ---
+	sessionRepo := repository.NewSessionRepository(db)
+	sessionUsecase := usecase.NewSessionUsecase(sessionRepo)
+
 	// --- Feedback ---
 	feedbackRepo := repository.NewFeedbackRepository(db)
-	feedbackUsecase := usecase.NewFeedbackUsecase(feedbackRepo, lessonRepo, pdfService, waService, pool)
+	feedbackUsecase := usecase.NewFeedbackUsecase(
+		feedbackRepo,
+		groupRepo,   // <-- Masukkan Group Repo
+		sessionRepo, // <-- Masukkan Session Repo
+		pdfService,
+		waService,
+	)
 
 	// 6. Routing API
 	api := r.Group("/api")
@@ -147,10 +163,20 @@ func main() {
 			groupGroup.Use(middleware.RoleMiddleware(domain.RoleAdmin, domain.RoleTutor))
 			handler.NewGroupHandler(groupGroup, groupUsecase)
 
+			// Course Module (Admin & Tutor)
+			courseGroup := protected.Group("/")
+			courseGroup.Use(middleware.RoleMiddleware(domain.RoleAdmin, domain.RoleTutor))
+			handler.NewCourseHandler(courseGroup, courseUsecase)
+
 			// Lesson Module (Admin & Tutor)
 			lessonGroup := protected.Group("/")
 			lessonGroup.Use(middleware.RoleMiddleware(domain.RoleAdmin, domain.RoleTutor))
 			handler.NewLessonHandler(lessonGroup, lessonUsecase)
+
+			// Session Module (Admin & Tutor)
+			sessionGroup := protected.Group("/")
+			sessionGroup.Use(middleware.RoleMiddleware(domain.RoleAdmin, domain.RoleTutor))
+			handler.NewSessionHandler(sessionGroup, sessionUsecase)
 
 			// Feedback Module (Admin & Tutor)
 			feedbackGroup := protected.Group("/")

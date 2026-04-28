@@ -15,6 +15,7 @@ import (
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 )
 
+// ... (NewGroupUsecase & operasi CRUD standar sama persis seperti sebelumnya) ...
 type groupUsecase struct {
 	repo domain.GroupRepository
 }
@@ -22,10 +23,6 @@ type groupUsecase struct {
 func NewGroupUsecase(repo domain.GroupRepository) domain.GroupUsecase {
 	return &groupUsecase{repo: repo}
 }
-
-// ... (Untuk Create, GetByID, GetAll, Update, Delete kodenya sama persis seperti Student Usecase,
-//      kamu bisa menambahkannya sendiri agar kita fokus ke logika ImportCSV) ...
-
 func (u *groupUsecase) Create(ctx context.Context, group *domain.Group) error {
 	return u.repo.Create(ctx, group)
 }
@@ -33,8 +30,6 @@ func (u *groupUsecase) GetByID(ctx context.Context, id uint) (*domain.Group, err
 	return u.repo.GetByID(ctx, id)
 }
 func (u *groupUsecase) GetAll(ctx context.Context) ([]domain.Group, error) { return u.repo.GetAll(ctx) }
-
-// GetPaginated mengambil data grup dengan pagination
 func (u *groupUsecase) GetPaginated(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedResult[domain.Group], error) {
 	params = pagination.Normalize(params)
 	groups, total, err := u.repo.GetPaginated(ctx, params)
@@ -43,11 +38,7 @@ func (u *groupUsecase) GetPaginated(ctx context.Context, params domain.Paginatio
 	}
 	totalPages := int(math.Ceil(float64(total) / float64(params.Limit)))
 	return &domain.PaginatedResult[domain.Group]{
-		Data:       groups,
-		Page:       params.Page,
-		Limit:      params.Limit,
-		Total:      total,
-		TotalPages: totalPages,
+		Data: groups, Total: total, TotalPages: totalPages, Page: params.Page, Limit: params.Limit,
 	}, nil
 }
 func (u *groupUsecase) Update(ctx context.Context, id uint, req *domain.Group) error {
@@ -56,9 +47,7 @@ func (u *groupUsecase) Update(ctx context.Context, id uint, req *domain.Group) e
 }
 func (u *groupUsecase) Delete(ctx context.Context, id uint) error { return u.repo.Delete(ctx, id) }
 
-// ImportCSV memproses CSV Grup
 func (u *groupUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*domain.ImportResult, error) {
-	// Catatan: ImportResult sudah dideklarasikan di student_usecase.go, jadi bisa langsung dipakai
 	result := &domain.ImportResult{Errors: make([]map[string]interface{}, 0)}
 
 	reader := csv.NewReader(fileReader)
@@ -84,34 +73,35 @@ func (u *groupUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*do
 		}
 		rowNum++
 
-		// 1. Ambil & Validasi ID
+		// Validasi ID Group
 		idUint, err := strconv.ParseUint(record[headerMap["id"]], 10, 32)
 		if err != nil || idUint == 0 {
-			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": "ID tidak valid atau kosong"})
+			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": "ID tidak valid"})
 			continue
 		}
 
-		// 2. Parsing Tanggal & Waktu (Golang menggunakan layout referensi: Mon Jan 2 15:04:05 MST 2006)
+		// Validasi Course ID (Wajib ada)
+		courseID, err := strconv.ParseUint(record[headerMap["course_id"]], 10, 32)
+		if err != nil || courseID == 0 {
+			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": "course_id tidak valid"})
+			continue
+		}
+
+		// Tanggal dan Waktu First Lesson
 		var firstLessonDate *time.Time
-		if dateStr := record[headerMap["first_lesson_date"]]; dateStr != "" {
-			parsedDate, err := time.Parse("02/01/2006", dateStr) // Format: dd/mm/yyyy
-			if err == nil {
+		if fd := record[headerMap["first_lesson_date"]]; fd != "" {
+			if parsedDate, err := time.Parse("02/01/2006", fd); err == nil {
 				firstLessonDate = &parsedDate
 			}
 		}
 
 		var firstLessonTime *time.Time
-		if timeStr := record[headerMap["first_lesson_time"]]; timeStr != "" {
-			parsedTime, err := time.Parse("15:04:05", timeStr) // Coba format HH:MM:SS
-			if err != nil {
-				parsedTime, err = time.Parse("15:04", timeStr) // Coba format HH:MM jika gagal
-			}
-			if err == nil {
+		if ft := record[headerMap["first_lesson_time"]]; ft != "" {
+			if parsedTime, err := time.Parse("15:04", ft); err == nil {
 				firstLessonTime = &parsedTime
 			}
 		}
 
-		// 3. Pointer String (Bisa Kosong)
 		desc := record[headerMap["description"]]
 		groupPhone := record[headerMap["group_phone"]]
 		meetLink := record[headerMap["meeting_link"]]
@@ -119,6 +109,7 @@ func (u *groupUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*do
 
 		group := &domain.Group{
 			ID:              uint(idUint),
+			CourseID:        uint(courseID), // <-- Tambahan Course ID
 			Name:            record[headerMap["name"]],
 			Type:            record[headerMap["type"]],
 			Description:     &desc,
@@ -130,10 +121,9 @@ func (u *groupUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*do
 			IsActive:        strings.ToLower(record[headerMap["is_active"]]) != "false",
 		}
 
-		// 4. Proses Array Many-to-Many Siswa
+		// Array Many-to-Many Siswa
 		var studentIDs []uint
-		studentStr := record[headerMap["students"]] // Contoh isi: "1, 2, 5"
-		if studentStr != "" {
+		if studentStr := record[headerMap["students"]]; studentStr != "" {
 			parts := strings.Split(studentStr, ",")
 			for _, p := range parts {
 				sID, err := strconv.ParseUint(strings.TrimSpace(p), 10, 32)
@@ -143,7 +133,6 @@ func (u *groupUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*do
 			}
 		}
 
-		// 5. Simpan ke Database
 		isCreated, err := u.repo.Upsert(ctx, group, studentIDs)
 		if err != nil {
 			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": err.Error()})

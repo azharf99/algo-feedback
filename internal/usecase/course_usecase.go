@@ -1,4 +1,4 @@
-// File: internal/usecase/lesson_usecase.go
+// File: internal/usecase/course_usecase.go
 package usecase
 
 import (
@@ -14,46 +14,55 @@ import (
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 )
 
-type lessonUsecase struct {
-	repo domain.LessonRepository
+type courseUsecase struct {
+	repo domain.CourseRepository
 }
 
-func NewLessonUsecase(repo domain.LessonRepository) domain.LessonUsecase {
-	return &lessonUsecase{repo: repo}
+func NewCourseUsecase(repo domain.CourseRepository) domain.CourseUsecase {
+	return &courseUsecase{repo: repo}
 }
 
-// ... (Metode CRUD Create, GetByID, GetAll, GetPaginated, Update, Delete tetap sama) ...
-func (u *lessonUsecase) Create(ctx context.Context, lesson *domain.Lesson) error {
-	return u.repo.Create(ctx, lesson)
+func (u *courseUsecase) Create(ctx context.Context, course *domain.Course) error {
+	return u.repo.Create(ctx, course)
 }
-func (u *lessonUsecase) GetByID(ctx context.Context, id uint) (*domain.Lesson, error) {
+
+func (u *courseUsecase) GetByID(ctx context.Context, id uint) (*domain.Course, error) {
 	return u.repo.GetByID(ctx, id)
 }
-func (u *lessonUsecase) GetAll(ctx context.Context) ([]domain.Lesson, error) {
+
+func (u *courseUsecase) GetAll(ctx context.Context) ([]domain.Course, error) {
 	return u.repo.GetAll(ctx)
 }
-func (u *lessonUsecase) GetPaginated(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedResult[domain.Lesson], error) {
+
+func (u *courseUsecase) GetPaginated(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedResult[domain.Course], error) {
 	params = pagination.Normalize(params)
-	lessons, total, err := u.repo.GetPaginated(ctx, params)
+	courses, total, err := u.repo.GetPaginated(ctx, params)
 	if err != nil {
 		return nil, err
 	}
+
 	totalPages := int(math.Ceil(float64(total) / float64(params.Limit)))
-	return &domain.PaginatedResult[domain.Lesson]{
-		Data:       lessons,
+
+	return &domain.PaginatedResult[domain.Course]{
+		Data:       courses,
 		Total:      total,
 		TotalPages: totalPages,
 		Page:       params.Page,
 		Limit:      params.Limit,
 	}, nil
 }
-func (u *lessonUsecase) Update(ctx context.Context, id uint, req *domain.Lesson) error {
+
+func (u *courseUsecase) Update(ctx context.Context, id uint, req *domain.Course) error {
 	req.ID = id
 	return u.repo.Update(ctx, req)
 }
-func (u *lessonUsecase) Delete(ctx context.Context, id uint) error { return u.repo.Delete(ctx, id) }
 
-func (u *lessonUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*domain.ImportResult, error) {
+func (u *courseUsecase) Delete(ctx context.Context, id uint) error {
+	return u.repo.Delete(ctx, id)
+}
+
+// ImportCSV memproses data blueprint kurikulum dari CSV
+func (u *courseUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*domain.ImportResult, error) {
 	result := &domain.ImportResult{Errors: make([]map[string]interface{}, 0)}
 
 	reader := csv.NewReader(fileReader)
@@ -79,37 +88,29 @@ func (u *lessonUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*d
 		}
 		rowNum++
 
+		// 1. Validasi ID Course
 		idUint, err := strconv.ParseUint(record[headerMap["id"]], 10, 32)
 		if err != nil || idUint == 0 {
 			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": "ID tidak valid"})
 			continue
 		}
 
-		// Mengubah dari group_id menjadi course_id
-		courseID, err := strconv.ParseUint(record[headerMap["course_id"]], 10, 32)
-		if err != nil || courseID == 0 {
-			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": "course_id tidak valid"})
-			continue
-		}
-
-		num, _ := strconv.Atoi(record[headerMap["number"]])
-		category := record[headerMap["category"]]
+		// 2. Tangani Nilai Opsional (Pointer)
 		desc := record[headerMap["description"]]
+		meetLink := record[headerMap["meeting_link"]]
 
-		lesson := &domain.Lesson{
+		// 3. Bangun Objek Course
+		course := &domain.Course{
 			ID:          uint(idUint),
-			CourseID:    uint(courseID),
 			Title:       record[headerMap["title"]],
-			Category:    &category,
 			Module:      record[headerMap["module"]],
-			Level:       record[headerMap["level"]],
-			Number:      uint(num),
 			Description: &desc,
+			MeetingLink: &meetLink,
 			IsActive:    strings.ToLower(record[headerMap["is_active"]]) != "false",
 		}
 
-		// Panggil Upsert TANPA studentIDs
-		isCreated, err := u.repo.Upsert(ctx, lesson)
+		// 4. Eksekusi Upsert
+		isCreated, err := u.repo.Upsert(ctx, course)
 		if err != nil {
 			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": err.Error()})
 			continue

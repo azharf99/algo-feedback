@@ -24,8 +24,8 @@ func (r *groupRepository) Create(ctx context.Context, group *domain.Group) error
 
 func (r *groupRepository) GetByID(ctx context.Context, id uint) (*domain.Group, error) {
 	var group domain.Group
-	// Gunakan Preload("Students") agar data siswa di dalam grup ikut terpanggil!
-	err := r.db.WithContext(ctx).Preload("Students").First(&group, id).Error
+	// Preload "Course" dan "Students"
+	err := r.db.WithContext(ctx).Preload("Course").Preload("Students").First(&group, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -34,21 +34,29 @@ func (r *groupRepository) GetByID(ctx context.Context, id uint) (*domain.Group, 
 
 func (r *groupRepository) GetAll(ctx context.Context) ([]domain.Group, error) {
 	var groups []domain.Group
-	err := r.db.WithContext(ctx).Preload("Students").Find(&groups).Error
+	err := r.db.WithContext(ctx).Preload("Course").Preload("Students").Find(&groups).Error
 	return groups, err
 }
 
-// GetPaginated: Mengambil data grup dengan pagination
 func (r *groupRepository) GetPaginated(ctx context.Context, params domain.PaginationParams) ([]domain.Group, int64, error) {
 	var groups []domain.Group
-	var total int64
+	var totalRows int64
 
-	r.db.WithContext(ctx).Model(&domain.Group{}).Count(&total)
-	err := r.db.WithContext(ctx).Preload("Students").Scopes(pagination.Paginate(params)).Find(&groups).Error
-	if err != nil {
+	query := r.db.WithContext(ctx).Model(&domain.Group{})
+	if params.Search != "" {
+		query = query.Where("name ILIKE ?", "%"+params.Search+"%")
+	}
+
+	if err := query.Count(&totalRows).Error; err != nil {
 		return nil, 0, err
 	}
-	return groups, total, nil
+
+	err := query.Preload("Course").Preload("Students").
+		Scopes(pagination.Paginate(params)).
+		Order(params.SortBy + " " + params.SortDir).
+		Find(&groups).Error
+
+	return groups, totalRows, err
 }
 
 func (r *groupRepository) Update(ctx context.Context, group *domain.Group) error {
@@ -56,20 +64,17 @@ func (r *groupRepository) Update(ctx context.Context, group *domain.Group) error
 }
 
 func (r *groupRepository) Delete(ctx context.Context, id uint) error {
-	// GORM otomatis akan menghapus data di tabel pivot group_students (CASCADE)
 	return r.db.WithContext(ctx).Delete(&domain.Group{}, id).Error
 }
 
-// Upsert menangani pembuatan/pembaruan Grup SEKALIGUS mengisi relasi Siswa
+// Upsert (Logikanya tetap sama persis seperti sebelumnya karena masih mengatur relasi Students)
 func (r *groupRepository) Upsert(ctx context.Context, group *domain.Group, studentIDs []uint) (bool, error) {
 	var existing domain.Group
 	var isCreated bool
 
-	// 1. Cek apakah Grup sudah ada
 	err := r.db.WithContext(ctx).First(&existing, group.ID).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// Buat Baru
 			if errCreate := r.db.WithContext(ctx).Create(group).Error; errCreate != nil {
 				return false, errCreate
 			}
@@ -78,25 +83,20 @@ func (r *groupRepository) Upsert(ctx context.Context, group *domain.Group, stude
 			return false, err
 		}
 	} else {
-		// Perbarui Data yang ada
 		if errUpdate := r.db.WithContext(ctx).Model(&existing).Updates(group).Error; errUpdate != nil {
 			return false, errUpdate
 		}
-		group.ID = existing.ID // Pastikan ID grup terbaru digunakan untuk relasi
+		group.ID = existing.ID
 	}
 
-	// 2. Tangani Relasi Many-to-Many (Siswa)
 	if len(studentIDs) > 0 {
 		var students []domain.Student
 		r.db.WithContext(ctx).Where("id IN ?", studentIDs).Find(&students)
-
-		// .Replace() akan menghapus relasi lama dan memasukkan relasi baru yang sesuai
 		errAssoc := r.db.WithContext(ctx).Model(group).Association("Students").Replace(&students)
 		if errAssoc != nil {
 			return isCreated, errAssoc
 		}
 	} else {
-		// Jika CSV kosong, bersihkan semua relasi siswa di grup ini
 		r.db.WithContext(ctx).Model(group).Association("Students").Clear()
 	}
 

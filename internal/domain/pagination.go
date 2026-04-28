@@ -2,10 +2,13 @@
 package domain
 
 // PaginationParams adalah struct yang di-bind dari query string request.
-// Contoh: GET /students?page=1&limit=10
+// Contoh: GET /students?page=1&limit=10&search=budi
 type PaginationParams struct {
-	Page  int `form:"page"`
-	Limit int `form:"limit"`
+	Page    int    `form:"page"`
+	Limit   int    `form:"limit"`
+	Search  string `form:"search"`
+	SortBy  string `form:"sort_by"`
+	SortDir string `form:"sort_dir"` // "asc" atau "desc"
 }
 
 // PaginatedResult adalah wrapper response standar untuk semua endpoint yang mendukung pagination.
