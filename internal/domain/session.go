@@ -3,6 +3,7 @@ package domain
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"time"
 
@@ -30,6 +31,35 @@ func (d DateOnly) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + d.Time.Format("2006-01-02") + `"`), nil
 }
 
+// Value implements driver.Valuer — GORM/DB menggunakan ini saat INSERT/UPDATE.
+func (d DateOnly) Value() (driver.Value, error) {
+	if d.Time.IsZero() {
+		return nil, nil
+	}
+	return d.Time.Format("2006-01-02"), nil
+}
+
+// Scan implements sql.Scanner — GORM menggunakan ini saat SELECT.
+func (d *DateOnly) Scan(value interface{}) error {
+	if value == nil {
+		d.Time = time.Time{}
+		return nil
+	}
+	switch v := value.(type) {
+	case time.Time:
+		d.Time = v
+		return nil
+	case string:
+		t, err := time.Parse("2006-01-02", v)
+		if err != nil {
+			return err
+		}
+		d.Time = t
+		return nil
+	}
+	return fmt.Errorf("DateOnly.Scan: cannot scan type %T", value)
+}
+
 // TimeOnly wraps time.Time and unmarshals JSON strings in "15:04" or "15:04:05" format.
 type TimeOnly struct{ time.Time }
 
@@ -54,6 +84,38 @@ func (t *TimeOnly) UnmarshalJSON(b []byte) error {
 
 func (t TimeOnly) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + t.Time.Format("15:04") + `"`), nil
+}
+
+// Value implements driver.Valuer — GORM/DB menggunakan ini saat INSERT/UPDATE.
+func (t TimeOnly) Value() (driver.Value, error) {
+	if t.Time.IsZero() {
+		return nil, nil
+	}
+	return t.Time.Format("15:04:05"), nil
+}
+
+// Scan implements sql.Scanner — GORM menggunakan ini saat SELECT.
+func (t *TimeOnly) Scan(value interface{}) error {
+	if value == nil {
+		t.Time = time.Time{}
+		return nil
+	}
+	switch v := value.(type) {
+	case time.Time:
+		t.Time = v
+		return nil
+	case string:
+		parsed, err := time.Parse("15:04:05", v)
+		if err != nil {
+			parsed, err = time.Parse("15:04", v)
+		}
+		if err != nil {
+			return err
+		}
+		t.Time = parsed
+		return nil
+	}
+	return fmt.Errorf("TimeOnly.Scan: cannot scan type %T", value)
 }
 
 type Session struct {
