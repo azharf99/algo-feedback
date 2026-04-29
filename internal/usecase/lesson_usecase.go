@@ -32,6 +32,11 @@ func (u *lessonUsecase) GetByID(ctx context.Context, id uint) (*domain.Lesson, e
 func (u *lessonUsecase) GetAll(ctx context.Context) ([]domain.Lesson, error) {
 	return u.repo.GetAll(ctx)
 }
+
+func (u *lessonUsecase) GetByCourse(ctx context.Context, courseID uint) ([]domain.Lesson, error) {
+	return u.repo.GetByCourse(ctx, courseID)
+}
+
 func (u *lessonUsecase) GetPaginated(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedResult[domain.Lesson], error) {
 	params = pagination.Normalize(params)
 	lessons, total, err := u.repo.GetPaginated(ctx, params)

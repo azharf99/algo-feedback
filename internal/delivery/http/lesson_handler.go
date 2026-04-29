@@ -19,6 +19,7 @@ func NewLessonHandler(r *gin.RouterGroup, us domain.LessonUsecase) {
 	routes := r.Group("/lessons")
 	{
 		routes.GET("", handler.GetAll)
+		routes.GET("/course/:course_id", handler.GetByCourse)
 		routes.GET("/:id", handler.GetByID)
 		routes.POST("", handler.Create)
 		routes.PUT("/:id", handler.Update)
@@ -48,6 +49,21 @@ func (h *LessonHandler) GetAll(c *gin.Context) {
 	lessons, err := h.usecase.GetAll(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": lessons})
+}
+
+// GetByCourse: GET /lessons/course/:course_id
+func (h *LessonHandler) GetByCourse(c *gin.Context) {
+	courseID, _ := strconv.Atoi(c.Param("course_id"))
+	if courseID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Course ID tidak valid"})
+		return
+	}
+	lessons, err := h.usecase.GetByCourse(c.Request.Context(), uint(courseID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mendapatkan pelajaran berdasarkan course"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": lessons})

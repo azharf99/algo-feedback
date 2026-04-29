@@ -29,6 +29,7 @@ type LessonRepository interface {
 	Create(ctx context.Context, lesson *Lesson) error
 	GetByID(ctx context.Context, id uint) (*Lesson, error)
 	GetAll(ctx context.Context) ([]Lesson, error)
+	GetByCourse(ctx context.Context, courseID uint) ([]Lesson, error)
 	GetPaginated(ctx context.Context, params PaginationParams) ([]Lesson, int64, error)
 	Update(ctx context.Context, lesson *Lesson) error
 	Delete(ctx context.Context, id uint) error
@@ -40,6 +41,7 @@ type LessonUsecase interface {
 	Create(ctx context.Context, lesson *Lesson) error
 	GetByID(ctx context.Context, id uint) (*Lesson, error)
 	GetAll(ctx context.Context) ([]Lesson, error)
+	GetByCourse(ctx context.Context, courseID uint) ([]Lesson, error)
 	GetPaginated(ctx context.Context, params PaginationParams) (*PaginatedResult[Lesson], error)
 	Update(ctx context.Context, id uint, req *Lesson) error
 	Delete(ctx context.Context, id uint) error

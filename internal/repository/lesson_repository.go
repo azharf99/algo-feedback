@@ -38,6 +38,12 @@ func (r *lessonRepository) GetAll(ctx context.Context) ([]domain.Lesson, error) 
 	return lessons, err
 }
 
+func (r *lessonRepository) GetByCourse(ctx context.Context, courseID uint) ([]domain.Lesson, error) {
+	var lessons []domain.Lesson
+	err := r.db.WithContext(ctx).Preload("Course").Where("course_id = ?", courseID).Find(&lessons).Error
+	return lessons, err
+}
+
 func (r *lessonRepository) GetPaginated(ctx context.Context, params domain.PaginationParams) ([]domain.Lesson, int64, error) {
 	var lessons []domain.Lesson
 	var totalRows int64
