@@ -14,7 +14,6 @@ type Course struct {
 	Title       string         `gorm:"type:varchar(255);not null" json:"title"`
 	Module      string         `gorm:"type:varchar(100);not null" json:"module"`
 	Description *string        `gorm:"type:text" json:"description"`
-	MeetingLink *string        `gorm:"type:varchar(255)" json:"meeting_link"`
 	IsActive    bool           `json:"is_active" gorm:"default:true"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`

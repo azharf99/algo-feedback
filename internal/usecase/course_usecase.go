@@ -97,7 +97,6 @@ func (u *courseUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*d
 
 		// 2. Tangani Nilai Opsional (Pointer)
 		desc := record[headerMap["description"]]
-		meetLink := record[headerMap["meeting_link"]]
 
 		// 3. Bangun Objek Course
 		course := &domain.Course{
@@ -105,7 +104,6 @@ func (u *courseUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*d
 			Title:       record[headerMap["title"]],
 			Module:      record[headerMap["module"]],
 			Description: &desc,
-			MeetingLink: &meetLink,
 			IsActive:    strings.ToLower(record[headerMap["is_active"]]) != "false",
 		}
 
