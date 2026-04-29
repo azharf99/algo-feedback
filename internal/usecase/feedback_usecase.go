@@ -124,8 +124,8 @@ func (u *feedbackUsecase) GenerateFeedback(ctx context.Context, groupID *uint, a
 						Result:          &result,
 						Competency:      &comp,
 						TutorFeedback:   &tutorFb,
-						LessonDate:      session.DateStart, // Tanggal rapor = tanggal sesi ke-4
-						LessonTime:      session.TimeStart,
+						LessonDate:      session.DateStart.Time, // Tanggal rapor = tanggal sesi ke-4
+						LessonTime:      session.TimeStart.Time,
 						IsSent:          false,
 						Level:           &level,
 						ProjectLink:     group.RecordingsLink,
