@@ -79,7 +79,22 @@ func (r *groupRepository) GetPaginated(ctx context.Context, params domain.Pagina
 }
 
 func (r *groupRepository) Update(ctx context.Context, group *domain.Group, studentIDs []uint) error {
-	err := r.db.WithContext(ctx).Omit("Students").Save(group).Error
+	// Gunakan Updates dengan map agar field bernilai zero (seperti is_active: false) tetap terupdate,
+	// dan Omit("CreatedAt") agar timestamp pembuatannya tidak tertimpa nilai zero.
+	updateData := map[string]interface{}{
+		"course_id":          group.CourseID,
+		"name":               group.Name,
+		"description":        group.Description,
+		"type":               group.Type,
+		"group_phone":        group.GroupPhone,
+		"meeting_link":       group.MeetingLink,
+		"recordings_link":    group.RecordingsLink,
+		"first_lesson_date":  group.FirstLessonDate,
+		"first_lesson_time":  group.FirstLessonTime,
+		"is_active":          group.IsActive,
+	}
+
+	err := r.db.WithContext(ctx).Model(group).Omit("Students").Updates(updateData).Error
 	if err != nil {
 		return err
 	}

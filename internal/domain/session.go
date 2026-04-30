@@ -15,31 +15,35 @@ type DateOnly struct{ time.Time }
 
 func (d *DateOnly) UnmarshalJSON(b []byte) error {
 	s := string(b)
-	// strip surrounding quotes
 	if len(s) >= 2 && s[0] == '"' {
 		s = s[1 : len(s)-1]
 	}
+	if s == "" || s == "null" {
+		d.Time = time.Time{}
+		return nil
+	}
 	t, err := time.Parse("2006-01-02", s)
 	if err != nil {
-		return fmt.Errorf("date_start: expected format YYYY-MM-DD, got %q", s)
+		return fmt.Errorf("date: expected format YYYY-MM-DD, got %q", s)
 	}
 	d.Time = t
 	return nil
 }
 
 func (d DateOnly) MarshalJSON() ([]byte, error) {
+	if d.Time.IsZero() {
+		return []byte("null"), nil
+	}
 	return []byte(`"` + d.Time.Format("2006-01-02") + `"`), nil
 }
 
-// Value implements driver.Valuer — GORM/DB menggunakan ini saat INSERT/UPDATE.
 func (d DateOnly) Value() (driver.Value, error) {
 	if d.Time.IsZero() {
 		return nil, nil
 	}
-	return d.Time, nil
+	return d.Time.Format("2006-01-02"), nil
 }
 
-// Scan implements sql.Scanner — GORM menggunakan ini saat SELECT.
 func (d *DateOnly) Scan(value interface{}) error {
 	if value == nil {
 		d.Time = time.Time{}
@@ -56,54 +60,69 @@ func (d *DateOnly) Scan(value interface{}) error {
 		}
 		d.Time = t
 		return nil
+	case []byte:
+		t, err := time.Parse("2006-01-02", string(v))
+		if err != nil {
+			return err
+		}
+		d.Time = t
+		return nil
 	}
 	return fmt.Errorf("DateOnly.Scan: cannot scan type %T", value)
 }
 
 // TimeOnly wraps time.Time and unmarshals JSON strings in "15:04" or "15:04:05" format.
+// Menggunakan year 2000 secara internal untuk menghindari bug historical timezone offset (seperti +07:07 di Jakarta tahun 0001).
 type TimeOnly struct{ time.Time }
 
 func (t *TimeOnly) UnmarshalJSON(b []byte) error {
 	s := string(b)
-	// strip surrounding quotes
 	if len(s) >= 2 && s[0] == '"' {
 		s = s[1 : len(s)-1]
 	}
+	if s == "" || s == "null" {
+		t.Time = time.Time{}
+		return nil
+	}
 	var parsed time.Time
 	var err error
+	// Gunakan UTC agar timezone-agnostic
 	parsed, err = time.Parse("15:04", s)
 	if err != nil {
 		parsed, err = time.Parse("15:04:05", s)
 	}
 	if err != nil {
-		return fmt.Errorf("time_start: expected format HH:MM or HH:MM:SS, got %q", s)
+		return fmt.Errorf("time: expected format HH:MM or HH:MM:SS, got %q", s)
 	}
-	t.Time = parsed
+	// Normalisasi ke year 2000 UTC
+	t.Time = time.Date(2000, 1, 1, parsed.Hour(), parsed.Minute(), parsed.Second(), 0, time.UTC)
 	return nil
 }
 
 func (t TimeOnly) MarshalJSON() ([]byte, error) {
+	if t.Time.IsZero() {
+		return []byte("null"), nil
+	}
 	return []byte(`"` + t.Time.Format("15:04") + `"`), nil
 }
 
-// Value implements driver.Valuer — GORM/DB menggunakan ini saat INSERT/UPDATE.
 func (t TimeOnly) Value() (driver.Value, error) {
 	if t.Time.IsZero() {
 		return nil, nil
 	}
-	return t.Time, nil
+	// Kirim sebagai string ke DB untuk menghindari konversi timezone oleh driver
+	return t.Time.Format("15:04:05"), nil
 }
 
-// Scan implements sql.Scanner — GORM menggunakan ini saat SELECT.
 func (t *TimeOnly) Scan(value interface{}) error {
 	if value == nil {
 		t.Time = time.Time{}
 		return nil
 	}
+	var hour, min, sec int
 	switch v := value.(type) {
 	case time.Time:
-		t.Time = v
-		return nil
+		hour, min, sec = v.Hour(), v.Minute(), v.Second()
 	case string:
 		parsed, err := time.Parse("15:04:05", v)
 		if err != nil {
@@ -112,10 +131,23 @@ func (t *TimeOnly) Scan(value interface{}) error {
 		if err != nil {
 			return err
 		}
-		t.Time = parsed
-		return nil
+		hour, min, sec = parsed.Hour(), parsed.Minute(), parsed.Second()
+	case []byte:
+		s := string(v)
+		parsed, err := time.Parse("15:04:05", s)
+		if err != nil {
+			parsed, err = time.Parse("15:04", s)
+		}
+		if err != nil {
+			return err
+		}
+		hour, min, sec = parsed.Hour(), parsed.Minute(), parsed.Second()
+	default:
+		return fmt.Errorf("TimeOnly.Scan: cannot scan type %T", value)
 	}
-	return fmt.Errorf("TimeOnly.Scan: cannot scan type %T", value)
+	// Selalu simpan sebagai year 2000 UTC agar konsisten
+	t.Time = time.Date(2000, 1, 1, hour, min, sec, 0, time.UTC)
+	return nil
 }
 
 type Session struct {
