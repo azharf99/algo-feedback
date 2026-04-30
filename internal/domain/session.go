@@ -41,7 +41,8 @@ func (d DateOnly) Value() (driver.Value, error) {
 	if d.Time.IsZero() {
 		return nil, nil
 	}
-	return d.Time.Format("2006-01-02"), nil
+	// Mengembalikan time.Time agar GORM/driver bisa menyesuaikan dengan tipe kolom (DATE atau TIMESTAMPTZ)
+	return d.Time, nil
 }
 
 func (d *DateOnly) Scan(value interface{}) error {
@@ -110,8 +111,8 @@ func (t TimeOnly) Value() (driver.Value, error) {
 	if t.Time.IsZero() {
 		return nil, nil
 	}
-	// Kirim sebagai string ke DB untuk menghindari konversi timezone oleh driver
-	return t.Time.Format("15:04:05"), nil
+	// Mengembalikan time.Time agar GORM/driver bisa menyesuaikan dengan tipe kolom (TIME atau TIMESTAMPTZ)
+	return t.Time, nil
 }
 
 func (t *TimeOnly) Scan(value interface{}) error {
