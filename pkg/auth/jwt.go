@@ -3,6 +3,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -10,9 +11,15 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// TODO: Nanti ambil dari .env
-var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
-var jwtRefreshSecret = []byte(os.Getenv("JWT_REFRESH_SECRET"))
+// GetJWTSecret mengambil secret key dari environment variable
+func GetJWTSecret() []byte {
+	return []byte(os.Getenv("JWT_SECRET"))
+}
+
+// GetJWTRefreshSecret mengambil refresh secret key dari environment variable
+func GetJWTRefreshSecret() []byte {
+	return []byte(os.Getenv("JWT_REFRESH_SECRET"))
+}
 
 type JwtCustomClaims struct {
 	UserID uint        `json:"user_id"`
@@ -20,29 +27,29 @@ type JwtCustomClaims struct {
 	jwt.RegisteredClaims
 }
 
-// GenerateTokens membuat Access Token (15 menit) & Refresh Token (7 hari)
+// GenerateTokens membuat Access Token (7 hari) & Refresh Token (14 hari)
 func GenerateTokens(user *domain.User) (string, string, error) {
-	// 1. Access Token
+	// 1. Access Token (Diperpanjang ke 7 hari sesuai permintaan user)
 	claims := &JwtCustomClaims{
 		UserID: user.ID,
 		Role:   user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	accessToken, err := token.SignedString(jwtSecret)
+	accessToken, err := token.SignedString(GetJWTSecret())
 	if err != nil {
 		return "", "", err
 	}
 
-	// 2. Refresh Token (Hanya menyimpan ID untuk keamanan)
+	// 2. Refresh Token (Diperpanjang ke 14 hari)
 	refreshClaims := jwt.RegisteredClaims{
-		Subject:   string(rune(user.ID)), // Menyimpan ID user
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
+		Subject:   fmt.Sprintf("%d", user.ID), // Simpan ID sebagai string
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(14 * 24 * time.Hour)),
 	}
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
-	refreshTokenStr, err := refreshToken.SignedString(jwtRefreshSecret)
+	refreshTokenStr, err := refreshToken.SignedString(GetJWTRefreshSecret())
 
 	return accessToken, refreshTokenStr, err
 }
@@ -53,6 +60,6 @@ func ValidateRefreshToken(tokenStr string) (*jwt.Token, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("metode penandatanganan tidak valid")
 		}
-		return jwtRefreshSecret, nil
+		return GetJWTRefreshSecret(), nil
 	})
 }
