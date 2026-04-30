@@ -74,7 +74,7 @@ func (h *GroupHandler) GetByID(c *gin.Context) {
 func (h *GroupHandler) Create(c *gin.Context) {
 	var payload struct {
 		domain.Group
-		StudentIDs []uint `json:"students"`
+		Students []uint `json:"students"`
 	}
 	
 	if err := c.ShouldBindJSON(&payload); err != nil {
@@ -82,7 +82,7 @@ func (h *GroupHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if err := h.usecase.Create(c.Request.Context(), &payload.Group, payload.StudentIDs); err != nil {
+	if err := h.usecase.Create(c.Request.Context(), &payload.Group, payload.Students); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan data"})
 		return
 	}
@@ -101,7 +101,7 @@ func (h *GroupHandler) Update(c *gin.Context) {
 
 	var payload struct {
 		domain.Group
-		StudentIDs []uint `json:"students"`
+		Students []uint `json:"students"`
 	}
 	
 	if err := c.ShouldBindJSON(&payload); err != nil {
@@ -109,7 +109,7 @@ func (h *GroupHandler) Update(c *gin.Context) {
 		return
 	}
 
-	if err := h.usecase.Update(c.Request.Context(), uint(id), &payload.Group, payload.StudentIDs); err != nil {
+	if err := h.usecase.Update(c.Request.Context(), uint(id), &payload.Group, payload.Students); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
