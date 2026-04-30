@@ -52,7 +52,9 @@ func (d *DateOnly) Scan(value interface{}) error {
 	}
 	switch v := value.(type) {
 	case time.Time:
-		d.Time = v
+		// Gunakan UTC() untuk menghindari pergeseran tanggal akibat timezone di level driver/database
+		vUTC := v.UTC()
+		d.Time = time.Date(vUTC.Year(), vUTC.Month(), vUTC.Day(), 0, 0, 0, 0, time.UTC)
 		return nil
 	case string:
 		t, err := time.Parse("2006-01-02", v)
@@ -123,7 +125,9 @@ func (t *TimeOnly) Scan(value interface{}) error {
 	var hour, min, sec int
 	switch v := value.(type) {
 	case time.Time:
-		hour, min, sec = v.Hour(), v.Minute(), v.Second()
+		// Gunakan UTC() untuk mengambil nilai jam asli yang disimpan tanpa pergeseran timezone lokal (Asia/Jakarta)
+		vUTC := v.UTC()
+		hour, min, sec = vUTC.Hour(), vUTC.Minute(), vUTC.Second()
 	case string:
 		parsed, err := time.Parse("15:04:05", v)
 		if err != nil {
