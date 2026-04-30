@@ -36,7 +36,7 @@ func (d DateOnly) Value() (driver.Value, error) {
 	if d.Time.IsZero() {
 		return nil, nil
 	}
-	return d.Time.Format("2006-01-02"), nil
+	return d.Time, nil
 }
 
 // Scan implements sql.Scanner — GORM menggunakan ini saat SELECT.
@@ -91,7 +91,7 @@ func (t TimeOnly) Value() (driver.Value, error) {
 	if t.Time.IsZero() {
 		return nil, nil
 	}
-	return t.Time.Format("15:04:05"), nil
+	return t.Time, nil
 }
 
 // Scan implements sql.Scanner — GORM menggunakan ini saat SELECT.
