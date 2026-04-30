@@ -70,24 +70,27 @@ func (h *GroupHandler) GetByID(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": student})
 }
 
-// Create: POST /students
+// Create: POST /groups
 func (h *GroupHandler) Create(c *gin.Context) {
-	var req domain.Group
-	// Mem-parsing body JSON ke dalam struct Student (seperti Serializer di Django)
-	if err := c.ShouldBindJSON(&req); err != nil {
+	var payload struct {
+		domain.Group
+		StudentIDs []uint `json:"students"`
+	}
+	
+	if err := c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := h.usecase.Create(c.Request.Context(), &req); err != nil {
+	if err := h.usecase.Create(c.Request.Context(), &payload.Group, payload.StudentIDs); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan data"})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Grup Siswa berhasil dibuat", "data": req})
+	c.JSON(http.StatusCreated, gin.H{"message": "Grup berhasil dibuat", "data": payload.Group})
 }
 
-// Update: PUT /students/:id
+// Update: PUT /groups/:id
 func (h *GroupHandler) Update(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.Atoi(idParam)
@@ -96,18 +99,22 @@ func (h *GroupHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var req domain.Group
-	if err := c.ShouldBindJSON(&req); err != nil {
+	var payload struct {
+		domain.Group
+		StudentIDs []uint `json:"students"`
+	}
+	
+	if err := c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := h.usecase.Update(c.Request.Context(), uint(id), &req); err != nil {
+	if err := h.usecase.Update(c.Request.Context(), uint(id), &payload.Group, payload.StudentIDs); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Data Grup siswa berhasil diperbarui"})
+	c.JSON(http.StatusOK, gin.H{"message": "Data Grup berhasil diperbarui"})
 }
 
 // Delete: DELETE /students/:id

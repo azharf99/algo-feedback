@@ -18,8 +18,19 @@ func NewGroupRepository(db *gorm.DB) domain.GroupRepository {
 	return &groupRepository{db: db}
 }
 
-func (r *groupRepository) Create(ctx context.Context, group *domain.Group) error {
-	return r.db.WithContext(ctx).Create(group).Error
+func (r *groupRepository) Create(ctx context.Context, group *domain.Group, studentIDs []uint) error {
+	err := r.db.WithContext(ctx).Omit("Students").Create(group).Error
+	if err != nil {
+		return err
+	}
+	if studentIDs != nil {
+		var students []domain.Student
+		if len(studentIDs) > 0 {
+			r.db.WithContext(ctx).Where("id IN ?", studentIDs).Find(&students)
+		}
+		return r.db.WithContext(ctx).Model(group).Association("Students").Replace(&students)
+	}
+	return nil
 }
 
 func (r *groupRepository) GetByID(ctx context.Context, id uint) (*domain.Group, error) {
@@ -67,8 +78,19 @@ func (r *groupRepository) GetPaginated(ctx context.Context, params domain.Pagina
 	return groups, totalRows, err
 }
 
-func (r *groupRepository) Update(ctx context.Context, group *domain.Group) error {
-	return r.db.WithContext(ctx).Save(group).Error
+func (r *groupRepository) Update(ctx context.Context, group *domain.Group, studentIDs []uint) error {
+	err := r.db.WithContext(ctx).Omit("Students").Save(group).Error
+	if err != nil {
+		return err
+	}
+	if studentIDs != nil {
+		var students []domain.Student
+		if len(studentIDs) > 0 {
+			r.db.WithContext(ctx).Where("id IN ?", studentIDs).Find(&students)
+		}
+		return r.db.WithContext(ctx).Model(group).Association("Students").Replace(&students)
+	}
+	return nil
 }
 
 func (r *groupRepository) Delete(ctx context.Context, id uint) error {

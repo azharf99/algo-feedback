@@ -23,8 +23,8 @@ type groupUsecase struct {
 func NewGroupUsecase(repo domain.GroupRepository) domain.GroupUsecase {
 	return &groupUsecase{repo: repo}
 }
-func (u *groupUsecase) Create(ctx context.Context, group *domain.Group) error {
-	return u.repo.Create(ctx, group)
+func (u *groupUsecase) Create(ctx context.Context, group *domain.Group, studentIDs []uint) error {
+	return u.repo.Create(ctx, group, studentIDs)
 }
 func (u *groupUsecase) GetByID(ctx context.Context, id uint) (*domain.Group, error) {
 	return u.repo.GetByID(ctx, id)
@@ -41,9 +41,9 @@ func (u *groupUsecase) GetPaginated(ctx context.Context, params domain.Paginatio
 		Data: groups, Total: total, TotalPages: totalPages, Page: params.Page, Limit: params.Limit,
 	}, nil
 }
-func (u *groupUsecase) Update(ctx context.Context, id uint, req *domain.Group) error {
+func (u *groupUsecase) Update(ctx context.Context, id uint, req *domain.Group, studentIDs []uint) error {
 	req.ID = id
-	return u.repo.Update(ctx, req)
+	return u.repo.Update(ctx, req, studentIDs)
 }
 func (u *groupUsecase) Delete(ctx context.Context, id uint) error { return u.repo.Delete(ctx, id) }
 

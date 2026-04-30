@@ -27,21 +27,21 @@ type Group struct {
 }
 
 type GroupRepository interface {
-	Create(ctx context.Context, group *Group) error
+	Create(ctx context.Context, group *Group, studentIDs []uint) error
 	GetByID(ctx context.Context, id uint) (*Group, error)
 	GetAll(ctx context.Context) ([]Group, error)
 	GetPaginated(ctx context.Context, params PaginationParams) ([]Group, int64, error)
-	Update(ctx context.Context, group *Group) error
+	Update(ctx context.Context, group *Group, studentIDs []uint) error
 	Delete(ctx context.Context, id uint) error
 	Upsert(ctx context.Context, group *Group, studentIDs []uint) (bool, error)
 }
 
 type GroupUsecase interface {
-	Create(ctx context.Context, group *Group) error
+	Create(ctx context.Context, group *Group, studentIDs []uint) error
 	GetByID(ctx context.Context, id uint) (*Group, error)
 	GetAll(ctx context.Context) ([]Group, error)
 	GetPaginated(ctx context.Context, params PaginationParams) (*PaginatedResult[Group], error)
-	Update(ctx context.Context, id uint, req *Group) error
+	Update(ctx context.Context, id uint, req *Group, studentIDs []uint) error
 	Delete(ctx context.Context, id uint) error
 	ImportCSV(ctx context.Context, fileReader io.Reader) (*ImportResult, error)
 }
