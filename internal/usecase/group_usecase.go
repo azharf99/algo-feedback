@@ -88,17 +88,17 @@ func (u *groupUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*do
 		}
 
 		// Tanggal dan Waktu First Lesson
-		var firstLessonDate *time.Time
+		var firstLessonDate *domain.DateOnly
 		if fd := record[headerMap["first_lesson_date"]]; fd != "" {
 			if parsedDate, err := time.Parse("02/01/2006", fd); err == nil {
-				firstLessonDate = &parsedDate
+				firstLessonDate = &domain.DateOnly{Time: parsedDate}
 			}
 		}
 
-		var firstLessonTime *time.Time
+		var firstLessonTime *domain.TimeOnly
 		if ft := record[headerMap["first_lesson_time"]]; ft != "" {
 			if parsedTime, err := time.Parse("15:04", ft); err == nil {
-				firstLessonTime = &parsedTime
+				firstLessonTime = &domain.TimeOnly{Time: parsedTime}
 			}
 		}
 

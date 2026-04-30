@@ -18,8 +18,8 @@ type Group struct {
 	GroupPhone      *string    `json:"group_phone" gorm:"type:varchar(50)"`
 	MeetingLink     *string    `json:"meeting_link" gorm:"type:text"`
 	RecordingsLink  *string    `json:"recordings_link" gorm:"type:text"`
-	FirstLessonDate *time.Time `json:"first_lesson_date" gorm:"type:date"`
-	FirstLessonTime *time.Time `json:"first_lesson_time" gorm:"type:time"`
+	FirstLessonDate *DateOnly `json:"first_lesson_date" gorm:"type:date"`
+	FirstLessonTime *TimeOnly `json:"first_lesson_time" gorm:"type:time"`
 	IsActive        bool       `json:"is_active" gorm:"default:true"`
 	CreatedAt       time.Time  `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt       time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
