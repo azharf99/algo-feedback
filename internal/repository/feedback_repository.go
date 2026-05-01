@@ -3,7 +3,6 @@ package repository
 
 import (
 	"context"
-	"errors"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
@@ -77,20 +76,22 @@ func (r *feedbackRepository) Delete(ctx context.Context, id uint) error {
 func (r *feedbackRepository) UpsertSeeder(ctx context.Context, f *domain.Feedback) (bool, error) {
 	var existing domain.Feedback
 
-	// Mencari berdasarkan relasi StudentID, Number, dan Course (Kunci unik di seeder Python-mu)
+	// Menggunakan Find().Limit(1) alih-alih First() untuk menghindari log "record not found" yang berisik
 	err := r.db.WithContext(ctx).
 		Where("student_id = ? AND number = ? AND course = ?", f.StudentID, f.Number, f.Course).
-		First(&existing).Error
+		Limit(1).
+		Find(&existing).Error
 
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// Buat Baru
-			if errCreate := r.db.WithContext(ctx).Create(f).Error; errCreate != nil {
-				return false, errCreate
-			}
-			return true, nil // True = Created
-		}
 		return false, err
+	}
+
+	// Jika ID masih 0, berarti data tidak ditemukan -> Buat Baru
+	if existing.ID == 0 {
+		if errCreate := r.db.WithContext(ctx).Create(f).Error; errCreate != nil {
+			return false, errCreate
+		}
+		return true, nil // True = Created
 	}
 
 	// Jika ada, Update data yang lama dengan data baru
