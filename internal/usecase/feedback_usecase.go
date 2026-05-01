@@ -6,7 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"math/rand"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
@@ -16,6 +17,14 @@ import (
 	"github.com/azharf99/algo-feedback/pkg/taskqueue"
 	"github.com/azharf99/algo-feedback/pkg/whatsapp"
 )
+
+// Helper function untuk dereference string pointer dengan fallback
+func strVal(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
 
 type feedbackUsecase struct {
 	feedRepo    domain.FeedbackRepository
@@ -179,14 +188,6 @@ func (u *feedbackUsecase) GeneratePDFAsync(ctx context.Context, studentID *uint,
 			continue
 		}
 
-		// Helper function untuk dereference string pointer dengan fallback
-		strVal := func(s *string) string {
-			if s == nil {
-				return ""
-			}
-			return *s
-		}
-
 		// Menggunakan GetFeedback dari curriculum untuk merangkai paragraf
 		teacherFeedback := curriculum.GetFeedback(
 			f.Student.Fullname,
@@ -263,14 +264,6 @@ func (u *feedbackUsecase) SendFeedbackPDF(ctx context.Context, feedbackID *uint)
 			continue
 		}
 
-		// Helper function untuk dereference string pointer dengan fallback
-		strVal := func(s *string) string {
-			if s == nil {
-				return ""
-			}
-			return *s
-		}
-
 		fileName := fmt.Sprintf("Rapor %s Bulan ke-%d.pdf", f.Student.Fullname, f.Number)
 		groupName := strVal(f.GroupName)
 		if groupName == "" {
@@ -278,49 +271,42 @@ func (u *feedbackUsecase) SendFeedbackPDF(ctx context.Context, feedbackID *uint)
 		}
 		filePath := fmt.Sprintf("mediafiles/%s/%s", groupName, fileName)
 
-		// Upload Document ke Wablas
-		uploadRes, err := u.waService.UploadDocument(groupName, f.Student.Fullname, strVal(f.Course), f.Number, filePath)
-		if err != nil || uploadRes == nil {
+		// Persiapkan data kirim
+		to := strVal(f.Student.ParentContact)
+		if to == "" {
+			// Fallback jika tidak ada nomor HP
+			continue
+		}
+		// Pastikan format nomor WhatsApp (misal tambahkan @s.whatsapp.net jika belum ada)
+		if !strings.Contains(to, "@") {
+			to = to + "@s.whatsapp.net"
+		}
+
+		caption := fmt.Sprintf("Halo Ayah/Bunda %s, berikut adalah laporan perkembangan belajar %s untuk %s bulan ke-%d.", f.Student.Fullname, f.Student.Fullname, strVal(f.Course), f.Number)
+
+		// Tentukan waktu kirim (misal 5 menit dari sekarang)
+		send_datetime := time.Date(f.LessonDate.Year(), f.LessonDate.Month(), f.LessonDate.Day(), f.LessonTime.Hour(), f.LessonTime.Minute(), f.LessonTime.Second(), 0, time.Local)
+		runAt := send_datetime.Add(5 * time.Minute).Format("2006-01-02 15:04:05")
+
+		// Panggil Gateway baru: ScheduleMedia
+		scheduleID, err := u.waService.ScheduleMedia(to, caption, filePath, runAt)
+		if err != nil {
 			continue
 		}
 
-		dataMap := uploadRes["data"].(map[string]interface{})
-		msgMap := dataMap["messages"].(map[string]interface{})
-		pdfURL := msgMap["url"].(string)
+		// Update schedule_id di Database
+		scheduleIDStr := fmt.Sprintf("%d", scheduleID)
+		f.ScheduleID = &scheduleIDStr
+		_ = u.feedRepo.Update(ctx, &f)
 
-		randSeconds := time.Duration(randomInt(1, 59)) * time.Second
-		scheduledTime := f.LessonDate.Add(2 * time.Hour).Add(randSeconds)
-		scheduleStr := scheduledTime.Format("2006-01-02 15:04:05")
-
-		scheduleData := []map[string]interface{}{
-			{
-				"category":     "document",
-				"phone":        *f.Student.ParentContact,
-				"scheduled_at": scheduleStr,
-				"url":          pdfURL,
-				"text":         *f.TutorFeedback,
-			},
-		}
-
-		u.waService.CreateSchedule(scheduleData)
-		// scheduleRes, _ := u.waService.CreateSchedule(scheduleData)
-
-		f.IsSent = true
-		f.URLPDF = &pdfURL
-		// Simulasi ID Jadwal (Di production ambil dari scheduleRes)
-		scheduleID := "SCH-WABLAS-123"
-		f.ScheduleID = &scheduleID
-
-		u.feedRepo.Update(ctx, &f)
-
-		responseList = append(responseList, scheduleData[0])
+		responseList = append(responseList, map[string]interface{}{
+			"student":     f.Student.Fullname,
+			"schedule_id": scheduleID,
+			"status":      "scheduled",
+		})
 	}
 
 	return responseList, nil
-}
-
-func randomInt(min, max int) int {
-	return min + rand.Intn(max-min)
 }
 
 // -------------------------------------------------------------------------
@@ -371,6 +357,32 @@ func (u *feedbackUsecase) Update(ctx context.Context, id uint, req *domain.Feedb
 	}
 	if req.ProjectLink != nil {
 		existing.ProjectLink = req.ProjectLink
+	}
+
+	// 3. Sinkronisasi dengan WhatsApp Gateway jika ada schedule_id
+	if existing.ScheduleID != nil && *existing.ScheduleID != "" {
+		scheduleIDInt, _ := strconv.Atoi(*existing.ScheduleID)
+		if scheduleIDInt > 0 && existing.Student != nil {
+			to := strVal(existing.Student.ParentContact)
+			if to != "" {
+				if !strings.Contains(to, "@") {
+					to = to + "@s.whatsapp.net"
+				}
+
+				// Format waktu baru (LessonDate + LessonTime)
+				// Kita ambil jam dari LessonTime dan tanggal dari LessonDate
+				newRunAt := time.Date(
+					existing.LessonDate.Year(), existing.LessonDate.Month(), existing.LessonDate.Day(),
+					existing.LessonTime.Hour(), existing.LessonTime.Minute(), existing.LessonTime.Second(),
+					0, time.Local,
+				).Format("2006-01-02 15:04:05")
+
+				caption := fmt.Sprintf("Halo %s, berikut adalah laporan perkembangan belajar Anda untuk %s bulan ke-%d.",
+					existing.Student.Fullname, strVal(existing.Course), existing.Number)
+
+				_ = u.waService.UpdateSchedule(scheduleIDInt, to, caption, newRunAt)
+			}
+		}
 	}
 
 	return u.feedRepo.Update(ctx, existing)

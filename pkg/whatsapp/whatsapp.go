@@ -20,9 +20,8 @@ type WhatsappConfig struct {
 
 // WhatsappService mendefinisikan kontrak fungsi WhatsApp
 type WhatsappService interface {
-	CreateSchedule(dataList []map[string]interface{}) (map[string]interface{}, error)
-	UpdateSchedule(dataList []map[string]interface{}, scheduleID string) (map[string]interface{}, error)
-	UploadDocument(groupName, studentName, courseName string, feedbackNumber uint, filePath string) (map[string]interface{}, error)
+	ScheduleMedia(to, caption, filePath, runAt string) (int, error)
+	UpdateSchedule(id int, to, message, runAt string) error
 }
 
 type whatsappService struct {
@@ -40,96 +39,103 @@ func NewWhatsappService(cfg WhatsappConfig) WhatsappService {
 
 // fungsi bantuan untuk menyematkan header otorisasi
 func (w *whatsappService) setAuthHeader(req *http.Request) {
-	req.Header.Set("Authorization", w.config.ApiKey) // Wablas modern biasanya pakai Authorization: API_KEY atau X-API-Key
-	// Jika user bilang X-API-Key secara spesifik:
 	req.Header.Set("X-API-Key", w.config.ApiKey)
 }
 
-func (w *whatsappService) CreateSchedule(dataList []map[string]interface{}) (map[string]interface{}, error) {
-	if len(dataList) == 0 {
-		return nil, nil
-	}
-
-	url := fmt.Sprintf("%s/api/v2/schedule", w.config.BaseURL)
-	jsonData, _ := json.Marshal(dataList)
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return nil, err
-	}
-
-	w.setAuthHeader(req)
-	req.Header.Set("Content-Type", "application/json")
-
-	return w.executeRequest(req)
-}
-
-func (w *whatsappService) UpdateSchedule(dataList []map[string]interface{}, scheduleID string) (map[string]interface{}, error) {
-	if len(dataList) == 0 {
-		return nil, nil
-	}
-
-	url := fmt.Sprintf("%s/api/v2/schedule/%s", w.config.BaseURL, scheduleID)
-	jsonData, _ := json.Marshal(dataList)
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return nil, err
-	}
-
-	w.setAuthHeader(req)
-	req.Header.Set("Content-Type", "application/json")
-
-	return w.executeRequest(req)
-}
-
-// UploadDocument menggantikan fungsi upload_files_to_whatsapp di Python
-func (w *whatsappService) UploadDocument(groupName, studentName, courseName string, feedbackNumber uint, filePath string) (map[string]interface{}, error) {
-	// Buka file lokal
+// ScheduleMedia: POST /api/schedule/media
+func (w *whatsappService) ScheduleMedia(to, caption, filePath, runAt string) (int, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("gagal membuka file lokal: %w", err)
+		return 0, fmt.Errorf("gagal membuka file: %w", err)
 	}
 	defer file.Close()
 
-	// Siapkan form-data (multipart)
 	payload := &bytes.Buffer{}
 	writer := multipart.NewWriter(payload)
+
+	// Fields sesuai spesifikasi gateway baru
+	_ = writer.WriteField("device_id", "3")
+	_ = writer.WriteField("to", to)
+	_ = writer.WriteField("is_group", "false")
+	_ = writer.WriteField("caption", caption)
+	_ = writer.WriteField("media_type", "document")
+	_ = writer.WriteField("run_at", runAt)
+
 	part, err := writer.CreateFormFile("file", filepath.Base(filePath))
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	_, err = io.Copy(part, file)
-	if err != nil {
-		return nil, err
-	}
+	_, _ = io.Copy(part, file)
 	writer.Close()
 
-	// URL sesuai legacy Python: /api/upload/document
-	url := fmt.Sprintf("%s/api/upload/document", w.config.BaseURL)
+	url := fmt.Sprintf("%s/api/schedule/media", w.config.BaseURL)
 	req, err := http.NewRequest("POST", url, payload)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	w.setAuthHeader(req)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
-	return w.executeRequest(req)
-}
-
-// executeRequest menjalankan HTTP request dan mem-parsing JSON response
-func (w *whatsappService) executeRequest(req *http.Request) (map[string]interface{}, error) {
 	resp, err := w.client.Do(req)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	defer resp.Body.Close()
 
-	var result map[string]interface{}
+	var result struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+		Data    int    `json:"data"`
+	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, err
+		return 0, err
 	}
 
-	return result, nil
+	if result.Status != "success" {
+		return 0, fmt.Errorf("gateway error: %s", result.Message)
+	}
+
+	return result.Data, nil
+}
+
+// UpdateSchedule: PUT /api/schedule/update
+func (w *whatsappService) UpdateSchedule(id int, to, message, runAt string) error {
+	payloadData := map[string]interface{}{
+		"id":        id,
+		"device_id": 3,
+		"to":        to,
+		"message":   message,
+		"run_at":    runAt,
+	}
+	jsonData, _ := json.Marshal(payloadData)
+
+	url := fmt.Sprintf("%s/api/schedule/update", w.config.BaseURL)
+	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+
+	w.setAuthHeader(req)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := w.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return err
+	}
+
+	if result.Status != "success" {
+		return fmt.Errorf("gateway error: %s", result.Message)
+	}
+
+	return nil
 }
