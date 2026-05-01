@@ -77,6 +77,10 @@ func (h *CourseHandler) Create(c *gin.Context) {
 func (h *CourseHandler) Update(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var course domain.Course
+	if err := c.ShouldBindJSON(&course); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format data tidak valid"})
+		return
+	}
 	if err := h.usecase.Update(c.Request.Context(), uint(id), &course); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

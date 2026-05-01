@@ -78,6 +78,10 @@ func (h *SessionHandler) Create(c *gin.Context) {
 func (h *SessionHandler) Update(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var session domain.Session
+	if err := c.ShouldBindJSON(&session); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format data tidak valid"})
+		return
+	}
 	if err := h.usecase.Update(c.Request.Context(), uint(id), &session); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
