@@ -140,6 +140,9 @@ func main() {
 	)
 
 	// 6. Routing API
+	// Serve Static Files (Agar PDF bisa diakses via Browser)
+	r.Static("/mediafiles", "./mediafiles")
+
 	api := r.Group("/api")
 	{
 		// Endpoint Publik (Tanpa Login)
