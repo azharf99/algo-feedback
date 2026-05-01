@@ -4,6 +4,7 @@ package usecase
 import (
 	"context"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -53,8 +54,22 @@ func (u *lessonUsecase) GetPaginated(ctx context.Context, params domain.Paginati
 	}, nil
 }
 func (u *lessonUsecase) Update(ctx context.Context, id uint, req *domain.Lesson) error {
-	req.ID = id
-	return u.repo.Update(ctx, req)
+	existing, err := u.repo.GetByID(ctx, id)
+	if err != nil {
+		return errors.New("pelajaran tidak ditemukan")
+	}
+
+	if req.Title != "" {
+		existing.Title = req.Title
+	}
+	if req.Level != "" {
+		existing.Level = req.Level
+	}
+	if req.CourseID != 0 {
+		existing.CourseID = req.CourseID
+	}
+
+	return u.repo.Update(ctx, existing)
 }
 func (u *lessonUsecase) Delete(ctx context.Context, id uint) error { return u.repo.Delete(ctx, id) }
 

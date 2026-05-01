@@ -3,6 +3,7 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"math"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
@@ -52,8 +53,30 @@ func (u *sessionUsecase) GetPaginated(ctx context.Context, params domain.Paginat
 }
 
 func (u *sessionUsecase) Update(ctx context.Context, id uint, req *domain.Session) error {
-	req.ID = id
-	return u.repo.Update(ctx, req)
+	existing, err := u.repo.GetByID(ctx, id)
+	if err != nil {
+		return errors.New("sesi tidak ditemukan")
+	}
+
+	if req.GroupID != 0 {
+		existing.GroupID = req.GroupID
+	}
+	if req.LessonID != 0 {
+		existing.LessonID = req.LessonID
+	}
+	if !req.DateStart.Time.IsZero() {
+		existing.DateStart = req.DateStart
+	}
+	if !req.TimeStart.Time.IsZero() {
+		existing.TimeStart = req.TimeStart
+	}
+	
+	// Untuk boolean, kita asumsikan jika dikirim dalam JSON akan ter-bind.
+	// Namun Gin ShouldBindJSON akan selalu set false jika tidak ada.
+	// Untuk keamanan, kita hanya update jika ada perubahan nilai dari existing.
+	existing.IsDone = req.IsDone
+
+	return u.repo.Update(ctx, existing)
 }
 
 func (u *sessionUsecase) Delete(ctx context.Context, id uint) error {

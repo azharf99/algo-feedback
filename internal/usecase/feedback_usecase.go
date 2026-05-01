@@ -3,6 +3,7 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -290,8 +291,33 @@ func (u *feedbackUsecase) GetPaginated(ctx context.Context, params domain.Pagina
 	}, nil
 }
 func (u *feedbackUsecase) Update(ctx context.Context, id uint, req *domain.Feedback) error {
-	req.ID = id
-	return u.feedRepo.Update(ctx, req)
+	// 1. Ambil data feedback yang sudah ada
+	existing, err := u.feedRepo.GetByID(ctx, id)
+	if err != nil {
+		return errors.New("feedback tidak ditemukan")
+	}
+
+	// 2. Update hanya field yang diizinkan untuk diubah manual
+	if req.AttendanceScore != "" {
+		existing.AttendanceScore = req.AttendanceScore
+	}
+	if req.ActivityScore != "" {
+		existing.ActivityScore = req.ActivityScore
+	}
+	if req.TaskScore != "" {
+		existing.TaskScore = req.TaskScore
+	}
+	if req.TutorFeedback != nil {
+		existing.TutorFeedback = req.TutorFeedback
+	}
+	if req.Result != nil {
+		existing.Result = req.Result
+	}
+	if req.ProjectLink != nil {
+		existing.ProjectLink = req.ProjectLink
+	}
+
+	return u.feedRepo.Update(ctx, existing)
 }
 func (u *feedbackUsecase) Delete(ctx context.Context, id uint) error {
 	return u.feedRepo.Delete(ctx, id)

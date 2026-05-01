@@ -64,7 +64,9 @@ func (r *feedbackRepository) GetPaginated(ctx context.Context, params domain.Pag
 }
 
 func (r *feedbackRepository) Update(ctx context.Context, feedback *domain.Feedback) error {
-	return r.db.WithContext(ctx).Save(feedback).Error
+	// Gunakan Updates(struct) agar GORM hanya memperbarui field yang tidak kosong (non-zero).
+	// Ini mencegah field lain seperti student_id tertimpa menjadi null jika tidak dikirim.
+	return r.db.WithContext(ctx).Model(feedback).Updates(feedback).Error
 }
 
 func (r *feedbackRepository) Delete(ctx context.Context, id uint) error {
