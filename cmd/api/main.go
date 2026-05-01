@@ -136,6 +136,7 @@ func main() {
 		sessionRepo, // <-- Masukkan Session Repo
 		pdfService,
 		waService,
+		pool, // <-- Masukkan Worker Pool
 	)
 
 	// 6. Routing API

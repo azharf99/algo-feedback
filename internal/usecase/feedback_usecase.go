@@ -13,6 +13,7 @@ import (
 	"github.com/azharf99/algo-feedback/pkg/curriculum"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 	"github.com/azharf99/algo-feedback/pkg/pdfgen"
+	"github.com/azharf99/algo-feedback/pkg/taskqueue"
 	"github.com/azharf99/algo-feedback/pkg/whatsapp"
 )
 
@@ -22,6 +23,7 @@ type feedbackUsecase struct {
 	sessionRepo domain.SessionRepository // Baru: Menggantikan LessonRepo
 	pdfGen      pdfgen.PDFGenerator
 	waService   whatsapp.WhatsappService
+	taskPool    taskqueue.WorkerPool // Tambahkan worker pool
 }
 
 func NewFeedbackUsecase(
@@ -30,6 +32,7 @@ func NewFeedbackUsecase(
 	sr domain.SessionRepository,
 	pdf pdfgen.PDFGenerator,
 	wa whatsapp.WhatsappService,
+	pool taskqueue.WorkerPool, // Tambahkan parameter pool
 ) domain.FeedbackUsecase {
 	return &feedbackUsecase{
 		feedRepo:    fr,
@@ -37,6 +40,7 @@ func NewFeedbackUsecase(
 		sessionRepo: sr,
 		pdfGen:      pdf,
 		waService:   wa,
+		taskPool:    pool,
 	}
 }
 
@@ -212,8 +216,26 @@ func (u *feedbackUsecase) GeneratePDFAsync(ctx context.Context, studentID *uint,
 		}
 		outputPath := fmt.Sprintf("mediafiles/%s/%s", groupName, fileName)
 
-		// ⚡ GOROUTINE ACTION ⚡
-		u.pdfGen.Generate(ctx, pdfData, outputPath)
+		// ⚡ GOROUTINE ACTION (Background Task) ⚡
+		// Kita kirim ke Worker Pool agar tidak blocking request HTTP
+		fID := f.ID // Capture ID untuk closure
+		u.taskPool.Submit(taskqueue.TaskFunc(func(taskCtx context.Context) error {
+			// 1. Generate PDF
+			err := u.pdfGen.Generate(taskCtx, pdfData, outputPath)
+			if err != nil {
+				return fmt.Errorf("gagal generate PDF untuk student %s: %w", pdfData.StudentName, err)
+			}
+
+			// 2. Update URL PDF di Database
+			// Kita ambil data terbaru dulu agar tidak menimpa data lain (pattern Fetch-then-Update)
+			existing, err := u.feedRepo.GetByID(taskCtx, fID)
+			if err != nil {
+				return err
+			}
+
+			existing.URLPDF = &outputPath
+			return u.feedRepo.Update(taskCtx, existing)
+		}))
 
 		response = append(response, map[string]interface{}{
 			"student": f.Student.Fullname,
