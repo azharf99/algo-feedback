@@ -170,6 +170,19 @@ func (u *feedbackUsecase) GeneratePDFAsync(ctx context.Context, studentID *uint,
 	var response []map[string]interface{}
 
 	for _, f := range feedbacks {
+		// Safety check: Skip jika data student tidak ada (akibat data korup atau null)
+		if f.Student == nil {
+			continue
+		}
+
+		// Helper function untuk dereference string pointer dengan fallback
+		strVal := func(s *string) string {
+			if s == nil {
+				return ""
+			}
+			return *s
+		}
+
 		// Menggunakan GetFeedback dari curriculum untuk merangkai paragraf
 		teacherFeedback := curriculum.GetFeedback(
 			f.Student.Fullname,
@@ -181,19 +194,23 @@ func (u *feedbackUsecase) GeneratePDFAsync(ctx context.Context, studentID *uint,
 		pdfData := pdfgen.PDFData{
 			StudentName:         f.Student.Fullname,
 			StudentMonthCourse:  f.Number,
-			StudentClass:        *f.Course,
-			StudentLevel:        *f.Level,
-			StudentProjectLink:  *f.ProjectLink,
+			StudentClass:        strVal(f.Course),
+			StudentLevel:        strVal(f.Level),
+			StudentProjectLink:  strVal(f.ProjectLink),
 			StudentReferralLink: "https://algonova.id/invite?utm_source=refferal&utm_medium=employee&utm_campaign=social_network&utm_content=hidin466",
 			StudentModuleLink:   "https://drive.google.com/drive/u/0/folders/1lErW_RKjHOkAgqCr9yymELg3yUZzvBEb",
-			ModuleTopic:         *f.Topic,
-			ModuleResult:        *f.Result,
-			SkillResult:         *f.Competency,
+			ModuleTopic:         strVal(f.Topic),
+			ModuleResult:        strVal(f.Result),
+			SkillResult:         strVal(f.Competency),
 			TeacherFeedback:     teacherFeedback,
 		}
 
 		fileName := fmt.Sprintf("Rapor %s Bulan ke-%d.pdf", f.Student.Fullname, f.Number)
-		outputPath := fmt.Sprintf("mediafiles/%s/%s", *f.GroupName, fileName)
+		groupName := strVal(f.GroupName)
+		if groupName == "" {
+			groupName = "UnknownGroup"
+		}
+		outputPath := fmt.Sprintf("mediafiles/%s/%s", groupName, fileName)
 
 		// ⚡ GOROUTINE ACTION ⚡
 		u.pdfGen.Generate(ctx, pdfData, outputPath)
@@ -219,11 +236,28 @@ func (u *feedbackUsecase) SendFeedbackPDF(ctx context.Context, feedbackID *uint)
 	var responseList []map[string]interface{}
 
 	for _, f := range feedbacks {
+		// Safety check: Skip jika data student tidak ada
+		if f.Student == nil {
+			continue
+		}
+
+		// Helper function untuk dereference string pointer dengan fallback
+		strVal := func(s *string) string {
+			if s == nil {
+				return ""
+			}
+			return *s
+		}
+
 		fileName := fmt.Sprintf("Rapor %s Bulan ke-%d.pdf", f.Student.Fullname, f.Number)
-		filePath := fmt.Sprintf("mediafiles/%s/%s", *f.GroupName, fileName)
+		groupName := strVal(f.GroupName)
+		if groupName == "" {
+			groupName = "UnknownGroup"
+		}
+		filePath := fmt.Sprintf("mediafiles/%s/%s", groupName, fileName)
 
 		// Upload Document ke Wablas
-		uploadRes, err := u.waService.UploadDocument(*f.GroupName, f.Student.Fullname, *f.Course, f.Number, filePath)
+		uploadRes, err := u.waService.UploadDocument(groupName, f.Student.Fullname, strVal(f.Course), f.Number, filePath)
 		if err != nil || uploadRes == nil {
 			continue
 		}
