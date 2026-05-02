@@ -48,16 +48,16 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 	cfg := config.NewBuilder().
 		WithPageNumber().
 		WithTopMargin(0).
-		WithLeftMargin(0).
-		WithRightMargin(0).
+		WithLeftMargin(10). // Margin kiri/kanan sedikit agar tidak terlalu mepet layar
+		WithRightMargin(10).
 		WithBottomMargin(10).
 		Build()
 
 	m := maroto.New(cfg)
 
-	// 1. HEADER (Full Width Banner)
+	// 1. BANNER (Full 12)
 	m.AddRows(
-		row.New(60).Add(
+		row.New(50).Add(
 			col.New(12).Add(
 				image.NewFromFile(filepath.Join(g.assetDir, "header.png"), props.Rect{
 					Center:  true,
@@ -67,101 +67,117 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 		),
 	)
 
-	// Margin Wrapper untuk konten utama
-	// Karena maroto v2 menggunakan model komponen, kita bisa menambahkan padding di baris
-	
-	// 2. JUDUL RAPOR
-	m.AddRows(
-		row.New(20).Add(
-			col.New(12).Add(
-				text.New("LAPORAN PERKEMBANGAN BELAJAR", props.Text{
-					Top:   5,
-					Size:  16,
-					Style: fontstyle.Bold,
-					Align: align.Center,
-					Color: &props.Color{Red: 20, Green: 20, Blue: 80},
-				}),
-				text.New(fmt.Sprintf("Siswa: %s | Level: %s", data.StudentName, data.StudentLevel), props.Text{
-					Top:   12,
-					Size:  10,
-					Align: align.Center,
-					Style: fontstyle.Italic,
-				}),
-			),
-		),
-	)
+	// Spacer (Beri jarak antar baris)
+	m.AddRow(10)
 
-	// 3. INFORMASI UTAMA (Topik & Hasil)
-	m.AddRows(
-		row.New(10).Add(col.New(12)), // Spacer
-		row.New(70).Add(
-			// Kolom Kiri: Kurikulum
-			col.New(7).Add(
-				text.New("📚 TOPIK PEMBELAJARAN", props.Text{Style: fontstyle.Bold, Size: 11, Color: &props.Color{Red: 200, Green: 0, Blue: 0}}),
-				text.New(data.ModuleTopic, props.Text{Top: 6, Size: 10, Left: 2}),
-
-				text.New("✅ HASIL PEMBELAJARAN", props.Text{Top: 20, Style: fontstyle.Bold, Size: 11, Color: &props.Color{Red: 0, Green: 120, Blue: 0}}),
-				text.New(data.ModuleResult, props.Text{Top: 26, Size: 10, Left: 2}),
-				
-				text.New("🛠️ KEAHLIAN YANG DIKUASAI", props.Text{Top: 40, Style: fontstyle.Bold, Size: 11, Color: &props.Color{Red: 0, Green: 0, Blue: 200}}),
-				text.New(data.SkillResult, props.Text{Top: 46, Size: 10, Left: 2}),
-			),
-			// Kolom Kanan: Visual Path
-			col.New(5).Add(
-				text.New("🛤️ JALUR PENDIDIKAN", props.Text{Style: fontstyle.Bold, Size: 10, Align: align.Center}),
-				image.NewFromFile(filepath.Join(g.assetDir, "path.png"), props.Rect{
-					Top:     5,
-					Center:  true,
-					Percent: 90,
-				}),
-				text.New("Lihat Modul Lengkap di Sini:", props.Text{Top: 55, Size: 8, Align: align.Center}),
-				text.New(data.StudentModuleLink, props.Text{Top: 60, Size: 7, Align: align.Center, Style: fontstyle.Italic, Color: &props.Color{Red: 0, Green: 0, Blue: 255}}),
-			),
-		),
-	)
-
-	// 4. TUTOR FEEDBACK (Area Luas)
-	m.AddRows(
-		row.New(10).Add(col.New(12)), // Spacer
-		row.New(80).Add(
-			col.New(12).Add(
-				text.New("💬 CATATAN TUTOR (FEEDBACK)", props.Text{Style: fontstyle.Bold, Size: 11}),
-				text.New(data.TeacherFeedback, props.Text{
-					Top:  6,
-					Size: 10,
-					Align: align.Justify,
-				}),
-			),
-		),
-	)
-
-	// 5. FOOTER / LINKS
+	// 2. INFORMASI SISWA & SKOR TOTAL [6 | 6]
 	m.AddRows(
 		row.New(30).Add(
+			// Kiri: Informasi Siswa
 			col.New(6).Add(
-				text.New("🔗 Link Project Siswa:", props.Text{Style: fontstyle.Bold, Size: 9}),
-				text.New(data.StudentProjectLink, props.Text{Top: 5, Size: 8, Color: &props.Color{Blue: 255}}),
+				text.New("INFORMASI SISWA", props.Text{Style: fontstyle.Bold, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}), // Warna #3F1F75
+				text.New(fmt.Sprintf("Nama Siswa: %s", data.StudentName), props.Text{Top: 6, Size: 10}),
+				text.New(fmt.Sprintf("Kursus: %s", data.StudentClass), props.Text{Top: 12, Size: 10}),
+				text.New(fmt.Sprintf("Lama Pelatihan: Bulan ke-%d", data.StudentMonthCourse), props.Text{Top: 18, Size: 10}),
 			),
+			// Kanan: Skor Total
 			col.New(6).Add(
-				text.New("🎁 Program Referral:", props.Text{Style: fontstyle.Bold, Size: 9, Align: align.Right}),
-				text.New("Dapatkan diskon dengan mengajak teman!", props.Text{Top: 5, Size: 8, Align: align.Right}),
-				text.New(data.StudentReferralLink, props.Text{Top: 10, Size: 7, Align: align.Right, Color: &props.Color{Blue: 255}}),
+				text.New("SKOR TOTAL", props.Text{Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				text.New(data.StudentLevel, props.Text{Top: 8, Size: 16, Align: align.Center, Style: fontstyle.Bold}),
+				text.New("⭐⭐⭐⭐⭐", props.Text{Top: 16, Size: 14, Align: align.Center}),
 			),
 		),
 	)
 
-	// Generate PDF ke Memory
+	m.AddRow(5) // Spacer
+
+	// 3. PROYEK SISWA & FREE LESSON [6 | 6]
+	m.AddRows(
+		row.New(25).Add(
+			// Kiri: Proyek Hasil
+			col.New(6).Add(
+				text.New("🎓 Proyek hasil Student", props.Text{Style: fontstyle.Bold, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				text.New("Proyek akhir diakses melalui link dibawah ini:", props.Text{Top: 6, Size: 9}),
+				text.New("👉 "+data.StudentProjectLink, props.Text{Top: 12, Size: 8, Style: fontstyle.Italic, Color: &props.Color{Red: 91, Green: 136, Blue: 239}}),
+			),
+			// Kanan: Free Lesson
+			col.New(6).Add(
+				text.New("💻 Free Lesson", props.Text{Style: fontstyle.Bold, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				text.New("🎁 Mau dapatkan free lesson?", props.Text{Top: 6, Size: 9}),
+				text.New("👉 Bagikan link ini: "+data.StudentReferralLink, props.Text{Top: 12, Size: 8, Style: fontstyle.Italic, Color: &props.Color{Red: 91, Green: 136, Blue: 239}}),
+			),
+		),
+	)
+
+	m.AddRow(5) // Spacer
+
+	// 4. TENTANG MODUL & KEAHLIAN [6 | 6]
+	m.AddRows(
+		row.New(40).Add(
+			// Kiri: Tentang Modul
+			col.New(6).Add(
+				text.New("📚 Tentang Modul Ini", props.Text{Style: fontstyle.Bold, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				text.New("Topik Modul: "+data.ModuleTopic, props.Text{Top: 6, Size: 9}),
+				text.New("Hasil: "+data.ModuleResult, props.Text{Top: 12, Size: 9}),
+				text.New(fmt.Sprintf("Menyelesaikan bulan ke-%d di level %s/9", data.StudentMonthCourse, data.StudentLevel), props.Text{Top: 20, Size: 8, Style: fontstyle.Italic}),
+			),
+			// Kanan: Keahlian
+			col.New(6).Add(
+				text.New("💻 Keahlian yang Didapatkan", props.Text{Style: fontstyle.Bold, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				text.New(data.SkillResult, props.Text{Top: 6, Size: 9}),
+			),
+		),
+	)
+
+	m.AddRow(5) // Spacer
+
+	// 5. JALUR PENDIDIKAN & TUTOR FEEDBACK [6 | 6]
+	m.AddRows(
+		row.New(80).Add(
+			// Kiri: Jalur Pendidikan (Image Path)
+			col.New(6).Add(
+				text.New("Jalur Pendidikan", props.Text{Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				image.NewFromFile(filepath.Join(g.assetDir, "path.png"), props.Rect{
+					Top:     6,
+					Center:  true,
+					Percent: 80,
+				}),
+				text.New("Lihat Modul Lengkap:", props.Text{Top: 60, Size: 9, Align: align.Center}),
+				text.New(data.StudentModuleLink, props.Text{Top: 65, Size: 7, Align: align.Center, Color: &props.Color{Red: 91, Green: 136, Blue: 239}}),
+			),
+			// Kanan: Tutor's Feedback
+			col.New(6).Add(
+				text.New("📝 Tutor's Feedback", props.Text{Style: fontstyle.Bold, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				text.New(data.TeacherFeedback, props.Text{Top: 6, Size: 9, Align: align.Justify}),
+			),
+		),
+	)
+
+	m.AddRow(10) // Spacer sebelum footer
+
+	// 6. FOOTER (Full 12)
+	m.AddRows(
+		row.New(10).Add(
+			col.New(12).Add(
+				text.New("Laporan dibuat oleh: Azhar Faturohman Ahidin", props.Text{
+					Size:  9,
+					Style: fontstyle.Italic,
+					Align: align.Left,
+				}),
+			),
+		),
+	)
+
+	// ... (Sisa kode simpan dokumen sama seperti sebelumnya) ...
 	doc, err := m.Generate()
 	if err != nil {
 		return err
 	}
 
-	// Pastikan folder tersedia
 	err = os.MkdirAll(filepath.Dir(outputPath), os.ModePerm)
 	if err != nil {
 		return err
 	}
 
-	// Simpan ke File
 	return doc.Save(outputPath)
 }
