@@ -146,7 +146,7 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 				text.New("Tentang Modul Ini", props.Text{Top: 2, Left: 2, Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
 				text.New("Topik Modul: "+data.ModuleTopic, props.Text{Top: 10, Left: 4, Right: 4, Bottom: 4, Style: fontstyle.Bold, Size: 9}),
 				text.New("Hasil: "+data.ModuleResult, props.Text{Top: 20, Left: 4, Right: 4, Bottom: 4, Size: 9}),
-				text.New(fmt.Sprintf("Menyelesaikan bulan ke-%d di level %s/9", data.StudentMonthCourse, data.StudentLevel), props.Text{Top: 75, Left: 4, Right: 4, Size: 8, Style: fontstyle.Italic}),
+				text.New(fmt.Sprintf("Menyelesaikan bulan ke-%d di level %s/9", data.StudentMonthCourse, data.StudentLevel), props.Text{Top: 65, Left: 4, Right: 4, Size: 8, Style: fontstyle.Italic}),
 			),
 			// Ini adalah GAP / Spacer
 			col.New(2),
