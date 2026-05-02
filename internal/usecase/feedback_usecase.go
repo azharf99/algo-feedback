@@ -296,7 +296,8 @@ func (u *feedbackUsecase) SendFeedbackPDF(ctx context.Context, studentID *uint) 
 			to = to + "@s.whatsapp.net"
 		}
 
-		caption := fmt.Sprintf("Halo Ayah/Bunda %s, berikut adalah laporan perkembangan belajar %s untuk %s bulan ke-%d.", f.Student.Fullname, f.Student.Fullname, strVal(f.Course), f.Number)
+		caption := fmt.Sprintf("Halo %s. Semoga %s sehat selalu, berikut adalah laporan perkembangan belajar Ananda %s untuk %s bulan ke-%d.",
+			*f.Student.ParentName, *f.Student.ParentName, f.Student.Fullname, strVal(f.Course), f.Number)
 
 		// Tentukan waktu kirim (misal 5 menit dari sekarang)
 		runAt := time.Date(f.LessonDate.Year(),
@@ -410,8 +411,8 @@ func (u *feedbackUsecase) Update(ctx context.Context, id uint, req *domain.Feedb
 					newRunAt = time.Now().Add(5 * time.Minute).Format("2006-01-02 15:04:05")
 				}
 
-				caption := fmt.Sprintf("Halo %s, berikut adalah laporan perkembangan belajar Anda untuk %s bulan ke-%d.",
-					existing.Student.Fullname, strVal(existing.Course), existing.Number)
+				caption := fmt.Sprintf("Halo %s. Semoga %s sehat selalu, berikut adalah laporan perkembangan belajar Ananda %s untuk %s bulan ke-%d.",
+					*existing.Student.ParentName, *existing.Student.ParentName, existing.Student.Fullname, strVal(existing.Course), existing.Number)
 
 				_ = u.waService.UpdateSchedule(scheduleIDInt, to, caption, newRunAt)
 			}
