@@ -415,6 +415,7 @@ func (u *feedbackUsecase) Update(ctx context.Context, id uint, req *domain.Feedb
 					*existing.Student.ParentName, *existing.Student.ParentName, existing.Student.Fullname, strVal(existing.Course), existing.Number)
 
 				_ = u.waService.UpdateSchedule(scheduleIDInt, to, caption, newRunAt)
+				existing.IsSent = true
 			}
 		}
 	}
