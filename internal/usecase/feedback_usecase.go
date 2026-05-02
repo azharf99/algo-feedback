@@ -378,6 +378,13 @@ func (u *feedbackUsecase) Update(ctx context.Context, id uint, req *domain.Feedb
 		existing.ProjectLink = req.ProjectLink
 	}
 
+	if req.LessonDate != nil {
+		existing.LessonDate = req.LessonDate
+	}
+	if req.LessonTime != nil {
+		existing.LessonTime = req.LessonTime
+	}
+
 	// 3. Sinkronisasi dengan WhatsApp Gateway jika ada schedule_id
 	if existing.ScheduleID != nil && *existing.ScheduleID != "" {
 		scheduleIDInt, _ := strconv.Atoi(*existing.ScheduleID)
