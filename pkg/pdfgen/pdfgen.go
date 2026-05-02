@@ -123,7 +123,7 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 			col.New(6).WithStyle(linkBackgroundColor).Add(
 				text.New("Proyek Hasil Student", props.Text{Top: 2, Left: 2, Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
 				text.New("Proyek akhir diakses melalui link dibawah ini:", props.Text{Top: 8, Left: 2, Size: 9, Align: align.Center}),
-				text.New(data.StudentProjectLink, props.Text{Top: 14, Left: 2, Size: 8, Style: fontstyle.BoldItalic, Align: align.Center, Color: &props.Color{Red: 91, Green: 136, Blue: 239}}),
+				text.New(data.StudentProjectLink, props.Text{Top: 14, Left: 2, Size: 5, Style: fontstyle.BoldItalic, Align: align.Center, Color: &props.Color{Red: 91, Green: 136, Blue: 239}}),
 			),
 			// Ini adalah GAP / Spacer
 			col.New(1),
