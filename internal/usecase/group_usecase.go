@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/formatter"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 )
 
@@ -24,6 +25,10 @@ func NewGroupUsecase(repo domain.GroupRepository) domain.GroupUsecase {
 	return &groupUsecase{repo: repo}
 }
 func (u *groupUsecase) Create(ctx context.Context, group *domain.Group, studentIDs []uint) error {
+	if group.GroupPhone != nil {
+		normalized := formatter.NormalizePhoneNumber(*group.GroupPhone)
+		group.GroupPhone = &normalized
+	}
 	return u.repo.Create(ctx, group, studentIDs)
 }
 func (u *groupUsecase) GetByID(ctx context.Context, id uint) (*domain.Group, error) {
@@ -43,6 +48,10 @@ func (u *groupUsecase) GetPaginated(ctx context.Context, params domain.Paginatio
 }
 func (u *groupUsecase) Update(ctx context.Context, id uint, req *domain.Group, studentIDs []uint) error {
 	req.ID = id
+	if req.GroupPhone != nil {
+		normalized := formatter.NormalizePhoneNumber(*req.GroupPhone)
+		req.GroupPhone = &normalized
+	}
 	return u.repo.Update(ctx, req, studentIDs)
 }
 func (u *groupUsecase) Delete(ctx context.Context, id uint) error { return u.repo.Delete(ctx, id) }
@@ -104,6 +113,10 @@ func (u *groupUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*do
 
 		desc := record[headerMap["description"]]
 		groupPhone := record[headerMap["group_phone"]]
+		if groupPhone != "" {
+			normalized := formatter.NormalizePhoneNumber(groupPhone)
+			groupPhone = normalized
+		}
 		meetLink := record[headerMap["meeting_link"]]
 		recLink := record[headerMap["recordings_link"]]
 

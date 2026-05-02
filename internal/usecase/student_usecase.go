@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/formatter"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 )
 
@@ -27,6 +28,16 @@ func NewStudentUsecase(repo domain.StudentRepository) domain.StudentUsecase {
 
 // Create menambah siswa baru
 func (u *studentUsecase) Create(ctx context.Context, student *domain.Student) error {
+	// Normalisasi nomor telepon
+	if student.PhoneNumber != nil {
+		normalized := formatter.NormalizePhoneNumber(*student.PhoneNumber)
+		student.PhoneNumber = &normalized
+	}
+	if student.ParentContact != nil {
+		normalized := formatter.NormalizePhoneNumber(*student.ParentContact)
+		student.ParentContact = &normalized
+	}
+
 	// TODO: Nanti di sini kita bisa menambahkan logika Hashing Password sebelum disimpan
 	// misal: student.Password = hashPassword(student.Password)
 	return u.repo.Create(ctx, student)
@@ -71,9 +82,24 @@ func (u *studentUsecase) Update(ctx context.Context, id uint, req *domain.Studen
 	existingStudent.Fullname = req.Fullname
 	existingStudent.Surname = req.Surname
 	existingStudent.Username = req.Username
-	existingStudent.PhoneNumber = req.PhoneNumber
+
+	// Normalisasi nomor telepon sebelum update
+	if req.PhoneNumber != nil {
+		normalized := formatter.NormalizePhoneNumber(*req.PhoneNumber)
+		existingStudent.PhoneNumber = &normalized
+	} else {
+		existingStudent.PhoneNumber = nil
+	}
+
 	existingStudent.ParentName = req.ParentName
-	existingStudent.ParentContact = req.ParentContact
+
+	if req.ParentContact != nil {
+		normalized := formatter.NormalizePhoneNumber(*req.ParentContact)
+		existingStudent.ParentContact = &normalized
+	} else {
+		existingStudent.ParentContact = nil
+	}
+
 	existingStudent.IsActive = req.IsActive
 
 	// Jika password dikirimkan (tidak kosong), perbarui password
@@ -141,9 +167,9 @@ func (u *studentUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*
 			isActive = false
 		}
 
-		phoneNumber := record[headerMap["phone_number"]]
+		phoneNumber := formatter.NormalizePhoneNumber(record[headerMap["phone_number"]])
 		parentName := record[headerMap["parent_name"]]
-		parentContact := record[headerMap["parent_contact"]]
+		parentContact := formatter.NormalizePhoneNumber(record[headerMap["parent_contact"]])
 
 		student := &domain.Student{
 			ID:            uint(idUint),
