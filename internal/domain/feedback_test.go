@@ -60,8 +60,8 @@ func TestFeedbackModel_Creation(t *testing.T) {
 	assert.Equal(t, domain.TaskScoreAll, feedback.TaskScore)
 
 	assert.True(t, feedback.IsSent)
-	assert.Equal(t, now, feedback.LessonDate)
-	assert.Equal(t, now, feedback.LessonTime)
+	assert.Equal(t, now, feedback.LessonDate.Time)
+	assert.Equal(t, now, feedback.LessonTime.Time)
 	assert.Equal(t, now, feedback.CreatedAt)
 	assert.Equal(t, now, feedback.UpdatedAt)
 

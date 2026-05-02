@@ -130,17 +130,13 @@ func (u *feedbackUsecase) GenerateFeedback(ctx context.Context, groupID *uint, a
 					// ---------------------------------------------------
 
 					var sessionLessonDate *domain.DateOnly
-					if fd := sessions[0].DateStart.Time; fd.IsZero() == false {
-						if parsedDate, err := time.Parse("02/01/2006", fd.Format("02/01/2006")); err == nil {
-							sessionLessonDate = &domain.DateOnly{Time: parsedDate}
-						}
+					if !session.DateStart.Time.IsZero() {
+						sessionLessonDate = &domain.DateOnly{Time: session.DateStart.Time}
 					}
 
 					var sessionLessonTime *domain.TimeOnly
-					if ft := sessions[0].TimeStart.Time; ft.IsZero() == false {
-						if parsedTime, err := time.Parse("15:04", ft.Format("15:04")); err == nil {
-							sessionLessonTime = &domain.TimeOnly{Time: parsedTime}
-						}
+					if !session.TimeStart.Time.IsZero() {
+						sessionLessonTime = &domain.TimeOnly{Time: session.TimeStart.Time}
 					}
 
 					feedback := &domain.Feedback{
@@ -390,14 +386,20 @@ func (u *feedbackUsecase) Update(ctx context.Context, id uint, req *domain.Feedb
 
 				// Format waktu baru (LessonDate + LessonTime)
 				// Kita ambil jam dari LessonTime dan tanggal dari LessonDate
-				newRunAt := time.Date(
-					existing.LessonDate.Year(), existing.LessonDate.Month(), existing.LessonDate.Day(),
-					existing.LessonTime.Hour(), existing.LessonTime.Minute(),
-					0, 0, time.Local,
-				).Format("2006-01-02 15:04:05")
+				var newRunAt string
+				if existing.LessonDate != nil && existing.LessonTime != nil {
+					newRunAt = time.Date(
+						existing.LessonDate.Year(), existing.LessonDate.Month(), existing.LessonDate.Day(),
+						existing.LessonTime.Hour(), existing.LessonTime.Minute(), existing.LessonTime.Second(),
+						0, time.Local,
+					).Format("2006-01-02 15:04:05")
+				} else {
+					// Fallback jika salah satu null
+					newRunAt = time.Now().Add(5 * time.Minute).Format("2006-01-02 15:04:05")
+				}
 
-				caption := fmt.Sprintf("Halo Ayah/Bunda %s, berikut adalah laporan perkembangan belajar %s, untuk %s bulan ke-%d.",
-					existing.Student.Fullname, existing.Student.Fullname, strVal(existing.Course), existing.Number)
+				caption := fmt.Sprintf("Halo %s, berikut adalah laporan perkembangan belajar Anda untuk %s bulan ke-%d.",
+					existing.Student.Fullname, strVal(existing.Course), existing.Number)
 
 				_ = u.waService.UpdateSchedule(scheduleIDInt, to, caption, newRunAt)
 			}
