@@ -50,8 +50,8 @@ type Feedback struct {
 	ActivityScore   ActivityScore   `json:"activity_score" gorm:"type:varchar(1);default:'3'"`
 	TaskScore       TaskScore       `json:"task_score" gorm:"type:varchar(1);default:'2'"`
 
-	LessonDate time.Time `json:"lesson_date" gorm:"type:date"`
-	LessonTime time.Time `json:"lesson_time" gorm:"type:time"`
+	LessonDate *DateOnly `json:"lesson_date" gorm:"type:date"`
+	LessonTime *TimeOnly `json:"lesson_time" gorm:"type:time"`
 	IsSent     bool      `json:"is_sent" gorm:"default:false"`
 	ScheduleID *string   `json:"schedule_id" gorm:"type:varchar(150)"`
 	TaskID     *string   `json:"task_id" gorm:"type:varchar(150)"`
