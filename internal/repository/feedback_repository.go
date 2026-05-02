@@ -103,11 +103,20 @@ func (r *feedbackRepository) UpsertSeeder(ctx context.Context, f *domain.Feedbac
 }
 
 // GetUnsentFeedbacks mengambil feedback yang belum terkirim (is_sent = false)
-// Digunakan di Generator PDF dan Pengirim WA
+// Digunakan di Pengirim WA
 func (r *feedbackRepository) GetUnsentFeedbacks(ctx context.Context, studentID *uint, course *string, number *uint) ([]domain.Feedback, error) {
-	query := r.db.WithContext(ctx).Preload("Student").Where("is_sent = ?", false)
+	return r.GetFeedbacks(ctx, studentID, course, number, true)
+}
 
-	// Filter dinamis mirip di generator_pdf.py Python-mu
+// GetFeedbacks mengambil data feedback dengan filter fleksibel
+func (r *feedbackRepository) GetFeedbacks(ctx context.Context, studentID *uint, course *string, number *uint, onlyUnsent bool) ([]domain.Feedback, error) {
+	query := r.db.WithContext(ctx).Preload("Student")
+
+	if onlyUnsent {
+		query = query.Where("is_sent = ?", false)
+	}
+
+	// Filter dinamis
 	if studentID != nil {
 		query = query.Where("student_id = ?", *studentID)
 	}

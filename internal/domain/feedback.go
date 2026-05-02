@@ -78,6 +78,9 @@ type FeedbackRepository interface {
 
 	// Untuk mengambil data feedback yang belum dikirim (is_sent=False)
 	GetUnsentFeedbacks(ctx context.Context, studentID *uint, course *string, number *uint) ([]Feedback, error)
+
+	// Untuk mengambil data feedback dengan filter fleksibel (misal untuk regenerasi PDF)
+	GetFeedbacks(ctx context.Context, studentID *uint, course *string, number *uint, onlyUnsent bool) ([]Feedback, error)
 }
 
 // FeedbackUsecase mendefinisikan logika bisnis

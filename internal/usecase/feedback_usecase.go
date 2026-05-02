@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -185,7 +186,10 @@ func (u *feedbackUsecase) GenerateFeedback(ctx context.Context, groupID *uint, a
 // 2. GENERATOR PDF (GOROUTINE BACKGROUND TASKS)
 // -------------------------------------------------------------------------
 func (u *feedbackUsecase) GeneratePDFAsync(ctx context.Context, studentID *uint, course *string, number *uint, all bool) ([]map[string]interface{}, error) {
-	feedbacks, err := u.feedRepo.GetUnsentFeedbacks(ctx, studentID, course, number)
+	// Menggunakan GetFeedbacks (bukan GetUnsentFeedbacks) agar bisa me-regenerate PDF
+	// yang sudah pernah dibuat/dikirim jika filter student/course/number diberikan.
+	// Jika filter kosong (all=true), kita tetap ambil semua sesuai filter yang ada.
+	feedbacks, err := u.feedRepo.GetFeedbacks(ctx, studentID, course, number, false)
 	if err != nil {
 		return nil, err
 	}
@@ -409,5 +413,12 @@ func (u *feedbackUsecase) Update(ctx context.Context, id uint, req *domain.Feedb
 	return u.feedRepo.Update(ctx, existing)
 }
 func (u *feedbackUsecase) Delete(ctx context.Context, id uint) error {
+	// 1. Ambil data feedback untuk cek URL PDF
+	existing, err := u.feedRepo.GetByID(ctx, id)
+	if err == nil && existing.URLPDF != nil && *existing.URLPDF != "" {
+		// 2. Hapus file fisik jika ada
+		_ = os.Remove(*existing.URLPDF)
+	}
+
 	return u.feedRepo.Delete(ctx, id)
 }
