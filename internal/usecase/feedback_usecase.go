@@ -316,6 +316,7 @@ func (u *feedbackUsecase) SendFeedbackPDF(ctx context.Context, studentID *uint) 
 		// Update schedule_id di Database
 		scheduleIDStr := fmt.Sprintf("%d", scheduleID)
 		f.ScheduleID = &scheduleIDStr
+		f.IsSent = true
 		_ = u.feedRepo.Update(ctx, &f)
 
 		responseList = append(responseList, map[string]interface{}{
