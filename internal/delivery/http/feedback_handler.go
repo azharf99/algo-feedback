@@ -82,17 +82,17 @@ func (h *FeedbackHandler) GeneratePDF(c *gin.Context) {
 	})
 }
 
-// SendWhatsApp: POST /feedbacks/send-wa?feedback_id=10
+// SendWhatsApp: POST /feedbacks/send-wa?student_id=1xxxxxxx
 func (h *FeedbackHandler) SendWhatsApp(c *gin.Context) {
-	var feedbackIDPtr *uint
-	if fIDStr := c.Query("feedback_id"); fIDStr != "" {
+	var studentIDPtr *uint
+	if fIDStr := c.Query("student_id"); fIDStr != "" {
 		if id, err := strconv.Atoi(fIDStr); err == nil {
 			parsedID := uint(id)
-			feedbackIDPtr = &parsedID
+			studentIDPtr = &parsedID
 		}
 	}
 
-	result, err := h.usecase.SendFeedbackPDF(c.Request.Context(), feedbackIDPtr)
+	result, err := h.usecase.SendFeedbackPDF(c.Request.Context(), studentIDPtr)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

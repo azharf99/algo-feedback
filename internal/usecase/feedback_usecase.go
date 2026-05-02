@@ -264,8 +264,8 @@ func (u *feedbackUsecase) GeneratePDFAsync(ctx context.Context, studentID *uint,
 // -------------------------------------------------------------------------
 // 3. PENGIRIMAN WHATSAPP & UPDATE STATUS
 // -------------------------------------------------------------------------
-func (u *feedbackUsecase) SendFeedbackPDF(ctx context.Context, feedbackID *uint) ([]map[string]interface{}, error) {
-	feedbacks, err := u.feedRepo.GetUnsentFeedbacks(ctx, feedbackID, nil, nil)
+func (u *feedbackUsecase) SendFeedbackPDF(ctx context.Context, studentID *uint) ([]map[string]interface{}, error) {
+	feedbacks, err := u.feedRepo.GetUnsentFeedbacks(ctx, studentID, nil, nil)
 	if err != nil {
 		return nil, err
 	}
