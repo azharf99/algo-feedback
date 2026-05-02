@@ -14,6 +14,7 @@ import (
 	"github.com/johnfercher/maroto/v2/pkg/components/text"
 	"github.com/johnfercher/maroto/v2/pkg/config"
 	"github.com/johnfercher/maroto/v2/pkg/consts/align"
+	"github.com/johnfercher/maroto/v2/pkg/consts/border" // IMPORT BARU UNTUK BORDER
 	"github.com/johnfercher/maroto/v2/pkg/consts/fontstyle"
 	"github.com/johnfercher/maroto/v2/pkg/props"
 )
@@ -45,17 +46,39 @@ func NewPDFGenerator(assetDir string) PDFGenerator {
 }
 
 func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath string) error {
+
 	cfg := config.NewBuilder().
 		WithPageNumber().
-		WithTopMargin(0).
-		WithLeftMargin(10). // Margin kiri/kanan sedikit agar tidak terlalu mepet layar
+		WithTopMargin(10).
+		WithLeftMargin(10).
 		WithRightMargin(10).
 		WithBottomMargin(10).
 		Build()
 
 	m := maroto.New(cfg)
 
-	// 1. BANNER (Full 12)
+	// --- STYLE DEFINITIONS ---
+	// 1. Mendefinisikan border ungu (tetap kita simpan untuk section di bawahnya)
+	purpleBorder := &props.Cell{
+		BorderType:      border.Full,                                 // Kotak penuh di 4 sisi
+		BorderColor:     &props.Color{Red: 153, Green: 0, Blue: 255}, // Hex #9900FF
+		BorderThickness: 0.5,                                         // Ketebalan garis
+	}
+
+	// 2. [BARU] Mendefinisikan warna background #D9D2E9 untuk Informasi Siswa
+	infoBackgroundColor := &props.Cell{
+		BackgroundColor: &props.Color{Red: 217, Green: 210, Blue: 233},
+	}
+
+	// 3. [BARU] Mendefinisikan warna background #D9D2E9 untuk Link Container
+	linkBackgroundColor := &props.Cell{
+		BackgroundColor: &props.Color{Red: 255, Green: 242, Blue: 204},
+		BorderType:      border.Full,                                 // Kotak penuh di 4 sisi
+		BorderColor:     &props.Color{Red: 153, Green: 0, Blue: 255}, // Hex #9900FF
+		BorderThickness: 0.5,
+	}
+
+	// 1. BANNER (Full 12) - Tanpa Border
 	m.AddRows(
 		row.New(50).Add(
 			col.New(12).Add(
@@ -67,95 +90,94 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 		),
 	)
 
-	// Spacer (Beri jarak antar baris)
-	m.AddRow(10)
+	m.AddRow(10) // Spacer
 
 	// 2. INFORMASI SISWA & SKOR TOTAL [6 | 6]
 	m.AddRows(
 		row.New(30).Add(
 			// Kiri: Informasi Siswa
-			col.New(6).Add(
-				text.New("INFORMASI SISWA", props.Text{Style: fontstyle.Bold, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}), // Warna #3F1F75
-				text.New(fmt.Sprintf("Nama Siswa: %s", data.StudentName), props.Text{Top: 6, Size: 10}),
-				text.New(fmt.Sprintf("Kursus: %s", data.StudentClass), props.Text{Top: 12, Size: 10}),
-				text.New(fmt.Sprintf("Lama Pelatihan: Bulan ke-%d", data.StudentMonthCourse), props.Text{Top: 18, Size: 10}),
+			col.New(6).WithStyle(infoBackgroundColor).Add(
+				text.New("INFORMASI SISWA", props.Text{Top: 2, Left: 2, Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				text.New(fmt.Sprintf("Nama Siswa: %s", data.StudentName), props.Text{Top: 8, Left: 2, Size: 10}),
+				text.New(fmt.Sprintf("Kursus: %s", data.StudentClass), props.Text{Top: 14, Left: 2, Size: 10}),
+				text.New(fmt.Sprintf("Lama Pelatihan: Bulan ke-%d", data.StudentMonthCourse), props.Text{Top: 20, Left: 2, Size: 10}),
 			),
 			// Kanan: Skor Total
-			col.New(6).Add(
-				text.New("SKOR TOTAL", props.Text{Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
-				text.New(data.StudentLevel, props.Text{Top: 8, Size: 16, Align: align.Center, Style: fontstyle.Bold}),
-				text.New("⭐⭐⭐⭐⭐", props.Text{Top: 16, Size: 14, Align: align.Center}),
+			col.New(6).WithStyle(infoBackgroundColor).Add(
+				text.New("SKOR TOTAL", props.Text{Top: 2, Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				text.New(data.StudentLevel, props.Text{Top: 10, Size: 16, Align: align.Center, Style: fontstyle.Bold}),
+				text.New("⁂⁂⁂⁂⁂", props.Text{Top: 18, Size: 14, Align: align.Center}),
 			),
 		),
 	)
 
-	m.AddRow(5) // Spacer
+	m.AddRow(5) // Spacer antar baris
 
 	// 3. PROYEK SISWA & FREE LESSON [6 | 6]
 	m.AddRows(
 		row.New(25).Add(
 			// Kiri: Proyek Hasil
-			col.New(6).Add(
-				text.New("🎓 Proyek hasil Student", props.Text{Style: fontstyle.Bold, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
-				text.New("Proyek akhir diakses melalui link dibawah ini:", props.Text{Top: 6, Size: 9}),
-				text.New("👉 "+data.StudentProjectLink, props.Text{Top: 12, Size: 8, Style: fontstyle.Italic, Color: &props.Color{Red: 91, Green: 136, Blue: 239}}),
+			col.New(6).WithStyle(linkBackgroundColor).Add(
+				text.New("🎓 Proyek hasil Student", props.Text{Top: 2, Left: 2, Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				text.New("Proyek akhir diakses melalui link dibawah ini:", props.Text{Top: 8, Left: 2, Size: 9, Align: align.Center}),
+				text.New(data.StudentProjectLink, props.Text{Top: 14, Left: 2, Size: 8, Style: fontstyle.Italic, Align: align.Center, Color: &props.Color{Red: 91, Green: 136, Blue: 239}}),
 			),
 			// Kanan: Free Lesson
-			col.New(6).Add(
-				text.New("💻 Free Lesson", props.Text{Style: fontstyle.Bold, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
-				text.New("🎁 Mau dapatkan free lesson?", props.Text{Top: 6, Size: 9}),
-				text.New("👉 Bagikan link ini: "+data.StudentReferralLink, props.Text{Top: 12, Size: 8, Style: fontstyle.Italic, Color: &props.Color{Red: 91, Green: 136, Blue: 239}}),
+			col.New(6).WithStyle(linkBackgroundColor).Add(
+				text.New("Free Lesson", props.Text{Top: 2, Left: 2, Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				text.New("Mau dapatkan free lesson?", props.Text{Top: 8, Left: 2, Size: 9, Align: align.Center}),
+				text.New("Bagikan link ini: "+data.StudentReferralLink, props.Text{Top: 14, Left: 2, Size: 8, Style: fontstyle.Italic, Align: align.Center, Color: &props.Color{Red: 91, Green: 136, Blue: 239}}),
 			),
 		),
 	)
 
-	m.AddRow(5) // Spacer
+	m.AddRow(5)
 
 	// 4. TENTANG MODUL & KEAHLIAN [6 | 6]
 	m.AddRows(
-		row.New(40).Add(
+		row.New(80).Add(
 			// Kiri: Tentang Modul
-			col.New(6).Add(
-				text.New("📚 Tentang Modul Ini", props.Text{Style: fontstyle.Bold, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
-				text.New("Topik Modul: "+data.ModuleTopic, props.Text{Top: 6, Size: 9}),
-				text.New("Hasil: "+data.ModuleResult, props.Text{Top: 12, Size: 9}),
-				text.New(fmt.Sprintf("Menyelesaikan bulan ke-%d di level %s/9", data.StudentMonthCourse, data.StudentLevel), props.Text{Top: 20, Size: 8, Style: fontstyle.Italic}),
+			col.New(6).WithStyle(purpleBorder).Add(
+				text.New("Tentang Modul Ini", props.Text{Top: 5, Left: 2, Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				text.New("Topik Modul: "+data.ModuleTopic, props.Text{Top: 8, Left: 2, Style: fontstyle.Bold, Size: 9}),
+				text.New("Hasil: "+data.ModuleResult, props.Text{Top: 25, Left: 2, Size: 9}),
+				text.New(fmt.Sprintf("Menyelesaikan bulan ke-%d di level %s/9", data.StudentMonthCourse, data.StudentLevel), props.Text{Top: 75, Left: 2, Size: 8, Style: fontstyle.Italic}),
 			),
 			// Kanan: Keahlian
-			col.New(6).Add(
-				text.New("💻 Keahlian yang Didapatkan", props.Text{Style: fontstyle.Bold, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
-				text.New(data.SkillResult, props.Text{Top: 6, Size: 9}),
+			col.New(6).WithStyle(purpleBorder).Add(
+				text.New("Keahlian yang Didapatkan", props.Text{Top: 2, Left: 2, Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				text.New(data.SkillResult, props.Text{Top: 8, Left: 2, Size: 9, Align: align.Justify}),
 			),
 		),
 	)
 
-	m.AddRow(5) // Spacer
+	m.AddRow(10)
 
 	// 5. JALUR PENDIDIKAN & TUTOR FEEDBACK [6 | 6]
 	m.AddRows(
 		row.New(80).Add(
 			// Kiri: Jalur Pendidikan (Image Path)
-			col.New(6).Add(
-				text.New("Jalur Pendidikan", props.Text{Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+			col.New(6).WithStyle(linkBackgroundColor).Add(
+				text.New("Jalur Pendidikan", props.Text{Top: 2, Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
 				image.NewFromFile(filepath.Join(g.assetDir, "path.png"), props.Rect{
-					Top:     6,
+					Top:     8,
 					Center:  true,
 					Percent: 80,
 				}),
-				text.New("Lihat Modul Lengkap:", props.Text{Top: 60, Size: 9, Align: align.Center}),
-				text.New(data.StudentModuleLink, props.Text{Top: 65, Size: 7, Align: align.Center, Color: &props.Color{Red: 91, Green: 136, Blue: 239}}),
+				text.New("Lihat Modul Lengkap:", props.Text{Top: 70, Size: 9, Align: align.Center}),
+				text.New(data.StudentModuleLink, props.Text{Top: 74, Size: 7, Align: align.Center, Color: &props.Color{Red: 91, Green: 136, Blue: 239}}),
 			),
 			// Kanan: Tutor's Feedback
-			col.New(6).Add(
-				text.New("📝 Tutor's Feedback", props.Text{Style: fontstyle.Bold, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
-				text.New(data.TeacherFeedback, props.Text{Top: 6, Size: 9, Align: align.Justify}),
+			col.New(6).WithStyle(purpleBorder).Add(
+				text.New("Tutor's Feedback", props.Text{Top: 2, Left: 2, Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				text.New(data.TeacherFeedback, props.Text{Top: 8, Left: 2, Right: 2, Size: 9, Align: align.Justify}),
 			),
 		),
 	)
 
-	m.AddRow(10) // Spacer sebelum footer
+	m.AddRow(5) // Spacer sebelum footer
 
-	// 6. FOOTER (Full 12)
+	// 6. FOOTER (Full 12) - Tanpa Border
 	m.AddRows(
 		row.New(10).Add(
 			col.New(12).Add(
@@ -168,7 +190,6 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 		),
 	)
 
-	// ... (Sisa kode simpan dokumen sama seperti sebelumnya) ...
 	doc, err := m.Generate()
 	if err != nil {
 		return err
