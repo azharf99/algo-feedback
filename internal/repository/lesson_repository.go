@@ -40,7 +40,7 @@ func (r *lessonRepository) GetAll(ctx context.Context) ([]domain.Lesson, error) 
 
 func (r *lessonRepository) GetByCourse(ctx context.Context, courseID uint) ([]domain.Lesson, error) {
 	var lessons []domain.Lesson
-	err := r.db.WithContext(ctx).Preload("Course").Where("course_id = ?", courseID).Find(&lessons).Error
+	err := r.db.WithContext(ctx).Preload("Course").Where("course_id = ?", courseID).Order("number ASC").Find(&lessons).Error
 	return lessons, err
 }
 

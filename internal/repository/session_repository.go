@@ -93,6 +93,34 @@ func (r *sessionRepository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Delete(&domain.Session{}, id).Error
 }
 
+func (r *sessionRepository) Upsert(ctx context.Context, session *domain.Session) (bool, error) {
+	var existing domain.Session
+	err := r.db.WithContext(ctx).
+		Where("group_id = ? AND lesson_id = ?", session.GroupID, session.LessonID).
+		First(&existing).Error
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			// Create new
+			err = r.db.WithContext(ctx).Create(session).Error
+			return true, err // true indicates created
+		}
+		return false, err
+	}
+
+	// Existing found. Check if it's done. If done, lock it (do not update).
+	if existing.IsDone {
+		return false, nil // false indicates not created/updated
+	}
+
+	// Update existing
+	err = r.db.WithContext(ctx).Model(&existing).Updates(map[string]interface{}{
+		"date_start": session.DateStart,
+		"time_start": session.TimeStart,
+	}).Error
+	return false, err
+}
+
 func (r *sessionRepository) UpsertAttendance(ctx context.Context, session *domain.Session, studentIDs []uint) error {
 	var existing domain.Session
 
