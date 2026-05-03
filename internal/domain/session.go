@@ -179,6 +179,7 @@ type SessionRepository interface {
 	Update(ctx context.Context, session *Session) error
 	Delete(ctx context.Context, id uint) error
 
+	Upsert(ctx context.Context, session *Session) (bool, error)
 	UpsertAttendance(ctx context.Context, session *Session, studentIDs []uint) error
 }
 

@@ -18,18 +18,29 @@ import (
 
 // ... (NewGroupUsecase & operasi CRUD standar sama persis seperti sebelumnya) ...
 type groupUsecase struct {
-	repo domain.GroupRepository
+	repo        domain.GroupRepository
+	lessonRepo  domain.LessonRepository
+	sessionRepo domain.SessionRepository
 }
 
-func NewGroupUsecase(repo domain.GroupRepository) domain.GroupUsecase {
-	return &groupUsecase{repo: repo}
+func NewGroupUsecase(repo domain.GroupRepository, lessonRepo domain.LessonRepository, sessionRepo domain.SessionRepository) domain.GroupUsecase {
+	return &groupUsecase{
+		repo:        repo,
+		lessonRepo:  lessonRepo,
+		sessionRepo: sessionRepo,
+	}
 }
 func (u *groupUsecase) Create(ctx context.Context, group *domain.Group, studentIDs []uint) error {
 	if group.GroupPhone != nil {
 		normalized := formatter.NormalizePhoneNumber(*group.GroupPhone)
 		group.GroupPhone = &normalized
 	}
-	return u.repo.Create(ctx, group, studentIDs)
+	err := u.repo.Create(ctx, group, studentIDs)
+	if err != nil {
+		return err
+	}
+	// Seed sessions asynchronously or synchronously, let's do it synchronously to ensure it completes.
+	return u.seedSessions(ctx, group)
 }
 func (u *groupUsecase) GetByID(ctx context.Context, id uint) (*domain.Group, error) {
 	return u.repo.GetByID(ctx, id)
@@ -52,7 +63,11 @@ func (u *groupUsecase) Update(ctx context.Context, id uint, req *domain.Group, s
 		normalized := formatter.NormalizePhoneNumber(*req.GroupPhone)
 		req.GroupPhone = &normalized
 	}
-	return u.repo.Update(ctx, req, studentIDs)
+	err := u.repo.Update(ctx, req, studentIDs)
+	if err != nil {
+		return err
+	}
+	return u.seedSessions(ctx, req)
 }
 func (u *groupUsecase) Delete(ctx context.Context, id uint) error { return u.repo.Delete(ctx, id) }
 
@@ -157,7 +172,49 @@ func (u *groupUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*do
 		} else {
 			result.Updated++
 		}
+
+		// Seed sessions after upsert
+		u.seedSessions(ctx, group)
 	}
 
 	return result, nil
+}
+
+func (u *groupUsecase) seedSessions(ctx context.Context, group *domain.Group) error {
+	if group.FirstLessonDate == nil {
+		return nil // Nothing to schedule if there's no first lesson date
+	}
+
+	lessons, err := u.lessonRepo.GetByCourse(ctx, group.CourseID)
+	if err != nil {
+		return err
+	}
+
+	timeStart := domain.TimeOnly{}
+	if group.FirstLessonTime != nil {
+		timeStart = *group.FirstLessonTime
+	}
+
+	startDate := group.FirstLessonDate.Time
+
+	for i, lesson := range lessons {
+		// Calculate the date: FirstLessonDate + (i * 7 days)
+		sessionDate := startDate.AddDate(0, 0, i*7)
+
+		session := &domain.Session{
+			GroupID:   group.ID,
+			LessonID:  lesson.ID,
+			DateStart: domain.DateOnly{Time: sessionDate},
+			TimeStart: timeStart,
+			IsDone:    false, // Default value for new sessions
+		}
+
+		_, err := u.sessionRepo.Upsert(ctx, session)
+		if err != nil {
+			// You might want to log this error, but we'll return it for now
+			return fmt.Errorf("failed to upsert session for lesson %d: %w", lesson.ID, err)
+		}
+	}
+
+	return nil
 }
