@@ -34,16 +34,39 @@ type LoginResponse struct {
 	User         User   `json:"user"`
 }
 
+// UpdateUserRequest adalah payload untuk Create/Update User
+type UpdateUserRequest struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"` // Kosong = tidak diubah
+	Role     Role   `json:"role"`
+}
+
 // Kontrak untuk User Repository
 type UserRepository interface {
 	Create(ctx context.Context, user *User) error
 	GetByEmail(ctx context.Context, email string) (*User, error)
 	GetByID(ctx context.Context, id uint) (*User, error)
+	GetAll(ctx context.Context) ([]User, error)
+	GetPaginated(ctx context.Context, params PaginationParams) ([]User, int64, error)
+	Update(ctx context.Context, user *User) error
+	Delete(ctx context.Context, id uint) error
 }
 
-// Kontrak untuk Auth/User Usecase
+// Kontrak untuk Auth Usecase (Login/Register)
 type AuthUsecase interface {
 	Register(ctx context.Context, req *User) error
 	Login(ctx context.Context, email, password string) (*LoginResponse, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*LoginResponse, error)
+	GoogleLogin(ctx context.Context, email, name string) (*LoginResponse, error)
+}
+
+// Kontrak untuk User Management Usecase (CRUD)
+type UserUsecase interface {
+	GetAll(ctx context.Context) ([]User, error)
+	GetPaginated(ctx context.Context, params PaginationParams) (*PaginatedResult[User], error)
+	GetByID(ctx context.Context, id uint) (*User, error)
+	Create(ctx context.Context, req *UpdateUserRequest) (*User, error)
+	Update(ctx context.Context, id uint, req *UpdateUserRequest) (*User, error)
+	Delete(ctx context.Context, id uint) error
 }

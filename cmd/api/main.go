@@ -107,6 +107,7 @@ func main() {
 	// --- Auth & User ---
 	userRepo := repository.NewUserRepository(db)
 	authUsecase := usecase.NewAuthUsecase(userRepo)
+	userUsecase := usecase.NewUserUsecase(userRepo)
 
 	// --- Student ---
 	studentRepo := repository.NewStudentRepository(db)
@@ -187,6 +188,11 @@ func main() {
 			feedbackGroup := protected.Group("/")
 			feedbackGroup.Use(middleware.RoleMiddleware(domain.RoleAdmin, domain.RoleTutor))
 			handler.NewFeedbackHandler(feedbackGroup, feedbackUsecase)
+
+			// User Management Module (Admin Only)
+			userGroup := protected.Group("/")
+			userGroup.Use(middleware.RoleMiddleware(domain.RoleAdmin))
+			handler.NewUserHandler(userGroup, userUsecase)
 		}
 	}
 

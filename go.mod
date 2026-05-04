@@ -11,11 +11,13 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.50.0
+	golang.org/x/oauth2 v0.36.0
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.1
 )
 
 require (
+	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	github.com/boombuler/barcode v1.1.0 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.15.0 // indirect

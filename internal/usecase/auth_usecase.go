@@ -3,6 +3,8 @@ package usecase
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"strconv"
 
@@ -85,6 +87,51 @@ func (u *authUsecase) RefreshToken(ctx context.Context, refreshTokenStr string) 
 	return &domain.LoginResponse{
 		AccessToken:  newAccessToken,
 		RefreshToken: newRefreshToken,
+		User:         *user,
+	}, nil
+}
+
+// GoogleLogin mencari user berdasarkan email.
+// Jika sudah ada, langsung generate token.
+// Jika belum ada, buat akun baru dengan password acak yang aman.
+func (u *authUsecase) GoogleLogin(ctx context.Context, email, name string) (*domain.LoginResponse, error) {
+	// 1. Cari user berdasarkan email
+	user, err := u.userRepo.GetByEmail(ctx, email)
+
+	if err != nil {
+		// 2. User belum ada — buat akun baru (auto-register)
+		randomBytes := make([]byte, 32)
+		if _, err := rand.Read(randomBytes); err != nil {
+			return nil, errors.New("gagal membuat password acak")
+		}
+		randomPassword := hex.EncodeToString(randomBytes)
+
+		hashedPassword, err := auth.HashPassword(randomPassword)
+		if err != nil {
+			return nil, errors.New("gagal mengenkripsi password")
+		}
+
+		user = &domain.User{
+			Name:     name,
+			Email:    email,
+			Password: hashedPassword,
+			Role:     domain.RoleTutor, // Default role untuk Google Sign-In
+		}
+
+		if err := u.userRepo.Create(ctx, user); err != nil {
+			return nil, errors.New("gagal membuat akun pengguna baru")
+		}
+	}
+
+	// 3. Generate JWT Access & Refresh Token
+	accessToken, refreshToken, err := auth.GenerateTokens(user)
+	if err != nil {
+		return nil, errors.New("gagal membuat token")
+	}
+
+	return &domain.LoginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 		User:         *user,
 	}, nil
 }
