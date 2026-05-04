@@ -60,18 +60,7 @@ func (r *studentRepository) GetPaginated(ctx context.Context, params domain.Pagi
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
-
-	if params.SortBy != "" {
-		sortDir := "ASC" // Default arah sort
-		if params.SortDir != "" {
-			sortDir = params.SortDir
-		}
-		query = query.Order(params.SortBy + " " + sortDir)
-	} else {
-		// Fallback default: urutkan dari data terbaru
-		query = query.Order("id DESC")
-	}
-	err := query.Scopes(pagination.Paginate(params)).Find(&students).Error
+	err := query.Scopes(pagination.Sort(params, "id DESC"), pagination.Paginate(params)).Find(&students).Error
 	if err != nil {
 		return nil, 0, err
 	}

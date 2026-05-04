@@ -75,23 +75,12 @@ func (r *sessionRepository) GetPaginated(ctx context.Context, params domain.Pagi
 		return nil, 0, err
 	}
 
-	if params.SortBy != "" {
-		sortDir := "ASC" // Default arah sort
-		if params.SortDir != "" {
-			sortDir = params.SortDir
-		}
-		query = query.Order(params.SortBy + " " + sortDir)
-	} else {
-		// Fallback default: urutkan dari data terbaru
-		query = query.Order("id DESC")
-	}
-
 	// Eksekusi pencarian dengan Pagination dan Preload lengkap
 	err := query.
 		Preload("Group").
 		Preload("Lesson").
 		Preload("StudentsAttended").
-		Scopes(pagination.Paginate(params)).
+		Scopes(pagination.Sort(params, "id DESC"), pagination.Paginate(params)).
 		Find(&sessions).Error
 
 	return sessions, totalRows, err

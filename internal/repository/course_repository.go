@@ -53,19 +53,8 @@ func (r *courseRepository) GetPaginated(ctx context.Context, params domain.Pagin
 		return nil, 0, err
 	}
 
-	if params.SortBy != "" {
-		sortDir := "ASC" // Default arah sort
-		if params.SortDir != "" {
-			sortDir = params.SortDir
-		}
-		query = query.Order(params.SortBy + " " + sortDir)
-	} else {
-		// Fallback default: urutkan dari data terbaru
-		query = query.Order("id DESC")
-	}
-
 	// Ambil data dengan Pagination
-	err := query.Preload("Lessons").Preload("Groups").Scopes(pagination.Paginate(params)).Find(&courses).Error
+	err := query.Preload("Lessons").Preload("Groups").Scopes(pagination.Sort(params, "id DESC"), pagination.Paginate(params)).Find(&courses).Error
 
 	return courses, totalRows, err
 }
