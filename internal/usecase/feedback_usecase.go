@@ -296,8 +296,15 @@ func (u *feedbackUsecase) SendFeedbackPDF(ctx context.Context, studentID *uint) 
 			to = to + "@s.whatsapp.net"
 		}
 
+		var parentName string
+		if strVal(f.Student.ParentName) == "" {
+			parentName = "{nama}" // {nama} ini nanti akan otomatis diganti dengan nama kontak yang terdaftar di Backend Whatsapp
+		} else {
+			parentName = *f.Student.ParentName
+		}
+
 		caption := fmt.Sprintf("Halo %s. Semoga %s sehat selalu, berikut adalah laporan perkembangan belajar Ananda %s untuk %s bulan ke-%d.",
-			*f.Student.ParentName, *f.Student.ParentName, f.Student.Fullname, strVal(f.Course), f.Number)
+			parentName, parentName, f.Student.Fullname, strVal(f.Course), f.Number)
 
 		// Tentukan waktu kirim (misal 5 menit dari sekarang)
 		runAt := time.Date(f.LessonDate.Year(),
