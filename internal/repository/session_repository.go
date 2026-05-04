@@ -42,6 +42,18 @@ func (r *sessionRepository) GetByGroup(ctx context.Context, groupID uint) ([]dom
 	return sessions, err
 }
 
+func (r *sessionRepository) GetByLesson(ctx context.Context, lessonID uint) ([]domain.Session, error) {
+	var sessions []domain.Session
+	err := r.db.WithContext(ctx).
+		Where("lesson_id = ?", lessonID).
+		Preload("Group").
+		Preload("Lesson").
+		Preload("StudentsAttended").
+		Order("date_start ASC").
+		Find(&sessions).Error
+	return sessions, err
+}
+
 func (r *sessionRepository) GetAll(ctx context.Context) ([]domain.Session, error) {
 	var sessions []domain.Session
 	err := r.db.WithContext(ctx).

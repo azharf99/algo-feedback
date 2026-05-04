@@ -21,7 +21,7 @@ type WhatsappConfig struct {
 // WhatsappService mendefinisikan kontrak fungsi WhatsApp
 type WhatsappService interface {
 	ScheduleMedia(to, caption, filePath, runAt string) (int, error)
-	ScheduleMessage(to, message, runAt string) error
+	ScheduleMessage(to, message, runAt string) (int, error)
 	UpdateSchedule(id int, to, message, runAt string) error
 }
 
@@ -142,7 +142,7 @@ func (w *whatsappService) UpdateSchedule(id int, to, message, runAt string) erro
 }
 
 // ScheduleMessage: POST /api/schedule/message
-func (w *whatsappService) ScheduleMessage(to, message, runAt string) error {
+func (w *whatsappService) ScheduleMessage(to, message, runAt string) (int, error) {
 	payloadData := map[string]interface{}{
 		"device_id": 3,
 		"to":        to,
@@ -154,7 +154,7 @@ func (w *whatsappService) ScheduleMessage(to, message, runAt string) error {
 	url := fmt.Sprintf("%s/api/schedule/message", w.config.BaseURL)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	w.setAuthHeader(req)
@@ -162,21 +162,22 @@ func (w *whatsappService) ScheduleMessage(to, message, runAt string) error {
 
 	resp, err := w.client.Do(req)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer resp.Body.Close()
 
 	var result struct {
 		Status  string `json:"status"`
 		Message string `json:"message"`
+		Data    int    `json:"data"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return err
+		return 0, err
 	}
 
 	if result.Status != "success" {
-		return fmt.Errorf("gateway error: %s", result.Message)
+		return 0, fmt.Errorf("gateway error: %s", result.Message)
 	}
 
-	return nil
+	return result.Data, nil
 }

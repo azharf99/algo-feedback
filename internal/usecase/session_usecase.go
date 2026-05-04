@@ -4,8 +4,10 @@ package usecase
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
@@ -16,12 +18,14 @@ import (
 type sessionUsecase struct {
 	repo      domain.SessionRepository
 	waService whatsapp.WhatsappService
+	userRepo  domain.UserRepository
 }
 
-func NewSessionUsecase(repo domain.SessionRepository, waService whatsapp.WhatsappService) domain.SessionUsecase {
+func NewSessionUsecase(repo domain.SessionRepository, waService whatsapp.WhatsappService, userRepo domain.UserRepository) domain.SessionUsecase {
 	return &sessionUsecase{
 		repo:      repo,
 		waService: waService,
+		userRepo:  userRepo,
 	}
 }
 
@@ -35,6 +39,10 @@ func (u *sessionUsecase) GetByID(ctx context.Context, id uint) (*domain.Session,
 
 func (u *sessionUsecase) GetByGroup(ctx context.Context, groupID uint) ([]domain.Session, error) {
 	return u.repo.GetByGroup(ctx, groupID)
+}
+
+func (u *sessionUsecase) GetByLesson(ctx context.Context, lessonID uint) ([]domain.Session, error) {
+	return u.repo.GetByLesson(ctx, lessonID)
 }
 
 func (u *sessionUsecase) GetAll(ctx context.Context) ([]domain.Session, error) {
@@ -85,11 +93,22 @@ func (u *sessionUsecase) Update(ctx context.Context, id uint, req *domain.Sessio
 	// Namun Gin ShouldBindJSON akan selalu set false jika tidak ada.
 	// Untuk keamanan, kita hanya update jika ada perubahan nilai dari existing.
 	if req.IsDone && !existing.IsDone {
-		u.triggerAfterSessionFeedback(ctx, existing)
+		// It will trigger in the end after update to ensure DB is saved, wait, if we trigger it needs to save ScheduledMessageID.
+		// Actually, let's just trigger it before, but we must update the DB. triggerAfterSessionFeedback will save it.
+		// So we update existing.IsDone first.
 	}
+	wasDone := existing.IsDone
 	existing.IsDone = req.IsDone
 
-	return u.repo.Update(ctx, existing)
+	err = u.repo.Update(ctx, existing)
+	if err != nil {
+		return err
+	}
+
+	if req.IsDone && !wasDone {
+		u.TriggerAfterSessionFeedback(ctx, existing)
+	}
+	return nil
 }
 
 func (u *sessionUsecase) Delete(ctx context.Context, id uint) error {
@@ -97,12 +116,10 @@ func (u *sessionUsecase) Delete(ctx context.Context, id uint) error {
 }
 
 func (u *sessionUsecase) UpdateAttendance(ctx context.Context, sessionID uint, studentIDs []uint) error {
-	existing, err := u.repo.GetByID(ctx, sessionID)
+	_, err := u.repo.GetByID(ctx, sessionID)
 	if err != nil {
 		return errors.New("sesi tidak ditemukan")
 	}
-
-	wasDone := existing.IsDone
 
 	// Menyiapkan struct Session dengan IsDone otomatis True saat absen dikirim
 	session := &domain.Session{
@@ -116,18 +133,88 @@ func (u *sessionUsecase) UpdateAttendance(ctx context.Context, sessionID uint, s
 		return err
 	}
 
-	if !wasDone {
-		u.triggerAfterSessionFeedback(ctx, existing)
+	updatedSession, err := u.repo.GetByID(ctx, sessionID)
+	if err == nil {
+		u.TriggerAfterSessionFeedback(ctx, updatedSession)
 	}
 
 	return nil
 }
 
-func (u *sessionUsecase) triggerAfterSessionFeedback(_ context.Context, session *domain.Session) {
-	if session.AfterSessionFeedback == nil || *session.AfterSessionFeedback == "" {
-		return
+func (u *sessionUsecase) generateFeedbackMessage(ctx context.Context, session *domain.Session) string {
+	// Dapatkan nama user dari context
+	userName := "Tutor"
+	if userID, ok := ctx.Value("user_id").(float64); ok { // JWT decode numeric as float64
+		if user, err := u.userRepo.GetByID(ctx, uint(userID)); err == nil {
+			userName = user.Name
+		}
+	} else if userID, ok := ctx.Value("user_id").(uint); ok {
+		if user, err := u.userRepo.GetByID(ctx, userID); err == nil {
+			userName = user.Name
+		}
 	}
 
+	// Format Tanggal dan Waktu
+	sessionDate := session.DateStart.Time
+	dateStr := formatIndonesianDate(sessionDate)
+	timeStr := session.TimeStart.Time.Format("15.04")
+
+	// Surnames
+	var surnames []string
+	for _, student := range session.StudentsAttended {
+		surnames = append(surnames, student.Surname)
+	}
+	surnamesStr := strings.Join(surnames, ", ")
+	if len(surnames) == 0 {
+		surnamesStr = "Siswa"
+	}
+
+	// Lesson dan Course
+	lessonName := "-"
+	if session.Lesson != nil {
+		lessonName = session.Lesson.Title
+	}
+	courseName := "-"
+	if session.Group != nil && session.Group.Course != nil {
+		courseName = session.Group.Course.Title
+	}
+
+	// Competency
+	var competencies []string
+	if session.Lesson != nil && session.Lesson.Competency != "" {
+		comps := strings.Split(session.Lesson.Competency, ";")
+		for _, c := range comps {
+			trimmed := strings.TrimSpace(c)
+			if trimmed != "" {
+				competencies = append(competencies, "• "+trimmed+";")
+			}
+		}
+	}
+	competenciesStr := strings.Join(competencies, "\n")
+
+	template := `Halo, Parents!
+
+Hari ini %s pukul %s %s telah mengikuti pelajaran %s di kursus %s. Mereka telah belajar:
+%s
+
+Untuk tetap belajar sambil berlatih, Bapak/Ibu bisa mengajak anak-anak membuka platform daring Algonova Indonesia dan menyelesaikan tugas-tugas mereka. Jika ada yang ingin dikonsultasikan, Ayah/Bunda bisa hubungi saya kapan saja.
+
+Terima Kasih dan Sampai jumpa!
+%s – Algonova Indonesia`
+
+	return fmt.Sprintf(template, dateStr, timeStr, surnamesStr, lessonName, courseName, competenciesStr, userName)
+}
+
+func formatIndonesianDate(t time.Time) string {
+	days := []string{"Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"}
+	months := []string{"", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"}
+	
+	dayName := days[t.Weekday()]
+	monthName := months[t.Month()]
+	return fmt.Sprintf("%s, %d %s %d", dayName, t.Day(), monthName, t.Year())
+}
+
+func (u *sessionUsecase) TriggerAfterSessionFeedback(ctx context.Context, session *domain.Session) {
 	sessionDate := session.DateStart.Time
 	sessionTime := session.TimeStart.Time
 
@@ -135,7 +222,7 @@ func (u *sessionUsecase) triggerAfterSessionFeedback(_ context.Context, session 
 		sessionDate.Year(), sessionDate.Month(), sessionDate.Day(),
 		sessionTime.Hour(), sessionTime.Minute(), sessionTime.Second(),
 		0, sessionDate.Location(),
-	).Add(90 * time.Minute)
+	).Add(120 * time.Minute)
 
 	if !runAtTime.After(time.Now()) {
 		return
@@ -152,12 +239,38 @@ func (u *sessionUsecase) triggerAfterSessionFeedback(_ context.Context, session 
 		groupPhone += "@s.whatsapp.net"
 	}
 
-	err := u.waService.ScheduleMessage(
-		groupPhone,
-		*session.AfterSessionFeedback,
-		runAtTime.Format("2006-01-02 15:04:05"),
-	)
-	if err != nil {
-		log.Printf("Gagal mendaftarkan jadwal WhatsApp after_session_feedback: %v", err)
+	// Generate Pesan
+	msg := u.generateFeedbackMessage(ctx, session)
+
+	// Simpan pesan ke AfterSessionFeedback agar terlihat di DB
+	session.AfterSessionFeedback = &msg
+
+	if session.ScheduledMessageID != nil {
+		// Update existing schedule
+		err := u.waService.UpdateSchedule(
+			int(*session.ScheduledMessageID),
+			groupPhone,
+			msg,
+			runAtTime.Format("2006-01-02 15:04:05"),
+		)
+		if err != nil {
+			log.Printf("Gagal mengupdate jadwal WhatsApp after_session_feedback: %v", err)
+		}
+	} else {
+		// Create new schedule
+		id, err := u.waService.ScheduleMessage(
+			groupPhone,
+			msg,
+			runAtTime.Format("2006-01-02 15:04:05"),
+		)
+		if err != nil {
+			log.Printf("Gagal mendaftarkan jadwal WhatsApp after_session_feedback: %v", err)
+		} else {
+			uid := uint(id)
+			session.ScheduledMessageID = &uid
+		}
 	}
+	
+	// Update DB (menyimpan ScheduledMessageID dan AfterSessionFeedback)
+	_ = u.repo.Update(ctx, session)
 }

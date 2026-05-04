@@ -118,11 +118,12 @@ func main() {
 
 	// --- Lesson ---
 	lessonRepo := repository.NewLessonRepository(db)
-	lessonUsecase := usecase.NewLessonUsecase(lessonRepo)
 
 	// --- Modul Session ---
 	sessionRepo := repository.NewSessionRepository(db)
-	sessionUsecase := usecase.NewSessionUsecase(sessionRepo, waService)
+	sessionUsecase := usecase.NewSessionUsecase(sessionRepo, waService, userRepo)
+
+	lessonUsecase := usecase.NewLessonUsecase(lessonRepo, sessionUsecase)
 
 	// --- Group ---
 	groupRepo := repository.NewGroupRepository(db)

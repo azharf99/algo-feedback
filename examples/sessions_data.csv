@@ -1,2 +1,2 @@
-id,title,category,module,level,number,group_id,description,date_start,time_start,meeting_link,students_attended,is_active
-2597,Generative networks - Language models,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M1L1,1,1725069,,2025-07-31,19:30:00,https://meet.google.com/dzq-hcch-zzz,,TRUE
+id,title,category,module,level,number,group_id,description,date_start,time_start,meeting_link,students_attended,is_active,after_session_feedback,scheduled_message_id
+2597,Generative networks - Language models,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M1L1,1,1725069,,2025-07-31,19:30:00,https://meet.google.com/dzq-hcch-zzz,,TRUE,Silahkan berikan feedback mengenai sesi ini dengan mengisi form pada link: https://forms.gle/7e6bX8fT3x4y5z6a7,1234567890

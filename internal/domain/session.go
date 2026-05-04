@@ -156,25 +156,27 @@ func (t *TimeOnly) Scan(value interface{}) error {
 }
 
 type Session struct {
-	ID               uint           `gorm:"primaryKey" json:"id"`
-	GroupID          uint           `json:"group_id" gorm:"not null"`
-	Group            *Group         `json:"group,omitempty"`
-	LessonID         uint           `json:"lesson_id" gorm:"not null"`
-	Lesson           *Lesson        `json:"lesson,omitempty"`
+	ID                   uint           `gorm:"primaryKey" json:"id"`
+	GroupID              uint           `json:"group_id" gorm:"not null"`
+	Group                *Group         `json:"group,omitempty"`
+	LessonID             uint           `json:"lesson_id" gorm:"not null"`
+	Lesson               *Lesson        `json:"lesson,omitempty"`
 	DateStart            DateOnly       `json:"date_start" gorm:"type:date"`
 	TimeStart            TimeOnly       `json:"time_start" gorm:"type:time"`
 	AfterSessionFeedback *string        `json:"after_session_feedback" gorm:"type:text"`
 	IsDone               bool           `json:"is_done" gorm:"default:false"`
+	ScheduledMessageID   *uint          `json:"scheduled_message_id"`
 	StudentsAttended     []Student      `json:"students_attended" gorm:"many2many:session_students;"`
-	CreatedAt        time.Time      `json:"created_at"`
-	UpdatedAt        time.Time      `json:"updated_at"`
-	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`
+	CreatedAt            time.Time      `json:"created_at"`
+	UpdatedAt            time.Time      `json:"updated_at"`
+	DeletedAt            gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 type SessionRepository interface {
 	Create(ctx context.Context, session *Session) error
 	GetByID(ctx context.Context, id uint) (*Session, error)
 	GetByGroup(ctx context.Context, groupID uint) ([]Session, error)
+	GetByLesson(ctx context.Context, lessonID uint) ([]Session, error)
 	GetAll(ctx context.Context) ([]Session, error)
 	GetPaginated(ctx context.Context, params PaginationParams) ([]Session, int64, error)
 	Update(ctx context.Context, session *Session) error
@@ -188,10 +190,12 @@ type SessionUsecase interface {
 	Create(ctx context.Context, session *Session) error
 	GetByID(ctx context.Context, id uint) (*Session, error)
 	GetByGroup(ctx context.Context, groupID uint) ([]Session, error)
+	GetByLesson(ctx context.Context, lessonID uint) ([]Session, error)
 	GetAll(ctx context.Context) ([]Session, error)
 	GetPaginated(ctx context.Context, params PaginationParams) (*PaginatedResult[Session], error)
 	Update(ctx context.Context, id uint, req *Session) error
 	Delete(ctx context.Context, id uint) error
 
 	UpdateAttendance(ctx context.Context, sessionID uint, studentIDs []uint) error
+	TriggerAfterSessionFeedback(ctx context.Context, session *Session)
 }

@@ -16,11 +16,15 @@ import (
 )
 
 type lessonUsecase struct {
-	repo domain.LessonRepository
+	repo           domain.LessonRepository
+	sessionUsecase domain.SessionUsecase
 }
 
-func NewLessonUsecase(repo domain.LessonRepository) domain.LessonUsecase {
-	return &lessonUsecase{repo: repo}
+func NewLessonUsecase(repo domain.LessonRepository, sessionUsecase domain.SessionUsecase) domain.LessonUsecase {
+	return &lessonUsecase{
+		repo:           repo,
+		sessionUsecase: sessionUsecase,
+	}
 }
 
 // ... (Metode CRUD Create, GetByID, GetAll, GetPaginated, Update, Delete tetap sama) ...
@@ -59,6 +63,12 @@ func (u *lessonUsecase) Update(ctx context.Context, id uint, req *domain.Lesson)
 		return errors.New("pelajaran tidak ditemukan")
 	}
 
+	competencyChanged := false
+	if req.Competency != "" && existing.Competency != req.Competency {
+		competencyChanged = true
+		existing.Competency = req.Competency
+	}
+
 	if req.Title != "" {
 		existing.Title = req.Title
 	}
@@ -69,7 +79,36 @@ func (u *lessonUsecase) Update(ctx context.Context, id uint, req *domain.Lesson)
 		existing.CourseID = req.CourseID
 	}
 
-	return u.repo.Update(ctx, existing)
+	err = u.repo.Update(ctx, existing)
+	if err != nil {
+		return err
+	}
+
+	// Cascading update to WhatsApp schedules
+	if competencyChanged {
+		go func(lessonID uint) {
+			bgCtx := context.Background()
+			sessions, err := u.sessionUsecase.GetByLesson(bgCtx, lessonID)
+			if err != nil {
+				return
+			}
+			for _, session := range sessions {
+				if session.IsDone && session.ScheduledMessageID != nil {
+					// We pass bgCtx. Note: userName from context will not be available in bgCtx!
+					// But we can extract user_id from the original ctx and inject it to bgCtx.
+					var updatedCtx = bgCtx
+					if userID, ok := ctx.Value("user_id").(float64); ok {
+						updatedCtx = context.WithValue(updatedCtx, "user_id", userID)
+					} else if userID, ok := ctx.Value("user_id").(uint); ok {
+						updatedCtx = context.WithValue(updatedCtx, "user_id", userID)
+					}
+					u.sessionUsecase.TriggerAfterSessionFeedback(updatedCtx, &session)
+				}
+			}
+		}(existing.ID)
+	}
+
+	return nil
 }
 func (u *lessonUsecase) Delete(ctx context.Context, id uint) error { return u.repo.Delete(ctx, id) }
 
