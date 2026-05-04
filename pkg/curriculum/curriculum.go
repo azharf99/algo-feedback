@@ -1,7 +1,10 @@
 // File: pkg/curriculum/curriculum.go
 package curriculum
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // Levels Map (Menerjemahkan level.py)
 var levels = map[string]string{
@@ -20,10 +23,11 @@ var levels = map[string]string{
 }
 
 func GetCourseLevel(module string) string {
-	if level, exists := levels[module]; exists {
-		return level
+	parts := strings.Split(module, " ")
+	if len(parts) > 0 {
+		return parts[0]
 	}
-	return ""
+	return module
 }
 
 // Topics Map (Menerjemahkan topic.py)
