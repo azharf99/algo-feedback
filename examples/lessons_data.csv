@@ -1,0 +1,37 @@
+id,course_id,title,category,module,level,number,description,is_active
+1,1,Generative networks - Language models,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M1L1,1,,TRUE
+2,1,Using AI in everyday tasks,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M1L2,2,,TRUE
+3,1,Creating the synopsis of our story,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M1L3,3,,TRUE
+4,1,Turning a story into a game,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M1L4,4,,TRUE
+5,1,Studying HTML & CSS,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M2L1,5,,TRUE
+6,1,Features of code generation,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M2L2,6,,TRUE
+7,1,Using code to stylize the game,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M2L3,7,,TRUE
+8,1,Features of image generation,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M3L1,8,,TRUE
+9,1,Creating a location,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M3L2,9,,TRUE
+10,1,Character creation,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M3L3,10,,TRUE
+11,1,Building scenes,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M3L4,11,,TRUE
+12,1,Features of generating music and sound effects,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M4L1,12,,TRUE
+13,1,Creating a game atmosphere with sound reffects,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M4L2,13,,TRUE
+14,1,Speech generation,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M4L3,14,,TRUE
+15,1,Voice acting of characters,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M4L4,15,,TRUE
+16,1,Features of video generation,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M5L1,16,,TRUE
+17,1,Creating in-game scenes,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M5L2,17,,TRUE
+18,1,Refinement and presentation of the game,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M5L3,18,,TRUE
+19,1,Advanced prompting techniques,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M6L1,19,,TRUE
+20,1,Application of advanced prompting techniques,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M6L2,20,,TRUE
+21,1,Creating a description of a board game,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M6L3,21,,TRUE
+22,1,Generative Adversarial Network (GAN) training algorithm,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M6L4,22,,TRUE
+23,1,Creating GAN to generate an image of the game field,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M6L5,23,,TRUE
+24,1,Introduction to Blender,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M7L1,24,,TRUE
+25,1,Features of 3D object generation,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M7L2,25,,TRUE
+26,1,Creating 3D game models,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M7L3,26,,TRUE
+27,1,Building a scene in Blender,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M7L4,27,,TRUE
+28,1,Scene render,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M7L5,28,,TRUE
+29,1,Building a game in Tabletopia,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M8L1,29,,TRUE
+30,1,Building a game in Tabletopia Part 2,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M8L2,30,,TRUE
+31,1,Product presentation,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M8L3,31,,TRUE
+32,1,AI for solving everyday tasks,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M9L1,32,,TRUE
+33,1,AI for solving educational tasks,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M9L2,33,,TRUE
+34,1,Idea generation and implementation plan,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M10L1,34,,TRUE
+35,1,Students develop their own project,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M10L2,35,,TRUE
+36,1,Refining and defending students' own projects,"Artificial Intelligence, AI ENG","Artificial Intelligence, AI ENG",M10L3,36,,TRUE

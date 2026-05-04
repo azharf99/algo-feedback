@@ -1,0 +1,2 @@
+id,course_id,name,description,students,type,group_phone,meeting_link ,recordings_link,first_lesson_date,first_lesson_time,is_active
+1960336,1,AI-121121,Artificial Intelligence,17,Group,081234567890,https://meet.google.com/pju-otdr-xxx,,TRUE
