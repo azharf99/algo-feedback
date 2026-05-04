@@ -122,7 +122,7 @@ func main() {
 
 	// --- Modul Session ---
 	sessionRepo := repository.NewSessionRepository(db)
-	sessionUsecase := usecase.NewSessionUsecase(sessionRepo)
+	sessionUsecase := usecase.NewSessionUsecase(sessionRepo, waService)
 
 	// --- Group ---
 	groupRepo := repository.NewGroupRepository(db)

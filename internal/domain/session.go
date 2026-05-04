@@ -161,10 +161,11 @@ type Session struct {
 	Group            *Group         `json:"group,omitempty"`
 	LessonID         uint           `json:"lesson_id" gorm:"not null"`
 	Lesson           *Lesson        `json:"lesson,omitempty"`
-	DateStart        DateOnly       `json:"date_start" gorm:"type:date"`
-	TimeStart        TimeOnly       `json:"time_start" gorm:"type:time"`
-	IsDone           bool           `json:"is_done" gorm:"default:false"`
-	StudentsAttended []Student      `json:"students_attended" gorm:"many2many:session_students;"`
+	DateStart            DateOnly       `json:"date_start" gorm:"type:date"`
+	TimeStart            TimeOnly       `json:"time_start" gorm:"type:time"`
+	AfterSessionFeedback *string        `json:"after_session_feedback" gorm:"type:text"`
+	IsDone               bool           `json:"is_done" gorm:"default:false"`
+	StudentsAttended     []Student      `json:"students_attended" gorm:"many2many:session_students;"`
 	CreatedAt        time.Time      `json:"created_at"`
 	UpdatedAt        time.Time      `json:"updated_at"`
 	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`
