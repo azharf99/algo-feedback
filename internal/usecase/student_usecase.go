@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/auth"
 	"github.com/azharf99/algo-feedback/pkg/formatter"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 )
@@ -38,8 +39,11 @@ func (u *studentUsecase) Create(ctx context.Context, student *domain.Student) er
 		student.ParentContact = &normalized
 	}
 
-	// TODO: Nanti di sini kita bisa menambahkan logika Hashing Password sebelum disimpan
-	// misal: student.Password = hashPassword(student.Password)
+	hashedPassword, err := auth.HashPassword(student.Password)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+	student.Password = hashedPassword
 	return u.repo.Create(ctx, student)
 }
 
@@ -104,7 +108,11 @@ func (u *studentUsecase) Update(ctx context.Context, id uint, req *domain.Studen
 
 	// Jika password dikirimkan (tidak kosong), perbarui password
 	if req.Password != "" {
-		existingStudent.Password = req.Password // TODO: Hash password baru
+		hashedPassword, err := auth.HashPassword(req.Password)
+		if err != nil {
+			return fmt.Errorf("failed to hash password: %w", err)
+		}
+		existingStudent.Password = hashedPassword
 	}
 
 	// 3. Simpan perubahan
@@ -171,12 +179,18 @@ func (u *studentUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*
 		parentName := record[headerMap["parent_name"]]
 		parentContact := formatter.NormalizePhoneNumber(record[headerMap["parent_contact"]])
 
+		hashedPassword, err := auth.HashPassword(record[headerMap["password"]])
+		if err != nil {
+			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": fmt.Sprintf("failed to hash password: %v", err)})
+			continue
+		}
+
 		student := &domain.Student{
 			ID:            uint(idUint),
 			Fullname:      record[headerMap["fullname"]],
 			Surname:       record[headerMap["surname"]],
 			Username:      record[headerMap["username"]],
-			Password:      record[headerMap["password"]],
+			Password:      hashedPassword,
 			PhoneNumber:   &phoneNumber,
 			ParentName:    &parentName,
 			ParentContact: &parentContact,
