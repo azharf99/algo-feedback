@@ -208,7 +208,7 @@ Terima Kasih dan Sampai jumpa!
 func formatIndonesianDate(t time.Time) string {
 	days := []string{"Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"}
 	months := []string{"", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"}
-	
+
 	dayName := days[t.Weekday()]
 	monthName := months[t.Month()]
 	return fmt.Sprintf("%s, %d %s %d", dayName, t.Day(), monthName, t.Year())
@@ -270,7 +270,7 @@ func (u *sessionUsecase) TriggerAfterSessionFeedback(ctx context.Context, sessio
 			session.ScheduledMessageID = &uid
 		}
 	}
-	
+
 	// Update DB (menyimpan ScheduledMessageID dan AfterSessionFeedback)
 	_ = u.repo.Update(ctx, session)
 }

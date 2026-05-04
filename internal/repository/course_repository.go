@@ -5,9 +5,12 @@ import (
 	"context"
 	"errors"
 
+	"strings"
+
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type courseRepository struct {
@@ -54,11 +57,11 @@ func (r *courseRepository) GetPaginated(ctx context.Context, params domain.Pagin
 	}
 
 	if params.SortBy != "" {
-		sortDir := "ASC" // Default arah sort
-		if params.SortDir != "" {
-			sortDir = params.SortDir
+		desc := false
+		if strings.ToUpper(params.SortDir) == "DESC" {
+			desc = true
 		}
-		query = query.Order(params.SortBy + " " + sortDir)
+		query = query.Order(clause.OrderByColumn{Column: clause.Column{Name: params.SortBy}, Desc: desc})
 	} else {
 		// Fallback default: urutkan dari data terbaru
 		query = query.Order("id DESC")
