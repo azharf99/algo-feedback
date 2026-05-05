@@ -58,7 +58,6 @@ func main() {
 	// 1.6. Seed Data & Final Cleanup
 	auth.SeedAdmin(db)
 
-
 	// 2. Setup Framework Gin
 	r := gin.Default()
 
@@ -86,6 +85,9 @@ func main() {
 		c.Header("X-XSS-Protection", "1; mode=block")
 		c.Next()
 	})
+
+	// Global Rate Limiter: 100 requests per second, burst 200
+	r.Use(middleware.RateLimitMiddleware(100, 200))
 
 	// 4. Inisialisasi Utilitas Pihak Ketiga (Third Party Services)
 	// Pastikan folder templates/index.html sudah ada

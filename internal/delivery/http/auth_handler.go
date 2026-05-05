@@ -11,8 +11,11 @@ import (
 	"os"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/internal/middleware"
+	"github.com/azharf99/algo-feedback/pkg/auth"
 	"github.com/azharf99/algo-feedback/pkg/oauth"
 	"github.com/gin-gonic/gin"
+	"golang.org/x/time/rate"
 )
 
 type AuthHandler struct {
@@ -23,6 +26,8 @@ func NewAuthHandler(r *gin.RouterGroup, us domain.AuthUsecase) {
 	handler := &AuthHandler{usecase: us}
 
 	authRoutes := r.Group("/auth")
+	// Rate limit: 5 request per menit per IP untuk Login/Register
+	authRoutes.Use(middleware.RateLimitMiddleware(rate.Limit(5.0/60.0), 10))
 	{
 		authRoutes.POST("/register", handler.Register)
 		authRoutes.POST("/login", handler.Login)
@@ -37,15 +42,17 @@ func NewAuthHandler(r *gin.RouterGroup, us domain.AuthUsecase) {
 
 // Request Body Structs
 type RegisterRequest struct {
-	Name     string      `json:"name" binding:"required"`
-	Email    string      `json:"email" binding:"required,email"`
-	Password string      `json:"password" binding:"required,min=6"`
-	Role     domain.Role `json:"role" binding:"required"`
+	Name         string      `json:"name" binding:"required"`
+	Email        string      `json:"email" binding:"required,email"`
+	Password     string      `json:"password" binding:"required,min=6"`
+	Role         domain.Role `json:"role" binding:"required"`
+	CaptchaToken string      `json:"captcha_token" binding:"required"`
 }
 
 type LoginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
+	Email        string `json:"email" binding:"required,email"`
+	Password     string `json:"password" binding:"required"`
+	CaptchaToken string `json:"captcha_token" binding:"required"`
 }
 
 type RefreshRequest struct {
@@ -67,11 +74,18 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
+	// Verifikasi Captcha
+	valid, err := auth.VerifyRecaptcha(req.CaptchaToken)
+	if err != nil || !valid {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Verifikasi captcha gagal"})
+		return
+	}
+
 	user := domain.User{
 		Name:     req.Name,
 		Email:    req.Email,
 		Password: req.Password,
-		Role:     domain.RoleTutor,
+		Role:     req.Role,
 	}
 
 	if err := h.usecase.Register(c.Request.Context(), &user); err != nil {
@@ -86,6 +100,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Format email atau password salah"})
+		return
+	}
+
+	// Verifikasi Captcha
+	valid, err := auth.VerifyRecaptcha(req.CaptchaToken)
+	if err != nil || !valid {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Verifikasi captcha gagal"})
 		return
 	}
 

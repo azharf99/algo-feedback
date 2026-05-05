@@ -28,6 +28,7 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - GOOGLE_REDIRECT_URL=${GOOGLE_REDIRECT_URL}
       - FRONTEND_URL=${FRONTEND_URL}
+      - RECAPTCHA_SECRET=${RECAPTCHA_SECRET}
     deploy:
       resources:
         limits:
