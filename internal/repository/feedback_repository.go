@@ -45,8 +45,7 @@ func (r *feedbackRepository) GetPaginated(ctx context.Context, params domain.Pag
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
-	query = query.Scopes(pagination.Sort(params, "id DESC"))
-	err := query.Preload("Student").Scopes(pagination.Paginate(params)).Find(&feedbacks).Error
+	err := query.Preload("Student").Scopes(pagination.Sort(params, "id DESC"), pagination.Paginate(params)).Find(&feedbacks).Error
 	if err != nil {
 		return nil, 0, err
 	}

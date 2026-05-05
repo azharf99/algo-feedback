@@ -74,14 +74,13 @@ func (r *sessionRepository) GetPaginated(ctx context.Context, params domain.Pagi
 	if err := query.Count(&totalRows).Error; err != nil {
 		return nil, 0, err
 	}
-	query = query.Scopes(pagination.Sort(params, "id DESC"))
 
 	// Eksekusi pencarian dengan Pagination dan Preload lengkap
 	err := query.
 		Preload("Group").
 		Preload("Lesson").
 		Preload("StudentsAttended").
-		Scopes(pagination.Paginate(params)).
+		Scopes(pagination.Sort(params, "id DESC"), pagination.Paginate(params)).
 		Find(&sessions).Error
 
 	return sessions, totalRows, err

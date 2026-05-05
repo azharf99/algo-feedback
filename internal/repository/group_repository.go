@@ -61,9 +61,8 @@ func (r *groupRepository) GetPaginated(ctx context.Context, params domain.Pagina
 	if err := query.Count(&totalRows).Error; err != nil {
 		return nil, 0, err
 	}
-	query = query.Scopes(pagination.Sort(params, "id DESC"))
 
-	err := query.Preload("Course").Preload("Students").Scopes(pagination.Paginate(params)).Find(&groups).Error
+	err := query.Preload("Course").Preload("Students").Scopes(pagination.Sort(params, "id DESC"), pagination.Paginate(params)).Find(&groups).Error
 
 	return groups, totalRows, err
 }
