@@ -9,21 +9,21 @@ import (
 
 // Group merepresentasikan kelas/kohort yang mengambil suatu Course
 type Group struct {
-	ID              uint       `json:"id" gorm:"primaryKey"`
-	CourseID        uint       `json:"course_id"` // Relasi ke Course (Blueprint)
-	Course          *Course    `json:"course,omitempty"`
-	Name            string     `json:"name" gorm:"type:varchar(50);not null"`
-	Description     *string    `json:"description" gorm:"type:text"`
-	Type            string     `json:"type" gorm:"type:varchar(10);default:'Group'"`
-	GroupPhone      *string    `json:"group_phone" gorm:"type:varchar(50)"`
-	MeetingLink     *string    `json:"meeting_link" gorm:"type:text"`
-	RecordingsLink  *string    `json:"recordings_link" gorm:"type:text"`
+	ID              uint      `json:"id" gorm:"primaryKey"`
+	CourseID        uint      `json:"course_id"` // Relasi ke Course (Blueprint)
+	Course          *Course   `json:"course,omitempty"`
+	Name            string    `json:"name" gorm:"type:varchar(50);not null"`
+	Description     *string   `json:"description" gorm:"type:text"`
+	Type            string    `json:"type" gorm:"type:varchar(10);default:'Group'"`
+	GroupPhone      *string   `json:"group_phone" gorm:"type:varchar(50)"`
+	MeetingLink     *string   `json:"meeting_link" gorm:"type:text"`
+	RecordingsLink  *string   `json:"recordings_link" gorm:"type:text"`
 	FirstLessonDate *DateOnly `json:"first_lesson_date" gorm:"type:date"`
 	FirstLessonTime *TimeOnly `json:"first_lesson_time" gorm:"type:time"`
-	IsActive        bool       `json:"is_active" gorm:"default:true"`
-	CreatedAt       time.Time  `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt       time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
-	Students        []Student  `json:"students" gorm:"many2many:group_students;"`
+	IsActive        bool      `json:"is_active" gorm:"default:true"`
+	CreatedAt       time.Time `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt       time.Time `json:"updated_at" gorm:"autoUpdateTime"`
+	Students        []Student `json:"students" gorm:"many2many:group_students;"`
 }
 
 type GroupRepository interface {

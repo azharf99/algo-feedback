@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strings"
 
+
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 	"gorm.io/gorm"
@@ -59,22 +60,7 @@ func (r *lessonRepository) GetPaginated(ctx context.Context, params domain.Pagin
 		return nil, 0, err
 	}
 
-	if params.SortBy != "" {
-		sortDir := "ASC" // Default arah sort
-		if params.SortDir != "" {
-			sortDir = params.SortDir
-		}
-		desc := false
-		if strings.ToUpper(sortDir) == "DESC" {
-			desc = true
-		}
-		query = query.Order(clause.OrderByColumn{Column: clause.Column{Name: params.SortBy}, Desc: desc})
-	} else {
-		// Fallback default: urutkan dari data terbaru
-		query = query.Order("id DESC")
-	}
-
-	err := query.Preload("Course").Scopes(pagination.Paginate(params)).Find(&lessons).Error
+	err := query.Preload("Course").Scopes(pagination.Sort(params, "id DESC"), pagination.Paginate(params)).Find(&lessons).Error
 
 	return lessons, totalRows, err
 }
