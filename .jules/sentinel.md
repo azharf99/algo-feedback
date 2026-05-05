@@ -1,0 +1,4 @@
+## 2025-05-05 - Fix SQL Injection in Pagination Sorting
+**Vulnerability:** SQL Injection in dynamic sorting across `GetPaginated` functions in repositories (`course_repository.go`, `feedback_repository.go`, `group_repository.go`, `lesson_repository.go`, `session_repository.go`, `student_repository.go`). User input from `params.SortBy` and `params.SortDir` was directly concatenated into the `.Order()` query clause (e.g., `query.Order(params.SortBy + " " + sortDir)`).
+**Learning:** This existed because GORM's standard string-based `.Order()` method does not automatically parameterize or sanitize raw string inputs containing column names or sort directions.
+**Prevention:** Avoid string concatenation for SQL clauses. When dynamically sorting columns from user input in GORM, use the structured clause API: `clause.OrderByColumn{Column: clause.Column{Name: userInput}, Desc: isDesc}`. This ensures GORM safely quotes and handles the column name identifier.

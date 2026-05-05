@@ -4,10 +4,12 @@ package repository
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type lessonRepository struct {
@@ -62,7 +64,11 @@ func (r *lessonRepository) GetPaginated(ctx context.Context, params domain.Pagin
 		if params.SortDir != "" {
 			sortDir = params.SortDir
 		}
-		query = query.Order(params.SortBy + " " + sortDir)
+		desc := false
+		if strings.ToUpper(sortDir) == "DESC" {
+			desc = true
+		}
+		query = query.Order(clause.OrderByColumn{Column: clause.Column{Name: params.SortBy}, Desc: desc})
 	} else {
 		// Fallback default: urutkan dari data terbaru
 		query = query.Order("id DESC")
