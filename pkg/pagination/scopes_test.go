@@ -1,3 +1,4 @@
+// File: pkg/pagination/scopes_test.go
 package pagination
 
 import (
@@ -16,6 +17,8 @@ type Dummy struct {
 }
 
 func TestSort(t *testing.T) {
+	// Menggunakan DryRun jauh lebih ideal untuk testing Scope GORM
+	// karena kita hanya memvalidasi SQL yang di-generate, bukan koneksi DB-nya.
 	db, _ := gorm.Open(postgres.Open("host=localhost"), &gorm.Config{
 		DryRun: true,
 	})
@@ -67,6 +70,12 @@ func TestSort(t *testing.T) {
 			params:      domain.PaginationParams{SortBy: "", SortDir: ""},
 			defaultSort: "",
 			wantSQL:     `SELECT * FROM "dummies"`,
+		},
+		{
+			name:        "Invalid SortDir, defaults to ASC",
+			params:      domain.PaginationParams{SortBy: "name", SortDir: "INVALID"},
+			defaultSort: "id DESC",
+			wantSQL:     `SELECT * FROM "dummies" ORDER BY "name"`,
 		},
 	}
 
