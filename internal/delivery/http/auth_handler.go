@@ -81,10 +81,16 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
+	hashPassword, err := auth.HashPassword(req.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengenkripsi password"})
+		return
+	}
+
 	user := domain.User{
 		Name:     req.Name,
 		Email:    req.Email,
-		Password: req.Password,
+		Password: hashPassword,
 		Role:     req.Role,
 	}
 
