@@ -43,22 +43,6 @@ func main() {
 		log.Fatal("Gagal koneksi ke database: ", err)
 	}
 
-	// 1.5. Pre-migration: Handle column user_id addition for existing data
-	// Kita tambahkan kolom user_id secara manual sebagai nullable dulu jika belum ada,
-	// agar AutoMigrate tidak error saat mencoba menambahkan kolom NOT NULL pada tabel yang sudah ada isinya.
-	tables := []string{"students", "courses", "groups", "lessons", "sessions", "feedbacks"}
-	for _, table := range tables {
-		if db.Migrator().HasTable(table) && !db.Migrator().HasColumn(table, "user_id") {
-			log.Printf("🛠️ MIGRATION: Menambahkan kolom user_id ke tabel %s...", table)
-			if err := db.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN user_id bigint", table)).Error; err != nil {
-				log.Printf("⚠️ MIGRATION: Gagal menambahkan kolom user_id ke %s: %v", table, err)
-			}
-			// Assign default user_id = 1 untuk data yang sudah ada (Legacy Data)
-			// Kita asumsikan user 1 adalah Admin yang akan dibuat oleh seeder.
-			db.Exec(fmt.Sprintf("UPDATE %s SET user_id = 1 WHERE user_id IS NULL", table))
-		}
-	}
-
 	// Auto Migrate: Sekarang aman menjalankan AutoMigrate karena kolom sudah ada dan terisi.
 	// GORM akan menyesuaikan tipe data dan constraint (NOT NULL, Index, dll).
 	db.AutoMigrate(
@@ -74,14 +58,6 @@ func main() {
 	// 1.6. Seed Data & Final Cleanup
 	auth.SeedAdmin(db)
 
-	// Pastikan sekali lagi jika ada data yang masih NULL (misal tabel baru tapi ada anomali)
-	var firstUser domain.User
-	if err := db.Order("id asc").First(&firstUser).Error; err == nil {
-		for _, table := range tables {
-			db.Exec(fmt.Sprintf("UPDATE %s SET user_id = ? WHERE user_id IS NULL OR user_id = 0", table), firstUser.ID)
-		}
-		log.Println("✅ MIGRATION: Sinkronisasi data lama selesai.")
-	}
 
 	// 2. Setup Framework Gin
 	r := gin.Default()
