@@ -28,7 +28,17 @@ func NewStudentUsecase(repo domain.StudentRepository) domain.StudentUsecase {
 }
 
 // Create menambah siswa baru
-func (u *studentUsecase) Create(ctx context.Context, student *domain.Student) error {
+func (u *studentUsecase) Create(ctx context.Context, req *domain.UpdateStudentRequest) error {
+	student := &domain.Student{
+		Fullname:      req.Fullname,
+		Surname:       req.Surname,
+		Username:      req.Username,
+		PhoneNumber:   req.PhoneNumber,
+		ParentName:    req.ParentName,
+		ParentContact: req.ParentContact,
+		IsActive:      req.IsActive,
+	}
+
 	// Normalisasi nomor telepon
 	if student.PhoneNumber != nil {
 		normalized := formatter.NormalizePhoneNumber(*student.PhoneNumber)
@@ -39,8 +49,8 @@ func (u *studentUsecase) Create(ctx context.Context, student *domain.Student) er
 		student.ParentContact = &normalized
 	}
 
-	if student.Password != "" {
-		hashedPassword, err := auth.HashPassword(student.Password)
+	if req.Password != "" {
+		hashedPassword, err := auth.HashPassword(req.Password)
 		if err != nil {
 			return errors.New("gagal memproses password")
 		}
@@ -77,7 +87,7 @@ func (u *studentUsecase) GetPaginated(ctx context.Context, params domain.Paginat
 }
 
 // Update memperbarui data siswa
-func (u *studentUsecase) Update(ctx context.Context, id uint, req *domain.Student) error {
+func (u *studentUsecase) Update(ctx context.Context, id uint, req *domain.UpdateStudentRequest) error {
 	// 1. Cek apakah siswa ada
 	existingStudent, err := u.repo.GetByID(ctx, id)
 	if err != nil {
@@ -85,25 +95,29 @@ func (u *studentUsecase) Update(ctx context.Context, id uint, req *domain.Studen
 	}
 
 	// 2. Perbarui field yang diizinkan
-	existingStudent.Fullname = req.Fullname
-	existingStudent.Surname = req.Surname
-	existingStudent.Username = req.Username
+	if req.Fullname != "" {
+		existingStudent.Fullname = req.Fullname
+	}
+	if req.Surname != "" {
+		existingStudent.Surname = req.Surname
+	}
+	if req.Username != "" {
+		existingStudent.Username = req.Username
+	}
 
 	// Normalisasi nomor telepon sebelum update
 	if req.PhoneNumber != nil {
 		normalized := formatter.NormalizePhoneNumber(*req.PhoneNumber)
 		existingStudent.PhoneNumber = &normalized
-	} else {
-		existingStudent.PhoneNumber = nil
 	}
 
-	existingStudent.ParentName = req.ParentName
+	if req.ParentName != nil {
+		existingStudent.ParentName = req.ParentName
+	}
 
 	if req.ParentContact != nil {
 		normalized := formatter.NormalizePhoneNumber(*req.ParentContact)
 		existingStudent.ParentContact = &normalized
-	} else {
-		existingStudent.ParentContact = nil
 	}
 
 	existingStudent.IsActive = req.IsActive

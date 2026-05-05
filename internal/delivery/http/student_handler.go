@@ -77,8 +77,8 @@ func (h *StudentHandler) GetByID(c *gin.Context) {
 
 // Create: POST /students
 func (h *StudentHandler) Create(c *gin.Context) {
-	var req domain.Student
-	// Mem-parsing body JSON ke dalam struct Student (seperti Serializer di Django)
+	var req domain.UpdateStudentRequest
+	// Mem-parsing body JSON ke dalam struct request
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -101,7 +101,7 @@ func (h *StudentHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var req domain.Student
+	var req domain.UpdateStudentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

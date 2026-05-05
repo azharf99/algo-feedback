@@ -23,6 +23,19 @@ type Student struct {
 	UpdatedAt     time.Time `json:"updated_at" gorm:"autoUpdateTime"` // Pengganti auto_now=True
 }
 
+// UpdateStudentRequest adalah payload untuk Create/Update Siswa
+type UpdateStudentRequest struct {
+	Fullname      string  `json:"fullname"`
+	Surname       string  `json:"surname"`
+	Username      string  `json:"username"`
+	Password      string  `json:"password"` // Opsional
+	PhoneNumber   *string `json:"phone_number"`
+	ParentName    *string `json:"parent_name"`
+	ParentContact *string `json:"parent_contact"`
+	IsActive      bool    `json:"is_active"`
+}
+
+
 // Tambahkan baris ini di dalam interface StudentRepository di internal/domain/student.go
 type StudentRepository interface {
 	Create(ctx context.Context, student *Student) error
@@ -45,11 +58,11 @@ type ImportResult struct {
 
 // StudentUsecase mendefinisikan kontrak logika bisnis untuk Student
 type StudentUsecase interface {
-	Create(ctx context.Context, student *Student) error
+	Create(ctx context.Context, req *UpdateStudentRequest) error
 	GetByID(ctx context.Context, id uint) (*Student, error)
 	GetAll(ctx context.Context) ([]Student, error)
 	GetPaginated(ctx context.Context, params PaginationParams) (*PaginatedResult[Student], error)
-	Update(ctx context.Context, id uint, req *Student) error
+	Update(ctx context.Context, id uint, req *UpdateStudentRequest) error
 	Delete(ctx context.Context, id uint) error
 	ImportCSV(ctx context.Context, fileReader io.Reader) (*ImportResult, error)
 }
