@@ -76,7 +76,7 @@ func (h *GroupHandler) Create(c *gin.Context) {
 		domain.Group
 		Students []uint `json:"students"`
 	}
-	
+
 	if err := c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -103,7 +103,7 @@ func (h *GroupHandler) Update(c *gin.Context) {
 		domain.Group
 		Students []uint `json:"students"`
 	}
-	
+
 	if err := c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
