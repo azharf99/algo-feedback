@@ -65,18 +65,7 @@ func (r *groupRepository) GetPaginated(ctx context.Context, params domain.Pagina
 		return nil, 0, err
 	}
 
-	if params.SortBy != "" {
-		desc := false
-		if strings.ToUpper(params.SortDir) == "DESC" {
-			desc = true
-		}
-		query = query.Order(clause.OrderByColumn{Column: clause.Column{Name: params.SortBy}, Desc: desc})
-	} else {
-		// Fallback default: urutkan dari data terbaru
-		query = query.Order("id DESC")
-	}
-
-	err := query.Preload("Course").Preload("Students").Scopes(pagination.Paginate(params)).Find(&groups).Error
+	err := query.Preload("Course").Preload("Students").Scopes(pagination.Sort(params, "id DESC"), pagination.Paginate(params)).Find(&groups).Error
 
 	return groups, totalRows, err
 }

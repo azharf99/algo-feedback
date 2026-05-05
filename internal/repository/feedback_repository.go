@@ -48,17 +48,7 @@ func (r *feedbackRepository) GetPaginated(ctx context.Context, params domain.Pag
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
-	if params.SortBy != "" {
-		desc := false
-		if strings.ToUpper(params.SortDir) == "DESC" {
-			desc = true
-		}
-		query = query.Order(clause.OrderByColumn{Column: clause.Column{Name: params.SortBy}, Desc: desc})
-	} else {
-		// Fallback default: urutkan dari data terbaru
-		query = query.Order("id DESC")
-	}
-	err := query.Preload("Student").Scopes(pagination.Paginate(params)).Find(&feedbacks).Error
+	err := query.Preload("Student").Scopes(pagination.Sort(params, "id DESC"), pagination.Paginate(params)).Find(&feedbacks).Error
 	if err != nil {
 		return nil, 0, err
 	}
