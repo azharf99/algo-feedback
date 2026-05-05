@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
@@ -265,11 +266,21 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 		frontendURL = "http://localhost:5173" // Fallback aman untuk development
 	}
 
+	// Ubah struct User menjadi JSON byte
+	userBytes, err := json.Marshal(loginRes.User)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal memproses data pengguna"})
+		return
+	}
+
+	userEncoded := url.QueryEscape(string(userBytes))
+
 	redirectURL := fmt.Sprintf(
-		"%s/auth/success?access_token=%s&refresh_token=%s",
+		"%s/auth/success?access_token=%s&refresh_token=%s&user=%s",
 		frontendURL,
 		loginRes.AccessToken,
 		loginRes.RefreshToken,
+		userEncoded,
 	)
 	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
 }
