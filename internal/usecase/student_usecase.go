@@ -181,12 +181,18 @@ func (u *studentUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*
 		parentName := record[headerMap["parent_name"]]
 		parentContact := formatter.NormalizePhoneNumber(record[headerMap["parent_contact"]])
 
+		hashedPassword, err := auth.HashPassword(record[headerMap["password"]])
+		if err != nil {
+			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": fmt.Sprintf("failed to hash password: %v", err)})
+			continue
+		}
+
 		student := &domain.Student{
 			ID:            uint(idUint),
 			Fullname:      record[headerMap["fullname"]],
 			Surname:       record[headerMap["surname"]],
 			Username:      record[headerMap["username"]],
-			Password:      record[headerMap["password"]],
+			Password:      hashedPassword,
 			PhoneNumber:   &phoneNumber,
 			ParentName:    &parentName,
 			ParentContact: &parentContact,
