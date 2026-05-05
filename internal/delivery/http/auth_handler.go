@@ -36,6 +36,13 @@ func NewAuthHandler(r *gin.RouterGroup, us domain.AuthUsecase) {
 }
 
 // Request Body Structs
+type RegisterRequest struct {
+	Name     string      `json:"name" binding:"required"`
+	Email    string      `json:"email" binding:"required,email"`
+	Password string      `json:"password" binding:"required,min=6"`
+	Role     domain.Role `json:"role" binding:"required"`
+}
+
 type LoginRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required"`
@@ -54,10 +61,17 @@ type GoogleUserInfo struct {
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
-	var user domain.User
-	if err := c.ShouldBindJSON(&user); err != nil {
+	var req RegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	user := domain.User{
+		Name:     req.Name,
+		Email:    req.Email,
+		Password: req.Password,
+		Role:     domain.RoleTutor,
 	}
 
 	if err := h.usecase.Register(c.Request.Context(), &user); err != nil {
