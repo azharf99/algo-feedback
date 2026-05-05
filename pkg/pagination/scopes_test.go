@@ -1,119 +1,94 @@
+// File: pkg/pagination/scopes_test.go
 package pagination
 
 import (
+	"regexp"
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-func setupTestDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("failed to open sqlmock db: %v", err)
-	}
-
-	gormDB, err := gorm.Open(postgres.New(postgres.Config{
-		Conn: db,
-	}), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("failed to initialize gorm with mock db: %v", err)
-	}
-
-	return gormDB, mock
-}
-
-type TestModel struct {
+type Dummy struct {
 	ID   uint
 	Name string
 }
 
 func TestSort(t *testing.T) {
-	db, mock := setupTestDB(t)
+	// Menggunakan DryRun jauh lebih ideal untuk testing Scope GORM
+	// karena kita hanya memvalidasi SQL yang di-generate, bukan koneksi DB-nya.
+	db, _ := gorm.Open(postgres.Open("host=localhost"), &gorm.Config{
+		DryRun: true,
+	})
 
 	tests := []struct {
-		name          string
-		params        domain.PaginationParams
-		defaultSort   string
-		expectedQuery string
+		name        string
+		params      domain.PaginationParams
+		defaultSort string
+		wantSQL     string
 	}{
 		{
-			name: "Valid SortBy and SortDir",
-			params: domain.PaginationParams{
-				SortBy:  "name",
-				SortDir: "DESC",
-			},
-			defaultSort:   "id DESC",
-			expectedQuery: `SELECT \* FROM "test_models" ORDER BY name DESC`,
+			name:        "Valid sort asc",
+			params:      domain.PaginationParams{SortBy: "name", SortDir: "asc"},
+			defaultSort: "id DESC",
+			wantSQL:     `SELECT * FROM "dummies" ORDER BY "name"`,
 		},
 		{
-			name: "Valid SortBy, Default SortDir to ASC",
-			params: domain.PaginationParams{
-				SortBy:  "created_at",
-				SortDir: "",
-			},
-			defaultSort:   "id DESC",
-			expectedQuery: `SELECT \* FROM "test_models" ORDER BY created_at ASC`,
+			name:        "Valid sort desc",
+			params:      domain.PaginationParams{SortBy: "name", SortDir: "desc"},
+			defaultSort: "id DESC",
+			wantSQL:     `SELECT * FROM "dummies" ORDER BY "name" DESC`,
 		},
 		{
-			name: "Valid SortBy, lowercase sortDir DESC",
-			params: domain.PaginationParams{
-				SortBy:  "updated_at",
-				SortDir: "desc",
-			},
-			defaultSort:   "id DESC",
-			expectedQuery: `SELECT \* FROM "test_models" ORDER BY updated_at DESC`,
+			name:        "Valid sort with spaces in SortDir",
+			params:      domain.PaginationParams{SortBy: "name", SortDir: " desc "},
+			defaultSort: "id DESC",
+			wantSQL:     `SELECT * FROM "dummies" ORDER BY "name" DESC`,
 		},
 		{
-			name: "Invalid SortBy (SQL Injection Attempt)",
-			params: domain.PaginationParams{
-				SortBy:  "name; DROP TABLE users;",
-				SortDir: "ASC",
-			},
-			defaultSort:   "id DESC",
-			expectedQuery: `SELECT \* FROM "test_models" ORDER BY id DESC`,
+			name:        "Empty SortBy should use defaultSort",
+			params:      domain.PaginationParams{SortBy: "", SortDir: "asc"},
+			defaultSort: "id DESC",
+			wantSQL:     `SELECT * FROM "dummies" ORDER BY id DESC`,
 		},
 		{
-			name: "Empty SortBy, Fallback to Default Sort",
-			params: domain.PaginationParams{
-				SortBy:  "",
-				SortDir: "ASC",
-			},
-			defaultSort:   "id ASC",
-			expectedQuery: `SELECT \* FROM "test_models" ORDER BY id ASC`,
+			name:        "Invalid SortBy (SQL Injection attempt) should use defaultSort",
+			params:      domain.PaginationParams{SortBy: "name; DROP TABLE users; --", SortDir: "asc"},
+			defaultSort: "id DESC",
+			wantSQL:     `SELECT * FROM "dummies" ORDER BY id DESC`,
 		},
 		{
-			name: "Empty SortBy, No Default Sort",
-			params: domain.PaginationParams{
-				SortBy:  "",
-				SortDir: "",
-			},
-			defaultSort:   "",
-			expectedQuery: `SELECT \* FROM "test_models"`,
+			name:        "Invalid SortBy (special chars) should use defaultSort",
+			params:      domain.PaginationParams{SortBy: "name,email", SortDir: "asc"},
+			defaultSort: "id DESC",
+			wantSQL:     `SELECT * FROM "dummies" ORDER BY id DESC`,
 		},
 		{
-			name: "Invalid SortDir, defaults to ASC",
-			params: domain.PaginationParams{
-				SortBy:  "id",
-				SortDir: "INVALID",
-			},
-			defaultSort:   "id DESC",
-			expectedQuery: `SELECT \* FROM "test_models" ORDER BY id ASC`,
+			name:        "Empty SortBy and empty defaultSort should not apply order",
+			params:      domain.PaginationParams{SortBy: "", SortDir: ""},
+			defaultSort: "",
+			wantSQL:     `SELECT * FROM "dummies"`,
+		},
+		{
+			name:        "Invalid SortDir, defaults to ASC",
+			params:      domain.PaginationParams{SortBy: "name", SortDir: "INVALID"},
+			defaultSort: "id DESC",
+			wantSQL:     `SELECT * FROM "dummies" ORDER BY "name"`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mock.ExpectQuery(tt.expectedQuery).WillReturnRows(sqlmock.NewRows([]string{"id", "name"}))
+			stmt := db.Model(&Dummy{}).Scopes(Sort(tt.params, tt.defaultSort)).Find(&[]Dummy{}).Statement
+			sql := stmt.SQL.String()
 
-			var results []TestModel
-			err := db.Scopes(Sort(tt.params, tt.defaultSort)).Find(&results).Error
+			// Menghapus quote agar test stabil di berbagai dialect
+			sql = regexp.MustCompile(`"|'`).ReplaceAllString(sql, "")
+			expected := regexp.MustCompile(`"|'`).ReplaceAllString(tt.wantSQL, "")
 
-			assert.NoError(t, err)
-			assert.NoError(t, mock.ExpectationsWereMet())
+			assert.Equal(t, expected, sql)
 		})
 	}
 }

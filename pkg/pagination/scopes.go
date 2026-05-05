@@ -1,4 +1,3 @@
-// File: pkg/pagination/scopes.go
 package pagination
 
 import (
@@ -7,9 +6,10 @@ import (
 
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
-var validSortByPattern = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
+var validColumnNameRegex = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
 
 // Paginate adalah GORM Scope yang mengaplikasikan OFFSET dan LIMIT ke query.
 // Digunakan di semua repository dengan r.db.Scopes(pagination.Paginate(params)).
@@ -49,23 +49,22 @@ func Normalize(params domain.PaginationParams) domain.PaginationParams {
 	return params
 }
 
-// Sort adalah GORM Scope yang mengaplikasikan ORDER BY ke query secara aman.
-// Menangani SQL Injection dengan memastikan SortBy hanya mengandung karakter alfanumerik atau underscore.
-// Memastikan SortDir hanya "ASC" atau "DESC".
+// Sort adalah GORM Scope yang mengaplikasikan ORDER BY ke query secara aman, mencegah SQL Injection.
 func Sort(params domain.PaginationParams, defaultSort string) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
-		if params.SortBy != "" && validSortByPattern.MatchString(params.SortBy) {
-			sortDir := "ASC"
-			if strings.ToUpper(params.SortDir) == "DESC" {
-				sortDir = "DESC"
+		sortBy := strings.TrimSpace(params.SortBy)
+		if sortBy != "" && validColumnNameRegex.MatchString(sortBy) {
+			desc := false
+			if strings.EqualFold(strings.TrimSpace(params.SortDir), "desc") {
+				desc = true
 			}
-			return db.Order(params.SortBy + " " + sortDir)
+			return db.Order(clause.OrderByColumn{Column: clause.Column{Name: sortBy}, Desc: desc})
 		}
 
+		// Fallback default
 		if defaultSort != "" {
 			return db.Order(defaultSort)
 		}
-
 		return db
 	}
 }

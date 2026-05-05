@@ -52,10 +52,9 @@ func (r *courseRepository) GetPaginated(ctx context.Context, params domain.Pagin
 	if err := query.Count(&totalRows).Error; err != nil {
 		return nil, 0, err
 	}
-	query = query.Scopes(pagination.Sort(params, "id DESC"))
 
 	// Ambil data dengan Pagination
-	err := query.Preload("Lessons").Preload("Groups").Scopes(pagination.Paginate(params)).Find(&courses).Error
+	err := query.Preload("Lessons").Preload("Groups").Scopes(pagination.Sort(params, "id DESC"), pagination.Paginate(params)).Find(&courses).Error
 
 	return courses, totalRows, err
 }

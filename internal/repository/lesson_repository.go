@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 
+
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 	"gorm.io/gorm"
@@ -56,9 +57,8 @@ func (r *lessonRepository) GetPaginated(ctx context.Context, params domain.Pagin
 	if err := query.Count(&totalRows).Error; err != nil {
 		return nil, 0, err
 	}
-	query = query.Scopes(pagination.Sort(params, "id DESC"))
 
-	err := query.Preload("Course").Scopes(pagination.Paginate(params)).Find(&lessons).Error
+	err := query.Preload("Course").Scopes(pagination.Sort(params, "id DESC"), pagination.Paginate(params)).Find(&lessons).Error
 
 	return lessons, totalRows, err
 }
