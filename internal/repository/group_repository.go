@@ -8,6 +8,8 @@ import (
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+	"strings"
 )
 
 type groupRepository struct {
@@ -65,9 +67,11 @@ func (r *groupRepository) GetPaginated(ctx context.Context, params domain.Pagina
 	if params.SortBy != "" {
 		sortDir := "ASC" // Default arah sort
 		if params.SortDir != "" {
-			sortDir = params.SortDir
+			sortDir = strings.ToUpper(params.SortDir)
 		}
-		query = query.Order(params.SortBy + " " + sortDir)
+
+		desc := sortDir == "DESC"
+		query = query.Order(clause.OrderByColumn{Column: clause.Column{Name: params.SortBy}, Desc: desc})
 	} else {
 		// Fallback default: urutkan dari data terbaru
 		query = query.Order("id DESC")
