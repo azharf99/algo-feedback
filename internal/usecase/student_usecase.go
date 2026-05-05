@@ -39,11 +39,13 @@ func (u *studentUsecase) Create(ctx context.Context, student *domain.Student) er
 		student.ParentContact = &normalized
 	}
 
-	hashedPassword, err := auth.HashPassword(student.Password)
-	if err != nil {
-		return fmt.Errorf("failed to hash password: %w", err)
+	if student.Password != "" {
+		hashedPassword, err := auth.HashPassword(student.Password)
+		if err != nil {
+			return errors.New("gagal memproses password")
+		}
+		student.Password = hashedPassword
 	}
-	student.Password = hashedPassword
 	return u.repo.Create(ctx, student)
 }
 
@@ -110,7 +112,7 @@ func (u *studentUsecase) Update(ctx context.Context, id uint, req *domain.Studen
 	if req.Password != "" {
 		hashedPassword, err := auth.HashPassword(req.Password)
 		if err != nil {
-			return fmt.Errorf("failed to hash password: %w", err)
+			return errors.New("gagal memproses password baru")
 		}
 		existingStudent.Password = hashedPassword
 	}
