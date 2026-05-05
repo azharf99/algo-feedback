@@ -59,6 +59,7 @@ type AuthUsecase interface {
 	Login(ctx context.Context, email, password string) (*LoginResponse, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*LoginResponse, error)
 	GoogleLogin(ctx context.Context, email, name string) (*LoginResponse, error)
+	GetUserByEmail(ctx context.Context, email string) (*User, error)
 }
 
 // Kontrak untuk User Management Usecase (CRUD)

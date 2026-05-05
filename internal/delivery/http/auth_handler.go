@@ -74,10 +74,21 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	// Verifikasi Captcha
 	valid, err := auth.VerifyRecaptcha(req.CaptchaToken)
 	if err != nil || !valid {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Verifikasi captcha gagal"})
+		return
+	}
+
+	// Validasi Email apakah sudah ada?
+	registeredUser, err := h.usecase.GetUserByEmail(c.Request.Context(), req.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data pengguna"})
+		return
+	}
+
+	if registeredUser != nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Email sudah terdaftar"})
 		return
 	}
 

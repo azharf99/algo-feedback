@@ -56,6 +56,10 @@ func (u *authUsecase) Login(ctx context.Context, email, password string) (*domai
 	}, nil
 }
 
+func (u *authUsecase) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
+	return u.userRepo.GetByEmail(ctx, email)
+}
+
 func (u *authUsecase) RefreshToken(ctx context.Context, refreshTokenStr string) (*domain.LoginResponse, error) {
 	// 1. Validasi Refresh Token
 	token, err := auth.ValidateRefreshToken(refreshTokenStr)
