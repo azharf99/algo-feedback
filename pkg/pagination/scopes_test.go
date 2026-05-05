@@ -1,61 +1,107 @@
+// File: pkg/pagination/scopes_test.go
 package pagination
 
 import (
 	"testing"
-	"gorm.io/gorm"
-	"gorm.io/driver/postgres"
+
+	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/stretchr/testify/assert"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-type DummyModel struct {
+type TestModel struct {
 	ID   uint
 	Name string
 }
 
 func TestSort(t *testing.T) {
+	// Menggunakan DryRun jauh lebih ideal untuk testing Scope GORM
+	// karena kita hanya memvalidasi SQL yang di-generate, bukan koneksi DB-nya.
 	db, _ := gorm.Open(postgres.Open("host=localhost user=postgres password=postgres dbname=postgres port=5432 sslmode=disable"), &gorm.Config{DryRun: true})
 
 	tests := []struct {
 		name        string
-		sortBy      string
-		sortDir     string
+		params      domain.PaginationParams
 		defaultSort string
 		expectedSQL string
 	}{
 		{
-			name:        "Valid Sort ASC",
-			sortBy:      "name",
-			sortDir:     "asc",
+			name: "Valid SortBy and SortDir DESC",
+			params: domain.PaginationParams{
+				SortBy:  "name",
+				SortDir: "DESC",
+			},
 			defaultSort: "id DESC",
-			expectedSQL: `SELECT * FROM "dummy_models" ORDER BY "name"`,
+			expectedSQL: `ORDER BY "name" DESC`, // GORM clause otomatis menambahkan kutip
 		},
 		{
-			name:        "Valid Sort DESC",
-			sortBy:      "name",
-			sortDir:     "desc",
+			name: "Valid SortBy, Default SortDir to ASC",
+			params: domain.PaginationParams{
+				SortBy:  "name",
+				SortDir: "",
+			},
 			defaultSort: "id DESC",
-			expectedSQL: `SELECT * FROM "dummy_models" ORDER BY "name" DESC`,
+			expectedSQL: `ORDER BY "name"`, // GORM tidak merender kata 'ASC', default SQL adalah ASC
 		},
 		{
-			name:        "Invalid Sort, Use Default",
-			sortBy:      "name; DROP TABLE students",
-			sortDir:     "asc",
+			name: "Valid SortBy, lowercase sortDir DESC",
+			params: domain.PaginationParams{
+				SortBy:  "updated_at",
+				SortDir: "desc",
+			},
 			defaultSort: "id DESC",
-			expectedSQL: `SELECT * FROM "dummy_models" ORDER BY id DESC`,
+			expectedSQL: `ORDER BY "updated_at" DESC`,
 		},
 		{
-			name:        "Empty Sort, Use Default",
-			sortBy:      "",
-			sortDir:     "",
+			name: "Invalid SortBy (SQL Injection Attempt)",
+			params: domain.PaginationParams{
+				SortBy:  "name; DROP TABLE users;",
+				SortDir: "ASC",
+			},
 			defaultSort: "id DESC",
-			expectedSQL: `SELECT * FROM "dummy_models" ORDER BY id DESC`,
+			expectedSQL: `ORDER BY id DESC`, // Menggunakan defaultSort (tanpa kutip karena raw string)
+		},
+		{
+			name: "Empty SortBy, Fallback to Default Sort ASC",
+			params: domain.PaginationParams{
+				SortBy:  "",
+				SortDir: "ASC",
+			},
+			defaultSort: "id ASC",
+			expectedSQL: `ORDER BY id ASC`,
+		},
+		{
+			name: "Empty SortBy, No Default Sort",
+			params: domain.PaginationParams{
+				SortBy:  "",
+				SortDir: "",
+			},
+			defaultSort: "",
+			expectedSQL: ``, // Seharusnya tidak ada klausa ORDER BY
+		},
+		{
+			name: "Invalid SortDir, defaults to ASC",
+			params: domain.PaginationParams{
+				SortBy:  "id",
+				SortDir: "INVALID",
+			},
+			defaultSort: "id DESC",
+			expectedSQL: `ORDER BY "id"`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			stmt := db.Model(&DummyModel{}).Scopes(Sort(tt.sortBy, tt.sortDir, tt.defaultSort)).Find(&[]DummyModel{}).Statement
-			assert.Contains(t, stmt.SQL.String(), tt.expectedSQL)
+			stmt := db.Model(&TestModel{}).Scopes(Sort(tt.params, tt.defaultSort)).Find(&[]TestModel{}).Statement
+			
+			if tt.expectedSQL == "" {
+				// Jika tidak diekspektasikan ada sorting, pastikan ORDER BY tidak ada di kueri
+				assert.NotContains(t, stmt.SQL.String(), "ORDER BY")
+			} else {
+				// Pastikan string SQL yang di-generate memuat ekspektasi kita
+				assert.Contains(t, stmt.SQL.String(), tt.expectedSQL)
+			}
 		})
 	}
 }

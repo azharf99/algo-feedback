@@ -61,8 +61,7 @@ func (r *groupRepository) GetPaginated(ctx context.Context, params domain.Pagina
 	if err := query.Count(&totalRows).Error; err != nil {
 		return nil, 0, err
 	}
-
-	query = query.Scopes(pagination.Sort(params.SortBy, params.SortDir, "id DESC"))
+	query = query.Scopes(pagination.Sort(params, "id DESC"))
 
 	err := query.Preload("Course").Preload("Students").Scopes(pagination.Paginate(params)).Find(&groups).Error
 
@@ -73,16 +72,16 @@ func (r *groupRepository) Update(ctx context.Context, group *domain.Group, stude
 	// Gunakan Updates dengan map agar field bernilai zero (seperti is_active: false) tetap terupdate,
 	// dan Omit("CreatedAt") agar timestamp pembuatannya tidak tertimpa nilai zero.
 	updateData := map[string]interface{}{
-		"course_id":          group.CourseID,
-		"name":               group.Name,
-		"description":        group.Description,
-		"type":               group.Type,
-		"group_phone":        group.GroupPhone,
-		"meeting_link":       group.MeetingLink,
-		"recordings_link":    group.RecordingsLink,
-		"first_lesson_date":  group.FirstLessonDate,
-		"first_lesson_time":  group.FirstLessonTime,
-		"is_active":          group.IsActive,
+		"course_id":         group.CourseID,
+		"name":              group.Name,
+		"description":       group.Description,
+		"type":              group.Type,
+		"group_phone":       group.GroupPhone,
+		"meeting_link":      group.MeetingLink,
+		"recordings_link":   group.RecordingsLink,
+		"first_lesson_date": group.FirstLessonDate,
+		"first_lesson_time": group.FirstLessonTime,
+		"is_active":         group.IsActive,
 	}
 
 	err := r.db.WithContext(ctx).Model(group).Omit("Students").Updates(updateData).Error

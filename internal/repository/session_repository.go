@@ -74,8 +74,7 @@ func (r *sessionRepository) GetPaginated(ctx context.Context, params domain.Pagi
 	if err := query.Count(&totalRows).Error; err != nil {
 		return nil, 0, err
 	}
-
-	query = query.Scopes(pagination.Sort(params.SortBy, params.SortDir, "id DESC"))
+	query = query.Scopes(pagination.Sort(params, "id DESC"))
 
 	// Eksekusi pencarian dengan Pagination dan Preload lengkap
 	err := query.
