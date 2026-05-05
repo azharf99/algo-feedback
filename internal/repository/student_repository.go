@@ -5,12 +5,9 @@ import (
 	"context"
 	"errors"
 
-	"strings"
-
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 // studentRepository adalah implementasi nyata dari domain.StudentRepository
