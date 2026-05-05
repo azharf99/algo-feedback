@@ -157,6 +157,7 @@ func (t *TimeOnly) Scan(value interface{}) error {
 
 type Session struct {
 	ID                   uint           `gorm:"primaryKey" json:"id"`
+	UserID               uint           `json:"user_id" gorm:"not null;index"`
 	GroupID              uint           `json:"group_id" gorm:"not null"`
 	Group                *Group         `json:"group,omitempty"`
 	LessonID             uint           `json:"lesson_id" gorm:"not null"`

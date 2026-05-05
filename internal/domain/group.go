@@ -10,6 +10,7 @@ import (
 // Group merepresentasikan kelas/kohort yang mengambil suatu Course
 type Group struct {
 	ID              uint      `json:"id" gorm:"primaryKey"`
+	UserID          uint      `json:"user_id" gorm:"not null;index"`
 	CourseID        uint      `json:"course_id"` // Relasi ke Course (Blueprint)
 	Course          *Course   `json:"course,omitempty"`
 	Name            string    `json:"name" gorm:"type:varchar(50);not null"`

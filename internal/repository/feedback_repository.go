@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/ctxutil"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 	"gorm.io/gorm"
 )
@@ -18,18 +19,20 @@ func NewFeedbackRepository(db *gorm.DB) domain.FeedbackRepository {
 }
 
 func (r *feedbackRepository) Create(ctx context.Context, feedback *domain.Feedback) error {
+	userID, _ := ctxutil.GetUserID(ctx)
+	feedback.UserID = userID
 	return r.db.WithContext(ctx).Create(feedback).Error
 }
 
 func (r *feedbackRepository) GetByID(ctx context.Context, id uint) (*domain.Feedback, error) {
 	var feedback domain.Feedback
-	err := r.db.WithContext(ctx).Preload("Student").First(&feedback, id).Error
+	err := r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Preload("Student").First(&feedback, id).Error
 	return &feedback, err
 }
 
 func (r *feedbackRepository) GetAll(ctx context.Context) ([]domain.Feedback, error) {
 	var feedbacks []domain.Feedback
-	err := r.db.WithContext(ctx).Preload("Student").Find(&feedbacks).Error
+	err := r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Preload("Student").Find(&feedbacks).Error
 	return feedbacks, err
 }
 
@@ -38,7 +41,7 @@ func (r *feedbackRepository) GetPaginated(ctx context.Context, params domain.Pag
 	var feedbacks []domain.Feedback
 	var total int64
 
-	query := r.db.WithContext(ctx).Model(&domain.Feedback{})
+	query := r.db.WithContext(ctx).Model(&domain.Feedback{}).Scopes(scopeByUser(ctx))
 	if params.Search != "" {
 		query = query.Where("course ILIKE ? OR group_name ILIKE ?", "%"+params.Search+"%", "%"+params.Search+"%")
 	}
@@ -53,60 +56,55 @@ func (r *feedbackRepository) GetPaginated(ctx context.Context, params domain.Pag
 }
 
 func (r *feedbackRepository) Update(ctx context.Context, feedback *domain.Feedback) error {
-	// Gunakan Updates(struct) agar GORM hanya memperbarui field yang tidak kosong (non-zero).
-	// Ini mencegah field lain seperti student_id tertimpa menjadi null jika tidak dikirim.
-	return r.db.WithContext(ctx).Model(feedback).Updates(feedback).Error
+	userID, _ := ctxutil.GetUserID(ctx)
+	feedback.UserID = userID
+	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Where("id = ?", feedback.ID).Updates(feedback).Error
 }
 
 func (r *feedbackRepository) Delete(ctx context.Context, id uint) error {
-	return r.db.WithContext(ctx).Delete(&domain.Feedback{}, id).Error
+	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Delete(&domain.Feedback{}, id).Error
 }
 
 // UpsertSeeder menggantikan update_or_create milik Django
 func (r *feedbackRepository) UpsertSeeder(ctx context.Context, f *domain.Feedback) (bool, error) {
 	var existing domain.Feedback
 
-	// Menggunakan Find().Limit(1) alih-alih First() untuk menghindari log "record not found" yang berisik
-	err := r.db.WithContext(ctx).
-		Where("student_id = ? AND number = ? AND course = ?", f.StudentID, f.Number, f.Course).
-		Limit(1).
-		Find(&existing).Error
+	userID, _ := ctxutil.GetUserID(ctx)
+	f.UserID = userID
 
+	err := r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).
+		Where("student_id = ? AND number = ? AND course = ?", f.StudentID, f.Number, f.Course).
+		Limit(1).Find(&existing).Error
 	if err != nil {
 		return false, err
 	}
 
-	// Jika ID masih 0, berarti data tidak ditemukan -> Buat Baru
 	if existing.ID == 0 {
 		if errCreate := r.db.WithContext(ctx).Create(f).Error; errCreate != nil {
 			return false, errCreate
 		}
-		return true, nil // True = Created
+		return true, nil
 	}
 
-	// Jika ada, Update data yang lama dengan data baru
 	f.ID = existing.ID
 	if errUpdate := r.db.WithContext(ctx).Model(&existing).Updates(f).Error; errUpdate != nil {
 		return false, errUpdate
 	}
-	return false, nil // False = Updated
+	return false, nil
 }
 
 // GetUnsentFeedbacks mengambil feedback yang belum terkirim (is_sent = false)
-// Digunakan di Pengirim WA
 func (r *feedbackRepository) GetUnsentFeedbacks(ctx context.Context, studentID *uint, course *string, number *uint) ([]domain.Feedback, error) {
 	return r.GetFeedbacks(ctx, studentID, course, number, true)
 }
 
 // GetFeedbacks mengambil data feedback dengan filter fleksibel
 func (r *feedbackRepository) GetFeedbacks(ctx context.Context, studentID *uint, course *string, number *uint, onlyUnsent bool) ([]domain.Feedback, error) {
-	query := r.db.WithContext(ctx).Preload("Student")
+	query := r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Preload("Student")
 
 	if onlyUnsent {
 		query = query.Where("is_sent = ?", false)
 	}
-
-	// Filter dinamis
 	if studentID != nil {
 		query = query.Where("student_id = ?", *studentID)
 	}

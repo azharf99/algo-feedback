@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/ctxutil"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 	"gorm.io/gorm"
 )
@@ -19,6 +20,8 @@ func NewGroupRepository(db *gorm.DB) domain.GroupRepository {
 }
 
 func (r *groupRepository) Create(ctx context.Context, group *domain.Group, studentIDs []uint) error {
+	userID, _ := ctxutil.GetUserID(ctx)
+	group.UserID = userID
 	err := r.db.WithContext(ctx).Omit("Students").Create(group).Error
 	if err != nil {
 		return err
@@ -26,7 +29,7 @@ func (r *groupRepository) Create(ctx context.Context, group *domain.Group, stude
 	if studentIDs != nil {
 		var students []domain.Student
 		if len(studentIDs) > 0 {
-			r.db.WithContext(ctx).Where("id IN ?", studentIDs).Find(&students)
+			r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Where("id IN ?", studentIDs).Find(&students)
 		}
 		return r.db.WithContext(ctx).Model(group).Association("Students").Replace(&students)
 	}
@@ -36,7 +39,7 @@ func (r *groupRepository) Create(ctx context.Context, group *domain.Group, stude
 func (r *groupRepository) GetByID(ctx context.Context, id uint) (*domain.Group, error) {
 	var group domain.Group
 	// Preload "Course" dan "Students"
-	err := r.db.WithContext(ctx).Preload("Course").Preload("Students").First(&group, id).Error
+	err := r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Preload("Course").Preload("Students").First(&group, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +48,7 @@ func (r *groupRepository) GetByID(ctx context.Context, id uint) (*domain.Group, 
 
 func (r *groupRepository) GetAll(ctx context.Context) ([]domain.Group, error) {
 	var groups []domain.Group
-	err := r.db.WithContext(ctx).Preload("Course").Preload("Students").Find(&groups).Error
+	err := r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Preload("Course").Preload("Students").Find(&groups).Error
 	return groups, err
 }
 
@@ -53,7 +56,7 @@ func (r *groupRepository) GetPaginated(ctx context.Context, params domain.Pagina
 	var groups []domain.Group
 	var totalRows int64
 
-	query := r.db.WithContext(ctx).Model(&domain.Group{})
+	query := r.db.WithContext(ctx).Model(&domain.Group{}).Scopes(scopeByUser(ctx))
 	if params.Search != "" {
 		query = query.Where("name ILIKE ?", "%"+params.Search+"%")
 	}
@@ -68,6 +71,8 @@ func (r *groupRepository) GetPaginated(ctx context.Context, params domain.Pagina
 }
 
 func (r *groupRepository) Update(ctx context.Context, group *domain.Group, studentIDs []uint) error {
+	userID, _ := ctxutil.GetUserID(ctx)
+	group.UserID = userID
 	// Gunakan Updates dengan map agar field bernilai zero (seperti is_active: false) tetap terupdate,
 	// dan Omit("CreatedAt") agar timestamp pembuatannya tidak tertimpa nilai zero.
 	updateData := map[string]interface{}{
@@ -81,16 +86,17 @@ func (r *groupRepository) Update(ctx context.Context, group *domain.Group, stude
 		"first_lesson_date": group.FirstLessonDate,
 		"first_lesson_time": group.FirstLessonTime,
 		"is_active":         group.IsActive,
+		"user_id":           group.UserID,
 	}
 
-	err := r.db.WithContext(ctx).Model(group).Omit("Students").Updates(updateData).Error
+	err := r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Where("id = ?", group.ID).Model(&domain.Group{}).Omit("Students").Updates(updateData).Error
 	if err != nil {
 		return err
 	}
 	if studentIDs != nil {
 		var students []domain.Student
 		if len(studentIDs) > 0 {
-			r.db.WithContext(ctx).Where("id IN ?", studentIDs).Find(&students)
+			r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Where("id IN ?", studentIDs).Find(&students)
 		}
 		return r.db.WithContext(ctx).Model(group).Association("Students").Replace(&students)
 	}
@@ -98,7 +104,7 @@ func (r *groupRepository) Update(ctx context.Context, group *domain.Group, stude
 }
 
 func (r *groupRepository) Delete(ctx context.Context, id uint) error {
-	return r.db.WithContext(ctx).Delete(&domain.Group{}, id).Error
+	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Delete(&domain.Group{}, id).Error
 }
 
 // Upsert (Logikanya tetap sama persis seperti sebelumnya karena masih mengatur relasi Students)
@@ -106,7 +112,10 @@ func (r *groupRepository) Upsert(ctx context.Context, group *domain.Group, stude
 	var existing domain.Group
 	var isCreated bool
 
-	err := r.db.WithContext(ctx).First(&existing, group.ID).Error
+	userID, _ := ctxutil.GetUserID(ctx)
+	group.UserID = userID
+
+	err := r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).First(&existing, group.ID).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			if errCreate := r.db.WithContext(ctx).Create(group).Error; errCreate != nil {
@@ -125,7 +134,7 @@ func (r *groupRepository) Upsert(ctx context.Context, group *domain.Group, stude
 
 	if len(studentIDs) > 0 {
 		var students []domain.Student
-		r.db.WithContext(ctx).Where("id IN ?", studentIDs).Find(&students)
+		r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Where("id IN ?", studentIDs).Find(&students)
 		errAssoc := r.db.WithContext(ctx).Model(group).Association("Students").Replace(&students)
 		if errAssoc != nil {
 			return isCreated, errAssoc

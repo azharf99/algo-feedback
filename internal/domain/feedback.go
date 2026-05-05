@@ -35,6 +35,7 @@ const (
 // Feedback merepresentasikan tabel feedbacks di database.
 type Feedback struct {
 	ID            uint    `json:"id" gorm:"primaryKey"`
+	UserID        uint    `json:"user_id" gorm:"not null;index"`
 	Number        uint    `json:"number"`
 	GroupName     *string `json:"group_name" gorm:"type:varchar(100)"`
 	Topic         *string `json:"topic" gorm:"type:varchar(200)"`

@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/ctxutil"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 	"gorm.io/gorm"
 )
@@ -19,13 +20,15 @@ func NewCourseRepository(db *gorm.DB) domain.CourseRepository {
 }
 
 func (r *courseRepository) Create(ctx context.Context, course *domain.Course) error {
+	userID, _ := ctxutil.GetUserID(ctx)
+	course.UserID = userID
 	return r.db.WithContext(ctx).Create(course).Error
 }
 
 func (r *courseRepository) GetByID(ctx context.Context, id uint) (*domain.Course, error) {
 	var course domain.Course
 	// Menarik detail Course sekalian dengan daftar Lesson dan Group-nya
-	err := r.db.WithContext(ctx).Preload("Lessons").Preload("Groups").First(&course, id).Error
+	err := r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Preload("Lessons").Preload("Groups").First(&course, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +37,7 @@ func (r *courseRepository) GetByID(ctx context.Context, id uint) (*domain.Course
 
 func (r *courseRepository) GetAll(ctx context.Context) ([]domain.Course, error) {
 	var courses []domain.Course
-	err := r.db.WithContext(ctx).Preload("Lessons").Preload("Groups").Find(&courses).Error
+	err := r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Preload("Lessons").Preload("Groups").Find(&courses).Error
 	return courses, err
 }
 
@@ -42,7 +45,7 @@ func (r *courseRepository) GetPaginated(ctx context.Context, params domain.Pagin
 	var courses []domain.Course
 	var totalRows int64
 
-	query := r.db.WithContext(ctx).Model(&domain.Course{})
+	query := r.db.WithContext(ctx).Model(&domain.Course{}).Scopes(scopeByUser(ctx))
 
 	// Fitur Pencarian berdasarkan Judul atau Modul
 	if params.Search != "" {
@@ -60,19 +63,24 @@ func (r *courseRepository) GetPaginated(ctx context.Context, params domain.Pagin
 }
 
 func (r *courseRepository) Update(ctx context.Context, course *domain.Course) error {
-	return r.db.WithContext(ctx).Save(course).Error
+	userID, _ := ctxutil.GetUserID(ctx)
+	course.UserID = userID
+	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Where("id = ?", course.ID).Updates(course).Error
 }
 
 func (r *courseRepository) Delete(ctx context.Context, id uint) error {
-	return r.db.WithContext(ctx).Delete(&domain.Course{}, id).Error
+	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Delete(&domain.Course{}, id).Error
 }
 
 func (r *courseRepository) Upsert(ctx context.Context, course *domain.Course) (bool, error) {
 	var existing domain.Course
 	var isCreated bool
 
+	userID, _ := ctxutil.GetUserID(ctx)
+	course.UserID = userID
+
 	// Cek apakah Course sudah ada berdasarkan ID
-	err := r.db.WithContext(ctx).First(&existing, course.ID).Error
+	err := r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).First(&existing, course.ID).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// Jika tidak ada, Create baru

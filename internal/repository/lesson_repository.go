@@ -5,8 +5,8 @@ import (
 	"context"
 	"errors"
 
-
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/ctxutil"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 	"gorm.io/gorm"
 )
@@ -20,13 +20,15 @@ func NewLessonRepository(db *gorm.DB) domain.LessonRepository {
 }
 
 func (r *lessonRepository) Create(ctx context.Context, lesson *domain.Lesson) error {
+	userID, _ := ctxutil.GetUserID(ctx)
+	lesson.UserID = userID
 	return r.db.WithContext(ctx).Create(lesson).Error
 }
 
 func (r *lessonRepository) GetByID(ctx context.Context, id uint) (*domain.Lesson, error) {
 	var lesson domain.Lesson
 	// Preload diganti ke "Course" karena Lesson sekarang bergantung pada Course
-	err := r.db.WithContext(ctx).Preload("Course").First(&lesson, id).Error
+	err := r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Preload("Course").First(&lesson, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -35,13 +37,13 @@ func (r *lessonRepository) GetByID(ctx context.Context, id uint) (*domain.Lesson
 
 func (r *lessonRepository) GetAll(ctx context.Context) ([]domain.Lesson, error) {
 	var lessons []domain.Lesson
-	err := r.db.WithContext(ctx).Preload("Course").Find(&lessons).Error
+	err := r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Preload("Course").Find(&lessons).Error
 	return lessons, err
 }
 
 func (r *lessonRepository) GetByCourse(ctx context.Context, courseID uint) ([]domain.Lesson, error) {
 	var lessons []domain.Lesson
-	err := r.db.WithContext(ctx).Preload("Course").Where("course_id = ?", courseID).Order("number ASC").Find(&lessons).Error
+	err := r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Preload("Course").Where("course_id = ?", courseID).Order("number ASC").Find(&lessons).Error
 	return lessons, err
 }
 
@@ -49,7 +51,7 @@ func (r *lessonRepository) GetPaginated(ctx context.Context, params domain.Pagin
 	var lessons []domain.Lesson
 	var totalRows int64
 
-	query := r.db.WithContext(ctx).Model(&domain.Lesson{})
+	query := r.db.WithContext(ctx).Model(&domain.Lesson{}).Scopes(scopeByUser(ctx))
 	if params.Search != "" {
 		query = query.Where("title ILIKE ? OR module ILIKE ?", "%"+params.Search+"%", "%"+params.Search+"%")
 	}
@@ -64,11 +66,13 @@ func (r *lessonRepository) GetPaginated(ctx context.Context, params domain.Pagin
 }
 
 func (r *lessonRepository) Update(ctx context.Context, lesson *domain.Lesson) error {
-	return r.db.WithContext(ctx).Save(lesson).Error
+	userID, _ := ctxutil.GetUserID(ctx)
+	lesson.UserID = userID
+	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Where("id = ?", lesson.ID).Updates(lesson).Error
 }
 
 func (r *lessonRepository) Delete(ctx context.Context, id uint) error {
-	return r.db.WithContext(ctx).Delete(&domain.Lesson{}, id).Error
+	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Delete(&domain.Lesson{}, id).Error
 }
 
 // Upsert HANYA memperbarui atau membuat record Lesson
@@ -76,7 +80,10 @@ func (r *lessonRepository) Upsert(ctx context.Context, lesson *domain.Lesson) (b
 	var existing domain.Lesson
 	var isCreated bool
 
-	err := r.db.WithContext(ctx).First(&existing, lesson.ID).Error
+	userID, _ := ctxutil.GetUserID(ctx)
+	lesson.UserID = userID
+
+	err := r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).First(&existing, lesson.ID).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// Buat Baru
