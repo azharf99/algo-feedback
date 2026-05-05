@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/ctxutil"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -43,6 +44,13 @@ func AuthMiddleware() gin.HandlerFunc {
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
 			c.Set("user_id", claims["user_id"])
 			c.Set("role", claims["role"])
+
+			// Inject ke standard context agar bisa diakses di repository layer
+			userIDFloat, _ := claims["user_id"].(float64)
+			ctx := ctxutil.WithUserID(c.Request.Context(), uint(userIDFloat))
+			roleStr, _ := claims["role"].(string)
+			ctx = ctxutil.WithRole(ctx, roleStr)
+			c.Request = c.Request.WithContext(ctx)
 		}
 		c.Next()
 	}

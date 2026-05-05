@@ -229,7 +229,7 @@ func (u *feedbackUsecase) GeneratePDFAsync(ctx context.Context, studentID *uint,
 		if groupName == "" {
 			groupName = "UnknownGroup"
 		}
-		outputPath := fmt.Sprintf("mediafiles/%s/%s", groupName, fileName)
+		outputPath := fmt.Sprintf("mediafiles/%d/%s/%s", f.UserID, groupName, fileName)
 
 		// ⚡ GOROUTINE ACTION (Background Task) ⚡
 		// Kita kirim ke Worker Pool agar tidak blocking request HTTP
@@ -283,7 +283,7 @@ func (u *feedbackUsecase) SendFeedbackPDF(ctx context.Context, studentID *uint) 
 		if groupName == "" {
 			groupName = "UnknownGroup"
 		}
-		filePath := fmt.Sprintf("mediafiles/%s/%s", groupName, fileName)
+		filePath := fmt.Sprintf("mediafiles/%d/%s/%s", f.UserID, groupName, fileName)
 
 		// Persiapkan data kirim
 		to := strVal(f.Student.ParentContact)

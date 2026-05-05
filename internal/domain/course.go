@@ -11,6 +11,7 @@ import (
 
 type Course struct {
 	ID          uint           `gorm:"primaryKey" json:"id"`
+	UserID      uint           `json:"user_id" gorm:"not null;index"`
 	Title       string         `gorm:"type:varchar(255);not null" json:"title"`
 	Module      string         `gorm:"type:varchar(100);not null" json:"module"`
 	Description *string        `gorm:"type:text" json:"description"`

@@ -10,6 +10,7 @@ import (
 // Student merepresentasikan tabel students di database.
 type Student struct {
 	ID            uint      `json:"id" gorm:"primaryKey"`
+	UserID        uint      `json:"user_id" gorm:"not null;index"`
 	Fullname      string    `json:"fullname" gorm:"type:varchar(150);not null"`
 	Surname       string    `json:"surname" gorm:"type:varchar(50);not null"`
 	Username      string    `json:"username" gorm:"type:varchar(50);unique;not null"`

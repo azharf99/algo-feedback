@@ -56,6 +56,16 @@ func main() {
 
 	auth.SeedAdmin(db)
 
+	// Data Migration: Assign data lama ke user pertama (Admin dari seeder)
+	var firstUser domain.User
+	if err := db.First(&firstUser).Error; err == nil {
+		tables := []string{"students", "courses", "groups", "lessons", "sessions", "feedbacks"}
+		for _, table := range tables {
+			db.Exec(fmt.Sprintf("UPDATE %s SET user_id = ? WHERE user_id IS NULL OR user_id = 0", table), firstUser.ID)
+		}
+		log.Println("✅ MIGRATION: Data lama berhasil di-assign ke user:", firstUser.Email)
+	}
+
 	// 2. Setup Framework Gin
 	r := gin.Default()
 
