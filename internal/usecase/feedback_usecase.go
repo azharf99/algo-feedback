@@ -110,6 +110,14 @@ func (u *feedbackUsecase) GenerateFeedback(ctx context.Context, groupID *uint, a
 			if counter%4 == 0 {
 				monthNumber := uint(counter / 4)
 
+				// Pre-calculate attendance score for all students
+				studentAttendanceCounts := make(map[uint]int)
+				for _, ms := range monthSessions {
+					for _, attStudent := range ms.StudentsAttended {
+						studentAttendanceCounts[attStudent.ID]++
+					}
+				}
+
 				for _, student := range group.Students {
 					courseName := group.Course.Module
 					topic := curriculum.GetTopic(courseName, int(monthNumber))
@@ -119,15 +127,7 @@ func (u *feedbackUsecase) GenerateFeedback(ctx context.Context, groupID *uint, a
 					level := curriculum.GetCourseLevel(courseName)
 
 					// --- FITUR BARU: AUTO CALCULATE ATTENDANCE SCORE ---
-					attendanceScore := 0
-					for _, ms := range monthSessions {
-						for _, attStudent := range ms.StudentsAttended {
-							if attStudent.ID == student.ID {
-								attendanceScore++
-								break
-							}
-						}
-					}
+					attendanceScore := studentAttendanceCounts[student.ID]
 					// ---------------------------------------------------
 
 					var sessionLessonDate *domain.DateOnly
