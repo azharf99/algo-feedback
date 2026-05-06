@@ -33,7 +33,8 @@ type feedbackUsecase struct {
 	sessionRepo domain.SessionRepository // Baru: Menggantikan LessonRepo
 	pdfGen      pdfgen.PDFGenerator
 	waService   whatsapp.WhatsappService
-	taskPool    taskqueue.WorkerPool // Tambahkan worker pool
+	userRepo    domain.UserRepository // Tambahkan user repo
+	taskPool    taskqueue.WorkerPool  // Tambahkan worker pool
 }
 
 func NewFeedbackUsecase(
@@ -42,6 +43,7 @@ func NewFeedbackUsecase(
 	sr domain.SessionRepository,
 	pdf pdfgen.PDFGenerator,
 	wa whatsapp.WhatsappService,
+	ur domain.UserRepository, // Tambahkan parameter user repo
 	pool taskqueue.WorkerPool, // Tambahkan parameter pool
 ) domain.FeedbackUsecase {
 	return &feedbackUsecase{
@@ -50,6 +52,7 @@ func NewFeedbackUsecase(
 		sessionRepo: sr,
 		pdfGen:      pdf,
 		waService:   wa,
+		userRepo:    ur,
 		taskPool:    pool,
 	}
 }
@@ -315,8 +318,15 @@ func (u *feedbackUsecase) SendFeedbackPDF(ctx context.Context, studentID *uint) 
 			0, 0,
 			time.Local).Add(5 * time.Minute).Format("2006-01-02 15:04:05")
 
+		// Dapatkan credentials WhatsApp dari User
+		var apiKey, deviceID string
+		if user, err := u.userRepo.GetByID(ctx, f.UserID); err == nil {
+			apiKey = user.WhatsappAPIKey
+			deviceID = user.WhatsappDeviceID
+		}
+
 		// Panggil Gateway baru: ScheduleMedia
-		scheduleID, err := u.waService.ScheduleMedia(to, caption, filePath, runAt)
+		scheduleID, err := u.waService.ScheduleMedia(apiKey, deviceID, to, caption, filePath, runAt)
 		if err != nil {
 			continue
 		}
@@ -421,7 +431,14 @@ func (u *feedbackUsecase) Update(ctx context.Context, id uint, req *domain.Feedb
 				caption := fmt.Sprintf("Halo %s. Semoga %s sehat selalu, berikut adalah laporan perkembangan belajar Ananda %s untuk %s bulan ke-%d.",
 					*existing.Student.ParentName, *existing.Student.ParentName, existing.Student.Fullname, strVal(existing.Course), existing.Number)
 
-				_ = u.waService.UpdateSchedule(scheduleIDInt, to, caption, newRunAt)
+				// Dapatkan credentials WhatsApp dari User
+				var apiKey, deviceID string
+				if user, err := u.userRepo.GetByID(ctx, existing.UserID); err == nil {
+					apiKey = user.WhatsappAPIKey
+					deviceID = user.WhatsappDeviceID
+				}
+
+				_ = u.waService.UpdateSchedule(apiKey, deviceID, scheduleIDInt, to, caption, newRunAt)
 				existing.IsSent = true
 			}
 		}

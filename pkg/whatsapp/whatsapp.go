@@ -20,9 +20,9 @@ type WhatsappConfig struct {
 
 // WhatsappService mendefinisikan kontrak fungsi WhatsApp
 type WhatsappService interface {
-	ScheduleMedia(to, caption, filePath, runAt string) (int, error)
-	ScheduleMessage(to, message, runAt string) (int, error)
-	UpdateSchedule(id int, to, message, runAt string) error
+	ScheduleMedia(apiKey, deviceID, to, caption, filePath, runAt string) (int, error)
+	ScheduleMessage(apiKey, deviceID, to, message, runAt string) (int, error)
+	UpdateSchedule(apiKey, deviceID string, id int, to, message, runAt string) error
 }
 
 type whatsappService struct {
@@ -39,12 +39,15 @@ func NewWhatsappService(cfg WhatsappConfig) WhatsappService {
 }
 
 // fungsi bantuan untuk menyematkan header otorisasi
-func (w *whatsappService) setAuthHeader(req *http.Request) {
-	req.Header.Set("X-API-Key", w.config.ApiKey)
+func (w *whatsappService) setAuthHeader(req *http.Request, apiKey string) {
+	if apiKey == "" {
+		apiKey = w.config.ApiKey
+	}
+	req.Header.Set("X-API-Key", apiKey)
 }
 
 // ScheduleMedia: POST /api/schedule/media
-func (w *whatsappService) ScheduleMedia(to, caption, filePath, runAt string) (int, error) {
+func (w *whatsappService) ScheduleMedia(apiKey, deviceID, to, caption, filePath, runAt string) (int, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return 0, fmt.Errorf("gagal membuka file: %w", err)
@@ -54,8 +57,13 @@ func (w *whatsappService) ScheduleMedia(to, caption, filePath, runAt string) (in
 	payload := &bytes.Buffer{}
 	writer := multipart.NewWriter(payload)
 
+	// Fallback device_id if empty
+	if deviceID == "" {
+		deviceID = "3"
+	}
+
 	// Fields sesuai spesifikasi gateway baru
-	_ = writer.WriteField("device_id", "3")
+	_ = writer.WriteField("device_id", deviceID)
 	_ = writer.WriteField("to", to)
 	_ = writer.WriteField("is_group", "false")
 	_ = writer.WriteField("caption", caption)
@@ -75,7 +83,7 @@ func (w *whatsappService) ScheduleMedia(to, caption, filePath, runAt string) (in
 		return 0, err
 	}
 
-	w.setAuthHeader(req)
+	w.setAuthHeader(req, apiKey)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	resp, err := w.client.Do(req)
@@ -101,10 +109,15 @@ func (w *whatsappService) ScheduleMedia(to, caption, filePath, runAt string) (in
 }
 
 // UpdateSchedule: PUT /api/schedule/update
-func (w *whatsappService) UpdateSchedule(id int, to, message, runAt string) error {
+func (w *whatsappService) UpdateSchedule(apiKey, deviceID string, id int, to, message, runAt string) error {
+	// Fallback device_id if empty
+	if deviceID == "" {
+		deviceID = "3"
+	}
+
 	payloadData := map[string]interface{}{
 		"id":        id,
-		"device_id": 3,
+		"device_id": deviceID,
 		"to":        to,
 		"message":   message,
 		"run_at":    runAt,
@@ -117,7 +130,7 @@ func (w *whatsappService) UpdateSchedule(id int, to, message, runAt string) erro
 		return err
 	}
 
-	w.setAuthHeader(req)
+	w.setAuthHeader(req, apiKey)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := w.client.Do(req)
@@ -142,9 +155,14 @@ func (w *whatsappService) UpdateSchedule(id int, to, message, runAt string) erro
 }
 
 // ScheduleMessage: POST /api/schedule/message
-func (w *whatsappService) ScheduleMessage(to, message, runAt string) (int, error) {
+func (w *whatsappService) ScheduleMessage(apiKey, deviceID, to, message, runAt string) (int, error) {
+	// Fallback device_id if empty
+	if deviceID == "" {
+		deviceID = "3"
+	}
+
 	payloadData := map[string]interface{}{
-		"device_id": 3,
+		"device_id": deviceID,
 		"to":        to,
 		"message":   message,
 		"run_at":    runAt,
@@ -157,7 +175,7 @@ func (w *whatsappService) ScheduleMessage(to, message, runAt string) (int, error
 		return 0, err
 	}
 
-	w.setAuthHeader(req)
+	w.setAuthHeader(req, apiKey)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := w.client.Do(req)

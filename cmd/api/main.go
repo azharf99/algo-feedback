@@ -143,6 +143,7 @@ func main() {
 		sessionRepo, // <-- Masukkan Session Repo
 		pdfService,
 		waService,
+		userRepo,
 		pool, // <-- Masukkan Worker Pool
 	)
 

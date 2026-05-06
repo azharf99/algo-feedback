@@ -21,10 +21,12 @@ type User struct {
 	Name      string         `gorm:"type:varchar(100);not null" json:"name"`
 	Email     string         `gorm:"type:varchar(100);uniqueIndex;not null" json:"email"`
 	Password  string         `gorm:"type:varchar(255);not null" json:"-"` // Password disembunyikan dari JSON
-	Role      Role           `gorm:"type:varchar(20);not null;default:'Siswa'" json:"role"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	Role             Role           `gorm:"type:varchar(20);not null;default:'Siswa'" json:"role"`
+	WhatsappAPIKey   string         `gorm:"type:varchar(255)" json:"whatsapp_api_key"`
+	WhatsappDeviceID string         `gorm:"type:varchar(50)" json:"whatsapp_device_id"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
+	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // Struktur untuk Response Login
@@ -38,8 +40,10 @@ type LoginResponse struct {
 type UpdateUserRequest struct {
 	Name     string `json:"name"`
 	Email    string `json:"email"`
-	Password string `json:"password"` // Kosong = tidak diubah
-	Role     Role   `json:"role"`
+	Password         string `json:"password"` // Kosong = tidak diubah
+	Role             Role   `json:"role"`
+	WhatsappAPIKey   string `json:"whatsapp_api_key"`
+	WhatsappDeviceID string `json:"whatsapp_device_id"`
 }
 
 // Kontrak untuk User Repository

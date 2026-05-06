@@ -79,8 +79,10 @@ func (u *userUsecase) Create(ctx context.Context, req *domain.UpdateUserRequest)
 	user := &domain.User{
 		Name:     req.Name,
 		Email:    req.Email,
-		Password: hashedPassword,
-		Role:     role,
+		Password:         hashedPassword,
+		Role:             role,
+		WhatsappAPIKey:   req.WhatsappAPIKey,
+		WhatsappDeviceID: req.WhatsappDeviceID,
 	}
 
 	if err := u.userRepo.Create(ctx, user); err != nil {
@@ -114,6 +116,13 @@ func (u *userUsecase) Update(ctx context.Context, id uint, req *domain.UpdateUse
 			return nil, errors.New("gagal memproses password baru")
 		}
 		user.Password = hashedPassword
+	}
+
+	if req.WhatsappAPIKey != "" {
+		user.WhatsappAPIKey = req.WhatsappAPIKey
+	}
+	if req.WhatsappDeviceID != "" {
+		user.WhatsappDeviceID = req.WhatsappDeviceID
 	}
 
 	if err := u.userRepo.Update(ctx, user); err != nil {

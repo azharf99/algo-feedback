@@ -239,6 +239,13 @@ func (u *sessionUsecase) TriggerAfterSessionFeedback(ctx context.Context, sessio
 		groupPhone += "@s.whatsapp.net"
 	}
 
+	// Dapatkan credentials WhatsApp dari User
+	var apiKey, deviceID string
+	if user, err := u.userRepo.GetByID(ctx, session.UserID); err == nil {
+		apiKey = user.WhatsappAPIKey
+		deviceID = user.WhatsappDeviceID
+	}
+
 	// Generate Pesan
 	msg := u.generateFeedbackMessage(ctx, session)
 
@@ -248,6 +255,8 @@ func (u *sessionUsecase) TriggerAfterSessionFeedback(ctx context.Context, sessio
 	if session.ScheduledMessageID != nil {
 		// Update existing schedule
 		err := u.waService.UpdateSchedule(
+			apiKey,
+			deviceID,
 			int(*session.ScheduledMessageID),
 			groupPhone,
 			msg,
@@ -259,6 +268,8 @@ func (u *sessionUsecase) TriggerAfterSessionFeedback(ctx context.Context, sessio
 	} else {
 		// Create new schedule
 		id, err := u.waService.ScheduleMessage(
+			apiKey,
+			deviceID,
 			groupPhone,
 			msg,
 			runAtTime.Format("2006-01-02 15:04:05"),
