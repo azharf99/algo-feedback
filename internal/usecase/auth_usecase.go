@@ -174,16 +174,62 @@ func (u *authUsecase) ForgotPassword(ctx context.Context, email string) error {
 		frontendURL = "http://localhost:5173"
 	}
 
-	resetLink := fmt.Sprintf("%s/api/auth/reset-password?token=%s", frontendURL, token)
-	subject := "Reset Password - Algonova Feedback"
+	resetLink := fmt.Sprintf("%s/reset-password?token=%s", frontendURL, token)
+	subject := "Reset Password - Algonova Feedback System"
 	body := fmt.Sprintf(`
-		<h1>Reset Password</h1>
-		<p>Halo %s,</p>
-		<p>Anda menerima email ini karena kami menerima permintaan reset password untuk akun Anda.</p>
-		<p>Silakan klik link di bawah ini untuk mereset password Anda:</p>
-		<p><a href="%s">%s</a></p>
-		<p>Link ini akan kadaluarsa dalam 1 jam.</p>
-		<p>Jika Anda tidak merasa melakukan permintaan ini, abaikan email ini.</p>
+		<!DOCTYPE html>
+		<html>
+		<head>
+			<style>
+				.button {
+					background-color: #4CAF50;
+					border: none;
+					color: white;
+					padding: 15px 32px;
+					text-align: center;
+					text-decoration: none;
+					display: inline-block;
+					font-size: 16px;
+					margin: 4px 2px;
+					cursor: pointer;
+					border-radius: 8px;
+				}
+				.container {
+					font-family: Arial, sans-serif;
+					max-width: 600px;
+					margin: auto;
+					padding: 20px;
+					border: 1px solid #ddd;
+					border-radius: 10px;
+				}
+				.footer {
+					font-size: 12px;
+					color: #888;
+					margin-top: 20px;
+					border-top: 1px solid #eee;
+					padding-top: 10px;
+				}
+			</style>
+		</head>
+		<body>
+			<div class="container">
+				<h2 style="color: #333;">Permintaan Reset Password</h2>
+				<p>Halo <strong>%s</strong>,</p>
+				<p>Kami menerima permintaan untuk mereset password akun Algonova Feedback Anda. Jika Anda tidak melakukan permintaan ini, silakan abaikan email ini.</p>
+				<p>Untuk melanjutkan proses reset password, silakan klik tombol di bawah ini:</p>
+				<div style="text-align: center; margin: 30px 0;">
+					<a href="%s" class="button" style="color: white;">Reset Password Sekarang</a>
+				</div>
+				<p>Atau salin dan tempel link berikut di browser Anda:</p>
+				<p style="word-break: break-all; color: #666; font-size: 14px;">%s</p>
+				<p>Link ini akan kadaluarsa dalam <strong>1 jam</strong> demi keamanan akun Anda.</p>
+				<div class="footer">
+					<p>Email ini dikirim secara otomatis oleh sistem Algonova Feedback.<br>
+					© 2026 Algonova Feedback. Semua hak dilindungi.</p>
+				</div>
+			</div>
+		</body>
+		</html>
 	`, user.Name, resetLink, resetLink)
 
 	return mail.SendMail(user.Email, subject, body)

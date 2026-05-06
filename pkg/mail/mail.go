@@ -1,10 +1,12 @@
 package mail
 
 import (
+	"crypto/rand"
 	"crypto/tls"
 	"fmt"
 	"net/smtp"
 	"os"
+	"time"
 )
 
 // SendMail mengirim email menggunakan SMTP dengan dukungan port 465 (Implicit TLS).
@@ -60,17 +62,21 @@ func SendMail(to, subject, body string) error {
 		return err
 	}
 
-	header := make(map[string]string)
-	header["From"] = from
-	header["To"] = to
-	header["Subject"] = subject
-	header["MIME-Version"] = "1.0"
-	header["Content-Type"] = "text/html; charset=\"utf-8\""
+	date := time.Now().Format(time.RFC1123Z)
+	randBytes := make([]byte, 12)
+	rand.Read(randBytes)
+	messageID := fmt.Sprintf("<%x@%s>", randBytes, host)
 
-	message := ""
-	for k, v := range header {
-		message += fmt.Sprintf("%s: %s\r\n", k, v)
-	}
+	message := fmt.Sprintf("Date: %s\r\n", date)
+	message += fmt.Sprintf("From: Algonova Feedback <%s>\r\n", from)
+	message += fmt.Sprintf("To: %s\r\n", to)
+	message += fmt.Sprintf("Subject: %s\r\n", subject)
+	message += fmt.Sprintf("Message-ID: %s\r\n", messageID)
+	message += "MIME-Version: 1.0\r\n"
+	message += "Content-Type: text/html; charset=\"utf-8\"\r\n"
+	message += "X-Mailer: Algonova-Mailer\r\n"
+	message += "Precedence: bulk\r\n"
+	message += "X-Auto-Response-Suppress: All\r\n"
 	message += "\r\n" + body
 
 	_, err = w.Write([]byte(message))
