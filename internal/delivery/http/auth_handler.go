@@ -34,6 +34,7 @@ func NewAuthHandler(r *gin.RouterGroup, us domain.AuthUsecase) {
 		authRoutes.POST("/login", handler.Login)
 		authRoutes.POST("/refresh", handler.RefreshToken)
 		authRoutes.GET("/google/login", handler.GoogleLogin)
+		authRoutes.POST("/google/login", handler.GoogleOneTap)
 	}
 
 	// Callback harus di-register di level /api (bukan /api/auth)
@@ -58,6 +59,10 @@ type LoginRequest struct {
 
 type RefreshRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
+type GoogleOneTapRequest struct {
+	Credential string `json:"credential" binding:"required"`
 }
 
 // GoogleUserInfo menyimpan data profil user dari Google API
@@ -283,4 +288,38 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 		userEncoded,
 	)
 	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
+}
+
+// GoogleOneTap menangani login via Google One Tap (ID Token verification)
+func (h *AuthHandler) GoogleOneTap(c *gin.Context) {
+	var req GoogleOneTapRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Credential (ID Token) diperlukan"})
+		return
+	}
+
+	// 1. Verifikasi ID Token
+	googleUser, err := oauth.VerifyIDToken(c.Request.Context(), req.Credential)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Verifikasi token Google gagal: " + err.Error()})
+		return
+	}
+
+	// 2. Pastikan email terverifikasi
+	if !googleUser.VerifiedEmail {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Email Google Anda belum terverifikasi"})
+		return
+	}
+
+	// 3. Login atau auto-register via AuthUsecase
+	loginRes, err := h.usecase.GoogleLogin(c.Request.Context(), googleUser.Email, googleUser.Name)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Login Google berhasil",
+		"data":    loginRes,
+	})
 }
