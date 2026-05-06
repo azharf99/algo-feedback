@@ -160,8 +160,10 @@ type Session struct {
 	UserID               uint           `json:"user_id" gorm:"not null;index"`
 	GroupID              uint           `json:"group_id" gorm:"not null"`
 	Group                *Group         `json:"group,omitempty"`
+	GroupName            string         `json:"group_name" gorm:"->"`
 	LessonID             uint           `json:"lesson_id" gorm:"not null"`
 	Lesson               *Lesson        `json:"lesson,omitempty"`
+	LessonTitle          string         `json:"lesson_title" gorm:"->"`
 	DateStart            DateOnly       `json:"date_start" gorm:"type:date"`
 	TimeStart            TimeOnly       `json:"time_start" gorm:"type:time"`
 	AfterSessionFeedback *string        `json:"after_session_feedback" gorm:"type:text"`

@@ -59,12 +59,31 @@ func (r *sessionRepository) GetAll(ctx context.Context) ([]domain.Session, error
 func (r *sessionRepository) GetPaginated(ctx context.Context, params domain.PaginationParams) ([]domain.Session, int64, error) {
 	var sessions []domain.Session
 	var totalRows int64
-	query := r.db.WithContext(ctx).Model(&domain.Session{}).Scopes(scopeByUser(ctx))
+
+	query := r.db.WithContext(ctx).Model(&domain.Session{}).
+		Joins("LEFT JOIN groups ON groups.id = sessions.group_id").
+		Joins("LEFT JOIN lessons ON lessons.id = sessions.lesson_id")
+
+	// Manually filter by user_id to avoid ambiguity when joining tables.
+	// We don't use scopeByUser(ctx) here because it adds a bare "user_id" which becomes ambiguous.
+	if !ctxutil.IsAdmin(ctx) {
+		userID, _ := ctxutil.GetUserID(ctx)
+		query = query.Where("sessions.user_id = ?", userID)
+	}
+
+	if params.Search != "" {
+		searchText := "%" + params.Search + "%"
+		query = query.Where("groups.name ILIKE ? OR lessons.title ILIKE ?", searchText, searchText)
+	}
+
 	if err := query.Count(&totalRows).Error; err != nil {
 		return nil, 0, err
 	}
-	err := query.Preload("Group").Preload("Lesson").Preload("StudentsAttended").
-		Scopes(pagination.Sort(params, "id DESC"), pagination.Paginate(params)).Find(&sessions).Error
+
+	// Use Select to populate the new read-only fields GroupName and LessonTitle in the domain model.
+	err := query.Select("sessions.*, groups.name as group_name, lessons.title as lesson_title").
+		Preload("Group").Preload("Lesson").Preload("StudentsAttended").
+		Scopes(pagination.Sort(params, "sessions.id DESC"), pagination.Paginate(params)).Find(&sessions).Error
 	return sessions, totalRows, err
 }
 
