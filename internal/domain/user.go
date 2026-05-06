@@ -23,10 +23,12 @@ type User struct {
 	Password  string         `gorm:"type:varchar(255);not null" json:"-"` // Password disembunyikan dari JSON
 	Role             Role           `gorm:"type:varchar(20);not null;default:'Siswa'" json:"role"`
 	WhatsappAPIKey   string         `gorm:"type:varchar(255)" json:"whatsapp_api_key"`
-	WhatsappDeviceID string         `gorm:"type:varchar(50)" json:"whatsapp_device_id"`
-	CreatedAt        time.Time      `json:"created_at"`
-	UpdatedAt        time.Time      `json:"updated_at"`
-	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`
+	WhatsappDeviceID       string         `gorm:"type:varchar(50)" json:"whatsapp_device_id"`
+	ResetPasswordToken     string         `gorm:"type:varchar(255)" json:"-"`
+	ResetPasswordExpiresAt *time.Time     `json:"-"`
+	CreatedAt              time.Time      `json:"created_at"`
+	UpdatedAt              time.Time      `json:"updated_at"`
+	DeletedAt              gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // Struktur untuk Response Login
@@ -51,6 +53,7 @@ type UserRepository interface {
 	Create(ctx context.Context, user *User) error
 	GetByEmail(ctx context.Context, email string) (*User, error)
 	GetByID(ctx context.Context, id uint) (*User, error)
+	GetByResetToken(ctx context.Context, token string) (*User, error)
 	GetAll(ctx context.Context) ([]User, error)
 	GetPaginated(ctx context.Context, params PaginationParams) ([]User, int64, error)
 	Update(ctx context.Context, user *User) error
@@ -64,6 +67,8 @@ type AuthUsecase interface {
 	RefreshToken(ctx context.Context, refreshToken string) (*LoginResponse, error)
 	GoogleLogin(ctx context.Context, email, name string) (*LoginResponse, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
+	ForgotPassword(ctx context.Context, email string) error
+	ResetPassword(ctx context.Context, token, newPassword string) error
 }
 
 // Kontrak untuk User Management Usecase (CRUD)

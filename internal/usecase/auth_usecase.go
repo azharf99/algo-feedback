@@ -6,10 +6,14 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
+	"os"
 	"strconv"
+	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/auth"
+	"github.com/azharf99/algo-feedback/pkg/mail"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -138,4 +142,75 @@ func (u *authUsecase) GoogleLogin(ctx context.Context, email, name string) (*dom
 		RefreshToken: refreshToken,
 		User:         *user,
 	}, nil
+}
+
+func (u *authUsecase) ForgotPassword(ctx context.Context, email string) error {
+	user, err := u.userRepo.GetByEmail(ctx, email)
+	if err != nil {
+		// Untuk alasan keamanan, jangan beritahu jika email tidak ditemukan
+		return nil
+	}
+
+	// 1. Generate Token
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return err
+	}
+	token := hex.EncodeToString(tokenBytes)
+
+	// 2. Set Expiry (1 jam)
+	expiresAt := time.Now().Add(time.Hour * 1)
+	user.ResetPasswordToken = token
+	user.ResetPasswordExpiresAt = &expiresAt
+
+	// 3. Simpan ke DB
+	if err := u.userRepo.Update(ctx, user); err != nil {
+		return err
+	}
+
+	// 4. Kirim Email
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "http://localhost:5173"
+	}
+
+	resetLink := fmt.Sprintf("%s/api/auth/reset-password?token=%s", frontendURL, token)
+	subject := "Reset Password - Algonova Feedback"
+	body := fmt.Sprintf(`
+		<h1>Reset Password</h1>
+		<p>Halo %s,</p>
+		<p>Anda menerima email ini karena kami menerima permintaan reset password untuk akun Anda.</p>
+		<p>Silakan klik link di bawah ini untuk mereset password Anda:</p>
+		<p><a href="%s">%s</a></p>
+		<p>Link ini akan kadaluarsa dalam 1 jam.</p>
+		<p>Jika Anda tidak merasa melakukan permintaan ini, abaikan email ini.</p>
+	`, user.Name, resetLink, resetLink)
+
+	return mail.SendMail(user.Email, subject, body)
+}
+
+func (u *authUsecase) ResetPassword(ctx context.Context, token, newPassword string) error {
+	// 1. Cari user berdasarkan token
+	user, err := u.userRepo.GetByResetToken(ctx, token)
+	if err != nil {
+		return errors.New("token reset password tidak valid")
+	}
+
+	// 2. Cek Expiry
+	if user.ResetPasswordExpiresAt == nil || time.Now().After(*user.ResetPasswordExpiresAt) {
+		return errors.New("token reset password sudah kadaluarsa")
+	}
+
+	// 3. Hash Password Baru
+	hashedPassword, err := auth.HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+
+	// 4. Update User & Bersihkan Token
+	user.Password = hashedPassword
+	user.ResetPasswordToken = ""
+	user.ResetPasswordExpiresAt = nil
+
+	return u.userRepo.Update(ctx, user)
 }

@@ -35,6 +35,8 @@ func NewAuthHandler(r *gin.RouterGroup, us domain.AuthUsecase) {
 		authRoutes.POST("/refresh", handler.RefreshToken)
 		authRoutes.GET("/google/login", handler.GoogleLogin)
 		authRoutes.POST("/google/login", handler.GoogleOneTap)
+		authRoutes.POST("/forgot-password", handler.ForgotPassword)
+		authRoutes.POST("/reset-password", handler.ResetPassword)
 	}
 
 	// Callback harus di-register di level /api (bukan /api/auth)
@@ -63,6 +65,15 @@ type RefreshRequest struct {
 
 type GoogleOneTapRequest struct {
 	Credential string `json:"credential" binding:"required"`
+}
+
+type ForgotPasswordRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+type ResetPasswordRequest struct {
+	Token       string `json:"token" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=6"`
 }
 
 // GoogleUserInfo menyimpan data profil user dari Google API
@@ -322,4 +333,34 @@ func (h *AuthHandler) GoogleOneTap(c *gin.Context) {
 		"message": "Login Google berhasil",
 		"data":    loginRes,
 	})
+}
+
+func (h *AuthHandler) ForgotPassword(c *gin.Context) {
+	var req ForgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Email diperlukan"})
+		return
+	}
+
+	if err := h.usecase.ForgotPassword(c.Request.Context(), req.Email); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengirim email reset password"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Jika email terdaftar, instruksi reset password akan dikirim"})
+}
+
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.usecase.ResetPassword(c.Request.Context(), req.Token, req.NewPassword); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Password berhasil diperbarui"})
 }

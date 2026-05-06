@@ -38,6 +38,15 @@ func (r *userRepository) GetByID(ctx context.Context, id uint) (*domain.User, er
 	return &user, nil
 }
 
+func (r *userRepository) GetByResetToken(ctx context.Context, token string) (*domain.User, error) {
+	var user domain.User
+	err := r.db.WithContext(ctx).Where("reset_password_token = ?", token).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (r *userRepository) GetAll(ctx context.Context) ([]domain.User, error) {
 	var users []domain.User
 	err := r.db.WithContext(ctx).Order("id asc").Find(&users).Error
