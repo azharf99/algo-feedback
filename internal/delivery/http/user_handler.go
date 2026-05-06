@@ -29,6 +29,15 @@ func NewUserHandler(r *gin.RouterGroup, us domain.UserUsecase) {
 	}
 }
 
+// NewProfileHandler mendaftarkan rute API untuk profil user sendiri
+func NewProfileHandler(r *gin.RouterGroup, us domain.UserUsecase) {
+	handler := &UserHandler{
+		usecase: us,
+	}
+
+	r.PUT("/profile", handler.UpdateProfile)
+}
+
 // GetAll: GET /users
 // Mendukung pagination opsional via query params: ?page=1&limit=10
 func (h *UserHandler) GetAll(c *gin.Context) {
@@ -133,4 +142,42 @@ func (h *UserHandler) Delete(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Pengguna berhasil dihapus"})
+}
+
+// UpdateProfile: PUT /profile
+func (h *UserHandler) UpdateProfile(c *gin.Context) {
+	// Mengambil user_id dari context (di-set oleh AuthMiddleware)
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID tidak ditemukan"})
+		return
+	}
+
+	// JWT biasanya menyimpan numeric sebagai float64 jika menggunakan jwt-go/v5 secara default
+	var uid uint
+	if idFloat, ok := userID.(float64); ok {
+		uid = uint(idFloat)
+	} else if idUint, ok := userID.(uint); ok {
+		uid = idUint
+	} else {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Format User ID tidak valid"})
+		return
+	}
+
+	var req domain.UpdateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	user, err := h.usecase.UpdateProfile(c.Request.Context(), uid, &req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Profil berhasil diperbarui",
+		"data":    user,
+	})
 }

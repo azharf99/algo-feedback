@@ -131,6 +131,42 @@ func (u *userUsecase) Update(ctx context.Context, id uint, req *domain.UpdateUse
 	return user, nil
 }
 
+// UpdateProfile memperbarui data profil user sendiri (Nama, Password, WA Credentials)
+func (u *userUsecase) UpdateProfile(ctx context.Context, id uint, req *domain.UpdateUserRequest) (*domain.User, error) {
+	user, err := u.userRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, errors.New("pengguna tidak ditemukan")
+	}
+
+	// Update field yang diizinkan (Nama, Password, WA API, WA Device)
+	if req.Name != "" {
+		user.Name = req.Name
+	}
+
+	// Password hanya diperbarui jika dikirim
+	if req.Password != "" {
+		hashedPassword, err := auth.HashPassword(req.Password)
+		if err != nil {
+			return nil, errors.New("gagal memproses password baru")
+		}
+		user.Password = hashedPassword
+	}
+
+	if req.WhatsappAPIKey != "" {
+		user.WhatsappAPIKey = req.WhatsappAPIKey
+	}
+	if req.WhatsappDeviceID != "" {
+		user.WhatsappDeviceID = req.WhatsappDeviceID
+	}
+
+	// Email dan Role sengaja tidak diupdate di sini untuk keamanan
+
+	if err := u.userRepo.Update(ctx, user); err != nil {
+		return nil, errors.New("gagal memperbarui profil")
+	}
+	return user, nil
+}
+
 // Delete menghapus user secara soft-delete berdasarkan ID
 func (u *userUsecase) Delete(ctx context.Context, id uint) error {
 	if _, err := u.userRepo.GetByID(ctx, id); err != nil {

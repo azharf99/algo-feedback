@@ -199,6 +199,9 @@ func main() {
 			userGroup := protected.Group("/")
 			userGroup.Use(middleware.RoleMiddleware(domain.RoleAdmin))
 			handler.NewUserHandler(userGroup, userUsecase)
+
+			// Profile Module (All authenticated users)
+			handler.NewProfileHandler(protected, userUsecase)
 		}
 	}
 

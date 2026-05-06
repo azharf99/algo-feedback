@@ -73,5 +73,6 @@ type UserUsecase interface {
 	GetByID(ctx context.Context, id uint) (*User, error)
 	Create(ctx context.Context, req *UpdateUserRequest) (*User, error)
 	Update(ctx context.Context, id uint, req *UpdateUserRequest) (*User, error)
+	UpdateProfile(ctx context.Context, id uint, req *UpdateUserRequest) (*User, error)
 	Delete(ctx context.Context, id uint) error
 }
