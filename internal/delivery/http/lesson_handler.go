@@ -25,6 +25,7 @@ func NewLessonHandler(r *gin.RouterGroup, us domain.LessonUsecase) {
 		routes.PUT("/:id", handler.Update)
 		routes.DELETE("/:id", handler.Delete)
 		routes.POST("/import", handler.ImportCSV)
+		routes.POST("/import-competencies", handler.ImportCompetenciesCSV)
 	}
 }
 
@@ -125,6 +126,23 @@ func (h *LessonHandler) ImportCSV(c *gin.Context) {
 	defer opened.Close()
 
 	result, err := h.usecase.ImportCSV(c.Request.Context(), opened)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, result)
+}
+
+func (h *LessonHandler) ImportCompetenciesCSV(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File CSV diperlukan"})
+		return
+	}
+	opened, _ := file.Open()
+	defer opened.Close()
+
+	result, err := h.usecase.ImportCompetenciesCSV(c.Request.Context(), opened)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

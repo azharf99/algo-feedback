@@ -183,3 +183,88 @@ func (u *lessonUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*d
 
 	return result, nil
 }
+
+func (u *lessonUsecase) ImportCompetenciesCSV(ctx context.Context, fileReader io.Reader) (*domain.ImportResult, error) {
+	result := &domain.ImportResult{Errors: make([]map[string]interface{}, 0)}
+
+	reader := csv.NewReader(fileReader)
+	headers, err := reader.Read()
+	if err != nil {
+		return nil, fmt.Errorf("gagal membaca header CSV: %w", err)
+	}
+
+	headerMap := make(map[string]int)
+	for i, header := range headers {
+		headerMap[strings.TrimSpace(strings.ToLower(header))] = i
+	}
+
+	// Group competencies by CourseID
+	courseCompetencies := make(map[uint][]string)
+	
+	rowNum := 1
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": err.Error()})
+			continue
+		}
+		rowNum++
+
+		idIdx, okID := headerMap["id"]
+		compIdx, okComp := headerMap["competencies"]
+
+		if !okID || !okComp {
+			return nil, errors.New("header CSV harus memiliki 'ID' dan 'competencies'")
+		}
+
+		courseID, err := strconv.ParseUint(record[idIdx], 10, 32)
+		if err != nil {
+			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": "Course ID tidak valid"})
+			continue
+		}
+
+		compStr := record[compIdx]
+		if compStr == "" {
+			continue
+		}
+
+		courseCompetencies[uint(courseID)] = append(courseCompetencies[uint(courseID)], compStr)
+	}
+
+	// Process each CourseID
+	for courseID, competencies := range courseCompetencies {
+		lessons, err := u.repo.GetByCourse(ctx, courseID)
+		if err != nil {
+			result.Errors = append(result.Errors, map[string]interface{}{"course_id": courseID, "error": "gagal mengambil data lesson"})
+			continue
+		}
+
+		if len(lessons) == 0 {
+			result.Errors = append(result.Errors, map[string]interface{}{"course_id": courseID, "error": "tidak ada lesson ditemukan untuk course ini"})
+			continue
+		}
+
+		// Map competencies to lessons
+		for i := 0; i < len(lessons) && i < len(competencies); i++ {
+			lessons[i].Competency = competencies[i]
+			err := u.repo.Update(ctx, &lessons[i])
+			if err != nil {
+				result.Errors = append(result.Errors, map[string]interface{}{"course_id": courseID, "lesson_id": lessons[i].ID, "error": err.Error()})
+			} else {
+				result.Updated++
+			}
+		}
+
+		if len(competencies) != len(lessons) {
+			result.Errors = append(result.Errors, map[string]interface{}{
+				"course_id": courseID, 
+				"warning": fmt.Sprintf("jumlah kompetensi (%d) tidak sama dengan jumlah lesson (%d)", len(competencies), len(lessons)),
+			})
+		}
+	}
+
+	return result, nil
+}

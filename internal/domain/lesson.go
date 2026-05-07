@@ -49,4 +49,5 @@ type LessonUsecase interface {
 	Delete(ctx context.Context, id uint) error
 
 	ImportCSV(ctx context.Context, fileReader io.Reader) (*ImportResult, error)
+	ImportCompetenciesCSV(ctx context.Context, fileReader io.Reader) (*ImportResult, error)
 }
