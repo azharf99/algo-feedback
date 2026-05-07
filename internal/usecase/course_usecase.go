@@ -59,12 +59,17 @@ func (u *courseUsecase) Update(ctx context.Context, id uint, req *domain.Course)
 		return errors.New("course tidak ditemukan")
 	}
 
+	if req.Title != "" {
+		existing.Title = req.Title
+	}
 	if req.Module != "" {
 		existing.Module = req.Module
 	}
 	if req.Description != nil {
 		existing.Description = req.Description
 	}
+	
+	existing.IsActive = req.IsActive
 
 	return u.repo.Update(ctx, existing)
 }
