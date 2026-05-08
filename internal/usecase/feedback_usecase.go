@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/ctxutil"
 	"github.com/azharf99/algo-feedback/pkg/curriculum"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 	"github.com/azharf99/algo-feedback/pkg/pdfgen"
@@ -245,23 +246,32 @@ func (u *feedbackUsecase) GeneratePDFAsync(ctx context.Context, studentID *uint,
 
 		// ⚡ GOROUTINE ACTION (Background Task) ⚡
 		// Kita kirim ke Worker Pool agar tidak blocking request HTTP
-		fID := f.ID // Capture ID untuk closure
+		fID := f.ID         // Capture ID untuk closure
+		fUserID := f.UserID // Capture UserID pemilik data
+		isAdmin := ctxutil.IsAdmin(ctx)
+
 		u.taskPool.Submit(taskqueue.TaskFunc(func(taskCtx context.Context) error {
+			// Rekonstruksi context agar layer repository bisa melewati filter scopeByUser
+			bgCtx := ctxutil.WithUserID(context.Background(), fUserID)
+			if isAdmin {
+				bgCtx = ctxutil.WithRole(bgCtx, "Admin")
+			}
+
 			// 1. Generate PDF
-			err := u.pdfGen.Generate(taskCtx, pdfData, outputPath)
+			err := u.pdfGen.Generate(bgCtx, pdfData, outputPath)
 			if err != nil {
 				return fmt.Errorf("gagal generate PDF untuk student %s: %w", pdfData.StudentName, err)
 			}
 
 			// 2. Update URL PDF di Database
 			// Kita ambil data terbaru dulu agar tidak menimpa data lain (pattern Fetch-then-Update)
-			existing, err := u.feedRepo.GetByID(taskCtx, fID)
+			existing, err := u.feedRepo.GetByID(bgCtx, fID)
 			if err != nil {
 				return err
 			}
 
 			existing.URLPDF = &outputPath
-			return u.feedRepo.Update(taskCtx, existing)
+			return u.feedRepo.Update(bgCtx, existing)
 		}))
 
 		response = append(response, map[string]interface{}{
