@@ -313,3 +313,7 @@ func (u *sessionUsecase) TriggerAfterSessionFeedback(ctx context.Context, sessio
 	// Update DB (menyimpan ScheduledMessageID dan AfterSessionFeedback)
 	_ = u.repo.Update(ctx, session)
 }
+
+func (u *sessionUsecase) MarkDoneUpToDate(ctx context.Context, groupID uint, date time.Time) error {
+	return u.repo.MarkDoneUpToDate(ctx, groupID, date)
+}

@@ -4,6 +4,7 @@ package http
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/gin-gonic/gin"
@@ -27,6 +28,7 @@ func NewSessionHandler(r *gin.RouterGroup, us domain.SessionUsecase) {
 
 		// Endpoint Khusus Absensi
 		routes.POST("/:id/attendance", handler.UpdateAttendance)
+		routes.POST("/mark-done", handler.MarkDoneUpToDate)
 	}
 }
 
@@ -117,4 +119,29 @@ func (h *SessionHandler) UpdateAttendance(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Kehadiran siswa berhasil disimpan"})
+}
+
+func (h *SessionHandler) MarkDoneUpToDate(c *gin.Context) {
+	var req struct {
+		GroupID   uint   `json:"group_id" binding:"required"`
+		UntilDate string `json:"until_date" binding:"required"` // YYYY-MM-DD
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	date, err := time.Parse("2006-01-02", req.UntilDate)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format tanggal tidak valid, gunakan YYYY-MM-DD"})
+		return
+	}
+
+	if err := h.usecase.MarkDoneUpToDate(c.Request.Context(), req.GroupID, date); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Sesi berhasil ditandai selesai"})
 }

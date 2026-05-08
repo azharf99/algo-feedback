@@ -3,6 +3,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/ctxutil"
@@ -141,4 +142,11 @@ func (r *sessionRepository) UpsertAttendance(ctx context.Context, session *domai
 		r.db.WithContext(ctx).Model(&existing).Association("StudentsAttended").Clear()
 	}
 	return nil
+}
+
+func (r *sessionRepository) MarkDoneUpToDate(ctx context.Context, groupID uint, date time.Time) error {
+	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).
+		Model(&domain.Session{}).
+		Where("group_id = ? AND date_start <= ?", groupID, date.Format("2006-01-02")).
+		Update("is_done", true).Error
 }
