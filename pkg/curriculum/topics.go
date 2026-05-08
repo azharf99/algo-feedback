@@ -104,7 +104,7 @@ var Topics = map[string]map[int]string{
 		7: "Introduction to Databases and Web Application Data Processing",
 		8: "Completion of Web Development Project and Graduation",
 	},
-	"Visual programming INDONESIA": {
+	"Visual Programing IND": {
 		1: "Pengenalan",
 		2: "Ruang",
 		3: "Animasi",
@@ -115,7 +115,18 @@ var Topics = map[string]map[int]string{
 		8: "Persiapan Project Akhir",
 		9: "Project Akhir",
 	},
-	"Building Websites_ENG": {
+	"Visual Programing ENG": {
+		1: "Introduction",
+		2: "Space",
+		3: "Animation",
+		4: "First Game",
+		5: "Logic Operators, RNG",
+		6: "Project Group",
+		7: "Variables, Chat Bot",
+		8: "Final Project Preparation",
+		9: "Final Project",
+	},
+	"Building Websites ENG": {
 		1: "HTML Basics",
 		2: "CSS Basics",
 		3: "Web Development with JavaScript",
@@ -231,7 +242,7 @@ var ModulesResult = map[string]map[int]string{
 		7: "Students are introduced to working with databases within a website, which provides an understanding of how to store, manage, and access the data needed for a web application. They learn about the data structure of a database, including how to design and organize data in tables for easy access and management. The material also covers the creation of dynamic and session websites, which allow users to have a more interactive and personalized experience when visiting a website. In addition, students are taught how to acquire and process data, which involves techniques for retrieving data from various sources and how to manipulate it for the purposes of a web application.",
 		8: "Students gain an in-depth look at a career as a Python developer, covering the various aspects of the job, responsibilities, and skills needed to succeed in the tech industry. They learn about the different career paths available, including web application development, data analytics, and machine learning, and how to choose a specialization that fits their interests and goals. At the end of the course, students participate in a hackathon, where they can apply the knowledge and skills they have learned to create a self-directed project. This experience helps them understand the software development process from start to finish, including team collaboration and project management.",
 	},
-	"Visual programming INDONESIA": {
+	"Visual Programing IND": {
 		1: "Berkenalan dengan bentuk dan antarmuka dari website Scratch memberikan pemahaman dasar mengenai platform tersebut, termasuk bagaimana pengguna dapat berinteraksi dengan berbagai fitur yang tersedia. Selain itu, pengenalan tentang konsep loop diajarkan untuk memahami proses perulangan dalam pemrograman.",
 		2: "Pembuatan project pertama memberikan pemahaman mengenai koordinat, derajat, dan arah. Materi ini membantu pengguna memahami bagaimana objek dapat diposisikan dan diarahkan dalam lingkungan dua dimensi",
 		3: "Pembuatan project kedua melibatkan pembelajaran tentang kondisi dan penggunaan perintah if, yang digunakan untuk membuat keputusan berdasarkan syarat tertentu dalam kode.",
@@ -242,7 +253,18 @@ var ModulesResult = map[string]map[int]string{
 		8: "Pembelajaran berfokus ke persiapan yang dilakukan para siswa untuk membuat proyek akhirnya. Tutor akan mengajak mereka mencari ide game / animasi yang orisinil untuk nanti dibuat dan dipresentasikan di akhir modul ",
 		9: "Pembelajaran berfokus ke penyelesaian project akhir yang telah direncanakan dan disiapkan. Pada pertemuan ke 36 , tutor mengajak para murid untuk mempresentasikan karya yang telah dibuatnya sekaligus untuk melatih kemampuan public speaking para murid",
 	},
-	"Building Websites_ENG": {
+	"Visual Programing ENG": {
+		1: "Getting familiar with the layout and interface of the Scratch website provides a basic understanding of the platform, including how users can interact with the various available features. Additionally, the introduction to the concept of loops is taught to understand the repetition process in programming.",
+		2: "Creating the first project provides an understanding of coordinates, degrees, and directions. This material helps users understand how objects can be positioned and directed in a two-dimensional environment.",
+		3: "Creating the second project involves learning about conditions and the use of the if statement, which is used to make decisions based on specific conditions in the code.",
+		4: "Introducing the concept of programming procedures through the creation of the first game (the third project). These procedures help structure the program modularly and efficiently.",
+		5: "Learning about logical operators, random numbers, and area coordinates introduces more complex concepts in programming for decision-making and generating variability within the program.",
+		6: "In creating the second game, the concept of variables in programming is introduced. Variables are used to store and manipulate data during program execution.",
+		7: "The reinforcement of material regarding variables is done by creating the fifth project in the form of a Chat Bot, which uses variables to store and process user input.",
+		8: "The learning focuses on the preparation done by the students to create their final project. The tutor will guide them in finding original game/animation ideas to be created later and presented at the end of the module.",
+		9: "The learning focuses on completing the final project that has been planned and prepared. In the 36th meeting, the tutor invites the students to present their creations while simultaneously practicing their public speaking skills.",
+	},
+	"Building Websites ENG": {
 		1: "Students are introduced to the basics of HTML, which includes an understanding of the basic structure of an HTML document and the essential elements used in creating a website. They learn how to work with text and images, including the use of HTML tags to format content and insert images appropriately. In addition, students learn how to work with tables, which allows them to display data in a structured and neat way. By the end of the month, students will have created a business card website, giving them practical experience in applying the HTML knowledge they have learned to create functional web pages.",
 		2: "Students learn the basic concepts of CSS, starting with an understanding of selectors and classes, which are used to select HTML elements and apply styles. They also learn about containers, which help organize elements on a web page. By understanding layout design, students can create effective and responsive layouts for their websites. By the end of the month, students will be able to style their designed layouts, thus applying their CSS knowledge to enhance the visual appearance and functionality of the websites they have created.",
 		3: "Students are introduced to JavaScript, starting with an understanding of variables, data types, and how the Document Object Model (DOM) works. They learn how to use JavaScript to interact with HTML elements and dynamically manipulate content. Next, students understand functions and events in JavaScript, which allow them to write code that is responsive to user interactions. The course also covers control structures and arrays, which provide tools for managing program flow. By the end of the month, students will have learned object-oriented programming (OOP), which provides a framework for structuring code in a more efficient and organized manner.",
@@ -358,7 +380,7 @@ var CompetencyResult = map[string]map[int]string{
 		7: "Students are introduced to working with databases within a website, which provides an understanding of how to store, manage, and access the data needed for a web application. They learn about the data structure of a database, including how to design and organize data in tables for easy access and management. The material also covers the creation of dynamic and session websites, which allow users to have a more interactive and personalized experience when visiting a website. In addition, students are taught how to acquire and process data, which involves techniques for retrieving data from various sources and how to manipulate it for the purposes of a web application.",
 		8: "Students gain an in-depth look at a career as a Python developer, covering the various aspects of the job, responsibilities, and skills needed to succeed in the tech industry. They learn about the different career paths available, including web application development, data analytics, and machine learning, and how to choose a specialization that fits their interests and goals. At the end of the course, students participate in a hackathon, where they can apply the knowledge and skills they have learned to create a self-directed project. This experience helps them understand the software development process from start to finish, including team collaboration and project management.",
 	},
-	"Visual programming INDONESIA": {
+	"Visual Programing IND": {
 		1: "Pada bulan ini siswa sudah belajar tentang apa itu scratch dan apa saja yang bisa dilakukan di aplikasi tersebut, Siswa juga sudah berlatih untuk membuat karakter berbicara, sekaligus mengasah logika dengan bantuan marsbot",
 		2: "Di bulan ini, siswa belajar membuat project pertamanya di scratch. Siswa juga belajar tentang Koordinat, bagaimana cara membuat karakter bergerak, dan belajar tentang derajat untuk mengarahkan karakter.",
 		3: "Di bulan ini, siswa belajar untuk membuat animasi pertamanya di Scratch. Siswa juga akan belajar untuk menggunakan tombol untuk menggerakan karakter dan menjadi jembatan untuk membuat game pertamanya di bulan berikutnya ",
@@ -369,7 +391,18 @@ var CompetencyResult = map[string]map[int]string{
 		8: "Di bulan ini, siswa sudah memperkuat pengetahuan yang sudah dipelajari dari pertemuan pertama untuk membuat Proyek akhir orisinal dan dipresentasikan di depan kelas",
 		9: "Siswa belajar bagaimana cara melakukan presentasi dengan baik berdasarkan contoh dan penjelasan yang telah diberikan. Siswa kemudian mempresentasikan project terbaru yang telah diselesaikannya. Siswa  diajak bermain bersama untuk mendapatkan inspirasi aplikasi/game yang akan dibuat kemudian menuliskan idenya sekaligus memulai mengimplementasikan idenya menjadi sebuah aplikasi / game. Siswa telah menyelesaikan final projectnya dan tutor telah memberikan apa saja hal yang harus diperhatikan ketika mempresentasikan sebuah final project. Siswa mempresentasikan final projectnya sekaligus melanjutkan ke pengantar course selanjutnya",
 	},
-	"Building Websites_ENG": {
+	"Visual Programing ENG": {
+		1: "This month, the students have learned what Scratch is and what can be done in the application. The students have also practiced making characters speak, while simultaneously honing their logic with the help of Marsbot.",
+		2: "This month, the students learned to create their first project in Scratch. The students also learned about coordinates, how to make characters move, and learned about degrees to direct the characters.",
+		3: "This month, the students learned to create their first animation in Scratch. The students also learned to use keys/buttons to move characters, serving as a bridge to creating their first game next month.",
+		4: "This month, the students learned to create their first game, from creating the backgrounds and characters to the programming. The students also learned to make programming simpler with a more structured approach.",
+		5: "This month, the students learned about logical operators, random numbers, and coordinate areas. The students learned the differences between \"and\", \"or\", and \"not\" logic. The students also practiced their logic through related exercises.",
+		6: "This month, the students were directed to create a group project. After the project, the students will be taught a new topic, \"Variables\". This material will be used to create the next project, \"Chat-bot\".",
+		7: "This month, the students have reinforced their knowledge about variables, and have successfully created the fifth project, which is \"Chat-bot\".",
+		8: "This month, the students have reinforced the knowledge they have learned since the first meeting to create an original final project and present it in front of the class.",
+		9: "The students learned how to deliver a good presentation based on the examples and explanations provided. The students then presented the latest project they had completed. The students were invited to play together to gain inspiration for the application/game they will create, then wrote down their ideas while beginning to implement those ideas into an application/game. The students have completed their final project, and the tutor has provided points to consider when presenting a final project. The students presented their final project while simultaneously proceeding to the introduction of the next course.",
+	},
+	"Building Websites ENG": {
 		1: "Students develop skills in using HTML to build web pages, including knowledge of various HTML tags and attributes. They learn how to structure and format text, and arrange images in a web layout. Skills in creating tables will help students present data clearly and effectively. Additionally, the experience of creating a business card website gives them the opportunity to apply web design concepts and coding skills, preparing them for more complex web projects in the future.",
 		2: "Students develop skills in using CSS to style web pages, including an understanding of how to use selectors to apply styles to specific elements. They also learn about the use of containers to organize content and how to create responsive layouts, which are essential in modern web design. Skills in creating styles that fit into a layout allow students to apply good design principles and improve the user experience of their website.",
 		3: "Students develop skills in writing effective JavaScript code, including a deep understanding of how to declare and use variables and understanding different data types. They learn how to use functions to organize code and handle events that occur on a web page. By learning about control structures and arrays, students are able to manage data and manipulate the flow of logic in a program. Object-oriented programming skills help students understand the concepts of classes and objects, and how they apply to the development of more complex applications.",

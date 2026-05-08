@@ -6,7 +6,8 @@ import "fmt"
 // Levels Map (Menerjemahkan level.py)
 var levels = map[string]string{
 	"Artificial Intelligence, AI ENG":   "Artificial Intelligence",
-	"Visual programming INDONESIA":      "IT GENIUS level 3",
+	"Visual Programing IND":             "IT GENIUS level 3",
+	"Visual Programing ENG":             "IT GENIUS level 3",
 	"Frontend Development_ENG":          "Frontend Development",
 	"Python Start 1st year IND":         "IT HERO level 6",
 	"Python Start 1st year ENG":         "IT HERO level 6",
@@ -16,7 +17,7 @@ var levels = map[string]string{
 	"Python Pro_1_ENG":                  "IT HERO level 8",
 	"Python Pro 2 IND":                  "IT HERO level 9",
 	"Python Pro 2 ENG":                  "IT HERO level 9",
-	"Building Websites_ENG":             "IT HERO level 9",
+	"Building Websites ENG":             "IT HERO level 9",
 }
 
 func GetCourseLevel(module string) string {

@@ -132,7 +132,7 @@ func (u *feedbackUsecase) GenerateFeedback(ctx context.Context, groupID *uint, a
 				}
 
 				for _, student := range group.Students {
-					courseName := group.Course.Module
+					courseName := session.Lesson.Module
 					topic := curriculum.GetTopic(courseName, int(monthNumber))
 					result := curriculum.GetResult(courseName, int(monthNumber))
 					comp := curriculum.GetCompetency(courseName, int(monthNumber))
