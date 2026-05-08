@@ -20,6 +20,7 @@ func NewSessionHandler(r *gin.RouterGroup, us domain.SessionUsecase) {
 	routes := r.Group("/sessions")
 	{
 		routes.GET("", handler.GetAll)
+		routes.GET("/summary", handler.GetWeeklySummary)
 		routes.GET("/:id", handler.GetByID)
 		routes.GET("/group/:group_id", handler.GetByGroup)
 		routes.POST("", handler.Create)
@@ -31,6 +32,15 @@ func NewSessionHandler(r *gin.RouterGroup, us domain.SessionUsecase) {
 		routes.POST("/mark-done", handler.MarkDoneUpToDate)
 		routes.POST("/auto-fill-attendance", handler.AutoFillAttendance)
 	}
+}
+
+func (h *SessionHandler) GetWeeklySummary(c *gin.Context) {
+	result, err := h.usecase.GetWeeklySummary(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": result})
 }
 
 func (h *SessionHandler) GetAll(c *gin.Context) {

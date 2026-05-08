@@ -321,3 +321,43 @@ func (u *sessionUsecase) MarkDoneUpToDate(ctx context.Context, groupID uint, dat
 func (u *sessionUsecase) AutoFillAttendance(ctx context.Context, groupID uint, date time.Time) error {
 	return u.repo.AutoFillAttendance(ctx, groupID, date)
 }
+
+func (u *sessionUsecase) GetWeeklySummary(ctx context.Context) (map[string][]domain.Session, error) {
+	now := time.Now()
+
+	// Get current Monday
+	offset := int(now.Weekday()) - 1
+	if offset < 0 {
+		offset = 6 // Sunday
+	}
+	thisMonday := now.AddDate(0, 0, -offset)
+	thisMonday = time.Date(thisMonday.Year(), thisMonday.Month(), thisMonday.Day(), 0, 0, 0, 0, thisMonday.Location())
+
+	lastMonday := thisMonday.AddDate(0, 0, -7)
+	nextMonday := thisMonday.AddDate(0, 0, 7)
+
+	lastSunday := thisMonday.AddDate(0, 0, -1)
+	thisSunday := thisMonday.AddDate(0, 0, 6)
+	nextSunday := thisMonday.AddDate(0, 0, 13)
+
+	lastWeekSessions, err := u.repo.GetByDateRange(ctx, lastMonday, lastSunday)
+	if err != nil {
+		return nil, err
+	}
+
+	thisWeekSessions, err := u.repo.GetByDateRange(ctx, thisMonday, thisSunday)
+	if err != nil {
+		return nil, err
+	}
+
+	nextWeekSessions, err := u.repo.GetByDateRange(ctx, nextMonday, nextSunday)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string][]domain.Session{
+		"last_week": lastWeekSessions,
+		"this_week": thisWeekSessions,
+		"next_week": nextWeekSessions,
+	}, nil
+}

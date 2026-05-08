@@ -190,6 +190,7 @@ type SessionRepository interface {
 	UpsertAttendance(ctx context.Context, session *Session, studentIDs []uint) error
 	MarkDoneUpToDate(ctx context.Context, groupID uint, date time.Time) error
 	AutoFillAttendance(ctx context.Context, groupID uint, date time.Time) error
+	GetByDateRange(ctx context.Context, startDate, endDate time.Time) ([]Session, error)
 }
 
 type SessionUsecase interface {
@@ -206,4 +207,5 @@ type SessionUsecase interface {
 	TriggerAfterSessionFeedback(ctx context.Context, session *Session)
 	MarkDoneUpToDate(ctx context.Context, groupID uint, date time.Time) error
 	AutoFillAttendance(ctx context.Context, groupID uint, date time.Time) error
+	GetWeeklySummary(ctx context.Context) (map[string][]Session, error)
 }

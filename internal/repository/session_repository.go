@@ -176,3 +176,13 @@ func (r *sessionRepository) AutoFillAttendance(ctx context.Context, groupID uint
 
 	return nil
 }
+
+func (r *sessionRepository) GetByDateRange(ctx context.Context, startDate, endDate time.Time) ([]domain.Session, error) {
+	var sessions []domain.Session
+	err := r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).
+		Where("date_start >= ? AND date_start <= ?", startDate.Format("2006-01-02"), endDate.Format("2006-01-02")).
+		Preload("Group").Preload("Lesson").Preload("StudentsAttended").
+		Order("date_start ASC, time_start ASC").
+		Find(&sessions).Error
+	return sessions, err
+}
