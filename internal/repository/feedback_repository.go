@@ -65,6 +65,10 @@ func (r *feedbackRepository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Delete(&domain.Feedback{}, id).Error
 }
 
+func (r *feedbackRepository) BulkDelete(ctx context.Context, ids []uint) error {
+	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Delete(&domain.Feedback{}, ids).Error
+}
+
 // UpsertSeeder menggantikan update_or_create milik Django
 func (r *feedbackRepository) UpsertSeeder(ctx context.Context, f *domain.Feedback) (bool, error) {
 	var existing domain.Feedback

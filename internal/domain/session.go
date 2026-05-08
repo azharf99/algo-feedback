@@ -185,7 +185,7 @@ type SessionRepository interface {
 	GetPaginated(ctx context.Context, params PaginationParams) ([]Session, int64, error)
 	Update(ctx context.Context, session *Session) error
 	Delete(ctx context.Context, id uint) error
-
+	BulkDelete(ctx context.Context, ids []uint) error
 	Upsert(ctx context.Context, session *Session) (bool, error)
 	UpsertAttendance(ctx context.Context, session *Session, studentIDs []uint) error
 	MarkDoneUpToDate(ctx context.Context, groupID uint, date time.Time) error
@@ -202,7 +202,7 @@ type SessionUsecase interface {
 	GetPaginated(ctx context.Context, params PaginationParams) (*PaginatedResult[Session], error)
 	Update(ctx context.Context, id uint, req *Session) error
 	Delete(ctx context.Context, id uint) error
-
+	BulkDelete(ctx context.Context, ids []uint) error
 	UpdateAttendance(ctx context.Context, sessionID uint, studentIDs []uint) error
 	TriggerAfterSessionFeedback(ctx context.Context, session *Session)
 	MarkDoneUpToDate(ctx context.Context, groupID uint, date time.Time) error

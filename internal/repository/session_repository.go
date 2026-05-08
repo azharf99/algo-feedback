@@ -98,6 +98,10 @@ func (r *sessionRepository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Delete(&domain.Session{}, id).Error
 }
 
+func (r *sessionRepository) BulkDelete(ctx context.Context, ids []uint) error {
+	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Delete(&domain.Session{}, ids).Error
+}
+
 func (r *sessionRepository) Upsert(ctx context.Context, session *domain.Session) (bool, error) {
 	var existing domain.Session
 	userID, _ := ctxutil.GetUserID(ctx)

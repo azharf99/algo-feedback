@@ -84,6 +84,10 @@ func (r *studentRepository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Delete(&domain.Student{}, id).Error
 }
 
+func (r *studentRepository) BulkDelete(ctx context.Context, ids []uint) error {
+	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Delete(&domain.Student{}, ids).Error
+}
+
 // Upsert: Memperbarui jika ada, membuat baru jika tidak ada (mirip update_or_create di Django)
 // Mengembalikan boolean (true jika data baru dibuat, false jika data lama diperbarui)
 func (r *studentRepository) Upsert(ctx context.Context, student *domain.Student) (bool, error) {

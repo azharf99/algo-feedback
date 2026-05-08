@@ -34,6 +34,7 @@ type GroupRepository interface {
 	GetPaginated(ctx context.Context, params PaginationParams) ([]Group, int64, error)
 	Update(ctx context.Context, group *Group, studentIDs []uint) error
 	Delete(ctx context.Context, id uint) error
+	BulkDelete(ctx context.Context, ids []uint) error
 	Upsert(ctx context.Context, group *Group, studentIDs []uint) (bool, error)
 }
 
@@ -44,5 +45,6 @@ type GroupUsecase interface {
 	GetPaginated(ctx context.Context, params PaginationParams) (*PaginatedResult[Group], error)
 	Update(ctx context.Context, id uint, req *Group, studentIDs []uint) error
 	Delete(ctx context.Context, id uint) error
+	BulkDelete(ctx context.Context, ids []uint) error
 	ImportCSV(ctx context.Context, fileReader io.Reader) (*ImportResult, error)
 }

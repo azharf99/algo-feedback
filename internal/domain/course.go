@@ -30,7 +30,7 @@ type CourseRepository interface {
 	GetAll(ctx context.Context) ([]Course, error)
 	Update(ctx context.Context, course *Course) error
 	Delete(ctx context.Context, id uint) error
-
+	BulkDelete(ctx context.Context, ids []uint) error
 	Upsert(ctx context.Context, course *Course) (bool, error)
 }
 
@@ -41,6 +41,6 @@ type CourseUsecase interface {
 	GetAll(ctx context.Context) ([]Course, error)
 	Update(ctx context.Context, id uint, req *Course) error
 	Delete(ctx context.Context, id uint) error
-
+	BulkDelete(ctx context.Context, ids []uint) error
 	ImportCSV(ctx context.Context, fileReader io.Reader) (*ImportResult, error)
 }

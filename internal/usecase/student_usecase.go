@@ -145,6 +145,10 @@ func (u *studentUsecase) Delete(ctx context.Context, id uint) error {
 	return u.repo.Delete(ctx, id)
 }
 
+func (u *studentUsecase) BulkDelete(ctx context.Context, ids []uint) error {
+	return u.repo.BulkDelete(ctx, ids)
+}
+
 // ImportCSV memproses file CSV dan mengembalikannya ke Repository
 func (u *studentUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*domain.ImportResult, error) {
 	result := &domain.ImportResult{

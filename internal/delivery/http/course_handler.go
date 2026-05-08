@@ -23,8 +23,26 @@ func NewCourseHandler(r *gin.RouterGroup, us domain.CourseUsecase) {
 		routes.POST("", handler.Create)
 		routes.PUT("/:id", handler.Update)
 		routes.DELETE("/:id", handler.Delete)
+		routes.DELETE("/bulk", handler.BulkDelete)
 		routes.POST("/import", handler.ImportCSV)
 	}
+}
+
+func (h *CourseHandler) BulkDelete(c *gin.Context) {
+	var req struct {
+		IDs []uint `json:"ids" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format data tidak valid (perlu daftar 'ids')"})
+		return
+	}
+
+	if err := h.usecase.BulkDelete(c.Request.Context(), req.IDs); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Berhasil menghapus data course secara massal"})
 }
 
 func (h *CourseHandler) GetAll(c *gin.Context) {
@@ -98,8 +116,16 @@ func (h *CourseHandler) Delete(c *gin.Context) {
 }
 
 func (h *CourseHandler) ImportCSV(c *gin.Context) {
-	file, _ := c.FormFile("file")
-	openedFile, _ := file.Open()
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File CSV diperlukan"})
+		return
+	}
+	openedFile, err := file.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal membuka file"})
+		return
+	}
 	defer openedFile.Close()
 
 	result, err := h.usecase.ImportCSV(c.Request.Context(), openedFile)

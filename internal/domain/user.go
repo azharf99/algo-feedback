@@ -58,6 +58,7 @@ type UserRepository interface {
 	GetPaginated(ctx context.Context, params PaginationParams) ([]User, int64, error)
 	Update(ctx context.Context, user *User) error
 	Delete(ctx context.Context, id uint) error
+	BulkDelete(ctx context.Context, ids []uint) error
 }
 
 // Kontrak untuk Auth Usecase (Login/Register)
@@ -80,4 +81,5 @@ type UserUsecase interface {
 	Update(ctx context.Context, id uint, req *UpdateUserRequest) (*User, error)
 	UpdateProfile(ctx context.Context, id uint, req *UpdateUserRequest) (*User, error)
 	Delete(ctx context.Context, id uint) error
+	BulkDelete(ctx context.Context, ids []uint) error
 }

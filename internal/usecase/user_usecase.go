@@ -174,3 +174,7 @@ func (u *userUsecase) Delete(ctx context.Context, id uint) error {
 	}
 	return u.userRepo.Delete(ctx, id)
 }
+
+func (u *userUsecase) BulkDelete(ctx context.Context, ids []uint) error {
+	return u.userRepo.BulkDelete(ctx, ids)
+}

@@ -75,3 +75,7 @@ func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 func (r *userRepository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Delete(&domain.User{}, id).Error
 }
+
+func (r *userRepository) BulkDelete(ctx context.Context, ids []uint) error {
+	return r.db.WithContext(ctx).Delete(&domain.User{}, ids).Error
+}

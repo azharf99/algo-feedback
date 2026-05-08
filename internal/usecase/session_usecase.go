@@ -138,6 +138,10 @@ func (u *sessionUsecase) Delete(ctx context.Context, id uint) error {
 	return u.repo.Delete(ctx, id)
 }
 
+func (u *sessionUsecase) BulkDelete(ctx context.Context, ids []uint) error {
+	return u.repo.BulkDelete(ctx, ids)
+}
+
 func (u *sessionUsecase) UpdateAttendance(ctx context.Context, sessionID uint, studentIDs []uint) error {
 	_, err := u.repo.GetByID(ctx, sessionID)
 	if err != nil {

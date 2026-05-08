@@ -75,6 +75,10 @@ func (r *lessonRepository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Delete(&domain.Lesson{}, id).Error
 }
 
+func (r *lessonRepository) BulkDelete(ctx context.Context, ids []uint) error {
+	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Delete(&domain.Lesson{}, ids).Error
+}
+
 // Upsert HANYA memperbarui atau membuat record Lesson
 func (r *lessonRepository) Upsert(ctx context.Context, lesson *domain.Lesson) (bool, error) {
 	var existing domain.Lesson

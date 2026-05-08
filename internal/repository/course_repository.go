@@ -72,6 +72,10 @@ func (r *courseRepository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Delete(&domain.Course{}, id).Error
 }
 
+func (r *courseRepository) BulkDelete(ctx context.Context, ids []uint) error {
+	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Delete(&domain.Course{}, ids).Error
+}
+
 func (r *courseRepository) Upsert(ctx context.Context, course *domain.Course) (bool, error) {
 	var existing domain.Course
 	var isCreated bool

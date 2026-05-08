@@ -107,6 +107,10 @@ func (r *groupRepository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Delete(&domain.Group{}, id).Error
 }
 
+func (r *groupRepository) BulkDelete(ctx context.Context, ids []uint) error {
+	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Delete(&domain.Group{}, ids).Error
+}
+
 // Upsert (Logikanya tetap sama persis seperti sebelumnya karena masih mengatur relasi Students)
 func (r *groupRepository) Upsert(ctx context.Context, group *domain.Group, studentIDs []uint) (bool, error) {
 	var existing domain.Group

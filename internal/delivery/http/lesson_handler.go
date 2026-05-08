@@ -24,9 +24,27 @@ func NewLessonHandler(r *gin.RouterGroup, us domain.LessonUsecase) {
 		routes.POST("", handler.Create)
 		routes.PUT("/:id", handler.Update)
 		routes.DELETE("/:id", handler.Delete)
+		routes.DELETE("/bulk", handler.BulkDelete)
 		routes.POST("/import", handler.ImportCSV)
 		routes.POST("/import-competencies", handler.ImportCompetenciesCSV)
 	}
+}
+
+func (h *LessonHandler) BulkDelete(c *gin.Context) {
+	var req struct {
+		IDs []uint `json:"ids" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format data tidak valid (perlu daftar 'ids')"})
+		return
+	}
+
+	if err := h.usecase.BulkDelete(c.Request.Context(), req.IDs); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Berhasil menghapus data lesson secara massal"})
 }
 
 // GetAll: GET /lessons

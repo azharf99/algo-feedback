@@ -110,7 +110,13 @@ func (u *lessonUsecase) Update(ctx context.Context, id uint, req *domain.Lesson)
 
 	return nil
 }
-func (u *lessonUsecase) Delete(ctx context.Context, id uint) error { return u.repo.Delete(ctx, id) }
+func (u *lessonUsecase) Delete(ctx context.Context, id uint) error {
+	return u.repo.Delete(ctx, id)
+}
+
+func (u *lessonUsecase) BulkDelete(ctx context.Context, ids []uint) error {
+	return u.repo.BulkDelete(ctx, ids)
+}
 
 func (u *lessonUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*domain.ImportResult, error) {
 	result := &domain.ImportResult{Errors: make([]map[string]interface{}, 0)}

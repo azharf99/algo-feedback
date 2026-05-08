@@ -73,18 +73,12 @@ type FeedbackRepository interface {
 	GetPaginated(ctx context.Context, params PaginationParams) ([]Feedback, int64, error)
 	Update(ctx context.Context, feedback *Feedback) error
 	Delete(ctx context.Context, id uint) error
-
-	// Untuk fitur Feedback Seeder (update_or_create)
+	BulkDelete(ctx context.Context, ids []uint) error
 	UpsertSeeder(ctx context.Context, feedback *Feedback) (bool, error)
-
-	// Untuk mengambil data feedback yang belum dikirim (is_sent=False)
 	GetUnsentFeedbacks(ctx context.Context, studentID *uint, course *string, number *uint) ([]Feedback, error)
-
-	// Untuk mengambil data feedback dengan filter fleksibel (misal untuk regenerasi PDF)
 	GetFeedbacks(ctx context.Context, studentID *uint, course *string, number *uint, onlyUnsent bool) ([]Feedback, error)
 }
 
-// FeedbackUsecase mendefinisikan logika bisnis
 type FeedbackUsecase interface {
 	Create(ctx context.Context, feedback *Feedback) error
 	GetByID(ctx context.Context, id uint) (*Feedback, error)
@@ -92,8 +86,7 @@ type FeedbackUsecase interface {
 	GetPaginated(ctx context.Context, params PaginationParams) (*PaginatedResult[Feedback], error)
 	Update(ctx context.Context, id uint, req *Feedback) error
 	Delete(ctx context.Context, id uint) error
-
-	// Fitur Utama
+	BulkDelete(ctx context.Context, ids []uint) error
 	GenerateFeedback(ctx context.Context, groupID *uint, all bool) (map[string]int, error)
 	GeneratePDFAsync(ctx context.Context, studentID *uint, course *string, number *uint, all bool) ([]map[string]interface{}, error)
 	SendFeedbackPDF(ctx context.Context, feedbackID *uint) ([]map[string]interface{}, error)

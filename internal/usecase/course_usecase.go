@@ -78,6 +78,10 @@ func (u *courseUsecase) Delete(ctx context.Context, id uint) error {
 	return u.repo.Delete(ctx, id)
 }
 
+func (u *courseUsecase) BulkDelete(ctx context.Context, ids []uint) error {
+	return u.repo.BulkDelete(ctx, ids)
+}
+
 // ImportCSV memproses data blueprint kurikulum dari CSV
 func (u *courseUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*domain.ImportResult, error) {
 	result := &domain.ImportResult{Errors: make([]map[string]interface{}, 0)}

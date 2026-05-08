@@ -26,7 +26,25 @@ func NewUserHandler(r *gin.RouterGroup, us domain.UserUsecase) {
 		userRoutes.POST("", handler.Create)
 		userRoutes.PUT("/:id", handler.Update)
 		userRoutes.DELETE("/:id", handler.Delete)
+		userRoutes.DELETE("/bulk", handler.BulkDelete)
 	}
+}
+
+func (h *UserHandler) BulkDelete(c *gin.Context) {
+	var req struct {
+		IDs []uint `json:"ids" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format data tidak valid (perlu daftar 'ids')"})
+		return
+	}
+
+	if err := h.usecase.BulkDelete(c.Request.Context(), req.IDs); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Berhasil menghapus data pengguna secara massal"})
 }
 
 // NewProfileHandler mendaftarkan rute API untuk profil user sendiri

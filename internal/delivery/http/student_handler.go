@@ -27,8 +27,26 @@ func NewStudentHandler(r *gin.RouterGroup, us domain.StudentUsecase) {
 		studentRoutes.POST("", handler.Create)
 		studentRoutes.PUT("/:id", handler.Update)
 		studentRoutes.DELETE("/:id", handler.Delete)
+		studentRoutes.DELETE("/bulk", handler.BulkDelete)
 		studentRoutes.POST("/import", handler.ImportCSV)
 	}
+}
+
+func (h *StudentHandler) BulkDelete(c *gin.Context) {
+	var req struct {
+		IDs []uint `json:"ids" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Format data tidak valid (perlu daftar 'ids')"})
+			return
+		}
+
+	if err := h.usecase.BulkDelete(c.Request.Context(), req.IDs); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Berhasil menghapus data siswa secara massal"})
 }
 
 // GetAll: GET /students

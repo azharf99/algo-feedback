@@ -69,7 +69,13 @@ func (u *groupUsecase) Update(ctx context.Context, id uint, req *domain.Group, s
 	}
 	return u.seedSessions(ctx, req)
 }
-func (u *groupUsecase) Delete(ctx context.Context, id uint) error { return u.repo.Delete(ctx, id) }
+func (u *groupUsecase) Delete(ctx context.Context, id uint) error {
+	return u.repo.Delete(ctx, id)
+}
+
+func (u *groupUsecase) BulkDelete(ctx context.Context, ids []uint) error {
+	return u.repo.BulkDelete(ctx, ids)
+}
 
 func (u *groupUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*domain.ImportResult, error) {
 	result := &domain.ImportResult{Errors: make([]map[string]interface{}, 0)}

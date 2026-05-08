@@ -475,3 +475,14 @@ func (u *feedbackUsecase) Delete(ctx context.Context, id uint) error {
 
 	return u.feedRepo.Delete(ctx, id)
 }
+
+func (u *feedbackUsecase) BulkDelete(ctx context.Context, ids []uint) error {
+	// Kita hapus file fisiknya satu-satu (optional, tapi bagus untuk kebersihan storage)
+	for _, id := range ids {
+		existing, err := u.feedRepo.GetByID(ctx, id)
+		if err == nil && existing.URLPDF != nil && *existing.URLPDF != "" {
+			_ = os.Remove(*existing.URLPDF)
+		}
+	}
+	return u.feedRepo.BulkDelete(ctx, ids)
+}

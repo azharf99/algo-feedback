@@ -35,8 +35,6 @@ type UpdateStudentRequest struct {
 	IsActive      bool    `json:"is_active"`
 }
 
-
-// Tambahkan baris ini di dalam interface StudentRepository di internal/domain/student.go
 type StudentRepository interface {
 	Create(ctx context.Context, student *Student) error
 	GetByID(ctx context.Context, id uint) (*Student, error)
@@ -44,8 +42,7 @@ type StudentRepository interface {
 	GetPaginated(ctx context.Context, params PaginationParams) ([]Student, int64, error)
 	Update(ctx context.Context, student *Student) error
 	Delete(ctx context.Context, id uint) error
-
-	// Fitur baru untuk keperluan Import CSV
+	BulkDelete(ctx context.Context, ids []uint) error
 	Upsert(ctx context.Context, student *Student) (bool, error)
 }
 
@@ -64,5 +61,6 @@ type StudentUsecase interface {
 	GetPaginated(ctx context.Context, params PaginationParams) (*PaginatedResult[Student], error)
 	Update(ctx context.Context, id uint, req *UpdateStudentRequest) error
 	Delete(ctx context.Context, id uint) error
+	BulkDelete(ctx context.Context, ids []uint) error
 	ImportCSV(ctx context.Context, fileReader io.Reader) (*ImportResult, error)
 }

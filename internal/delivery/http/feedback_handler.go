@@ -29,7 +29,25 @@ func NewFeedbackHandler(r *gin.RouterGroup, us domain.FeedbackUsecase) {
 		feedbackRoutes.POST("", handler.Create)
 		feedbackRoutes.PUT("/:id", handler.Update)
 		feedbackRoutes.DELETE("/:id", handler.Delete)
+		feedbackRoutes.DELETE("/bulk", handler.BulkDelete)
 	}
+}
+
+func (h *FeedbackHandler) BulkDelete(c *gin.Context) {
+	var req struct {
+		IDs []uint `json:"ids" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format data tidak valid (perlu daftar 'ids')"})
+		return
+	}
+
+	if err := h.usecase.BulkDelete(c.Request.Context(), req.IDs); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Berhasil menghapus data feedback secara massal"})
 }
 
 // RunSeeder: POST /feedbacks/seeder?group_id=1&all=true

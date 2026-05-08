@@ -23,8 +23,26 @@ func NewGroupHandler(r *gin.RouterGroup, us domain.GroupUsecase) {
 		groupRoutes.POST("", handler.Create)
 		groupRoutes.PUT("/:id", handler.Update)
 		groupRoutes.DELETE("/:id", handler.Delete)
+		groupRoutes.DELETE("/bulk", handler.BulkDelete)
 		groupRoutes.POST("/import", handler.ImportCSV)
 	}
+}
+
+func (h *GroupHandler) BulkDelete(c *gin.Context) {
+	var req struct {
+		IDs []uint `json:"ids" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format data tidak valid (perlu daftar 'ids')"})
+		return
+	}
+
+	if err := h.usecase.BulkDelete(c.Request.Context(), req.IDs); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Berhasil menghapus data group secara massal"})
 }
 
 // GetAll: GET /groups

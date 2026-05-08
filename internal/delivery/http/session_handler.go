@@ -26,6 +26,7 @@ func NewSessionHandler(r *gin.RouterGroup, us domain.SessionUsecase) {
 		routes.POST("", handler.Create)
 		routes.PUT("/:id", handler.Update)
 		routes.DELETE("/:id", handler.Delete)
+		routes.DELETE("/bulk", handler.BulkDelete)
 
 		// Endpoint Khusus Absensi
 		routes.POST("/:id/attendance", handler.UpdateAttendance)
@@ -109,6 +110,23 @@ func (h *SessionHandler) Delete(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Sesi dihapus"})
+}
+
+func (h *SessionHandler) BulkDelete(c *gin.Context) {
+	var req struct {
+		IDs []uint `json:"ids" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format data tidak valid (perlu daftar 'ids')"})
+		return
+	}
+
+	if err := h.usecase.BulkDelete(c.Request.Context(), req.IDs); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Berhasil menghapus data sesi secara massal"})
 }
 
 // UpdateAttendance: POST /sessions/:id/attendance
