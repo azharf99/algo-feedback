@@ -141,18 +141,7 @@ func (u *sessionUsecase) UpdateAttendance(ctx context.Context, sessionID uint, s
 	return nil
 }
 
-func (u *sessionUsecase) generateFeedbackMessage(ctx context.Context, session *domain.Session) string {
-	// Dapatkan nama user dari context
-	userName := "Tutor"
-	if userID, ok := ctx.Value("user_id").(float64); ok { // JWT decode numeric as float64
-		if user, err := u.userRepo.GetByID(ctx, uint(userID)); err == nil {
-			userName = user.Name
-		}
-	} else if userID, ok := ctx.Value("user_id").(uint); ok {
-		if user, err := u.userRepo.GetByID(ctx, userID); err == nil {
-			userName = user.Name
-		}
-	}
+func (u *sessionUsecase) generateFeedbackMessage(_ context.Context, session *domain.Session, userName string) string {
 
 	// Format Tanggal dan Waktu
 	sessionDate := session.DateStart.Time
@@ -233,7 +222,8 @@ func (u *sessionUsecase) TriggerAfterSessionFeedback(ctx context.Context, sessio
 	}
 
 	groupPhone := *session.Group.GroupPhone
-	if len(groupPhone) > 14 {
+	isGroup := len(groupPhone) > 14
+	if isGroup {
 		groupPhone += "@g.us"
 	} else {
 		groupPhone += "@s.whatsapp.net"
@@ -241,13 +231,26 @@ func (u *sessionUsecase) TriggerAfterSessionFeedback(ctx context.Context, sessio
 
 	// Dapatkan credentials WhatsApp dari User
 	var apiKey, deviceID string
+	userName := "Tutor"
 	if user, err := u.userRepo.GetByID(ctx, session.UserID); err == nil {
 		apiKey = user.WhatsappAPIKey
 		deviceID = user.WhatsappDeviceID
+		userName = user.Name
+	} else {
+		// Fallback ke context jika session.UserID gagal atau bernilai 0
+		if userID, ok := ctx.Value("user_id").(float64); ok {
+			if u, err := u.userRepo.GetByID(ctx, uint(userID)); err == nil {
+				userName = u.Name
+			}
+		} else if userID, ok := ctx.Value("user_id").(uint); ok {
+			if u, err := u.userRepo.GetByID(ctx, userID); err == nil {
+				userName = u.Name
+			}
+		}
 	}
 
 	// Generate Pesan
-	msg := u.generateFeedbackMessage(ctx, session)
+	msg := u.generateFeedbackMessage(ctx, session, userName)
 
 	// Simpan pesan ke AfterSessionFeedback agar terlihat di DB
 	session.AfterSessionFeedback = &msg
@@ -261,6 +264,7 @@ func (u *sessionUsecase) TriggerAfterSessionFeedback(ctx context.Context, sessio
 			groupPhone,
 			msg,
 			runAtTime.Format("2006-01-02 15:04:05"),
+			isGroup,
 		)
 		if err != nil {
 			log.Printf("Gagal mengupdate jadwal WhatsApp after_session_feedback: %v", err)
@@ -273,6 +277,7 @@ func (u *sessionUsecase) TriggerAfterSessionFeedback(ctx context.Context, sessio
 			groupPhone,
 			msg,
 			runAtTime.Format("2006-01-02 15:04:05"),
+			isGroup,
 		)
 		if err != nil {
 			log.Printf("Gagal mendaftarkan jadwal WhatsApp after_session_feedback: %v", err)

@@ -21,8 +21,8 @@ type WhatsappConfig struct {
 // WhatsappService mendefinisikan kontrak fungsi WhatsApp
 type WhatsappService interface {
 	ScheduleMedia(apiKey, deviceID, to, caption, filePath, runAt string) (int, error)
-	ScheduleMessage(apiKey, deviceID, to, message, runAt string) (int, error)
-	UpdateSchedule(apiKey, deviceID string, id int, to, message, runAt string) error
+	ScheduleMessage(apiKey, deviceID, to, message, runAt string, isGroup bool) (int, error)
+	UpdateSchedule(apiKey, deviceID string, id int, to, message, runAt string, isGroup bool) error
 }
 
 type whatsappService struct {
@@ -109,7 +109,7 @@ func (w *whatsappService) ScheduleMedia(apiKey, deviceID, to, caption, filePath,
 }
 
 // UpdateSchedule: PUT /api/schedule/update
-func (w *whatsappService) UpdateSchedule(apiKey, deviceID string, id int, to, message, runAt string) error {
+func (w *whatsappService) UpdateSchedule(apiKey, deviceID string, id int, to, message, runAt string, isGroup bool) error {
 	// Fallback device_id if empty
 	if deviceID == "" {
 		deviceID = "3"
@@ -121,6 +121,7 @@ func (w *whatsappService) UpdateSchedule(apiKey, deviceID string, id int, to, me
 		"to":        to,
 		"message":   message,
 		"run_at":    runAt,
+		"is_group":  isGroup,
 	}
 	jsonData, _ := json.Marshal(payloadData)
 
@@ -155,7 +156,7 @@ func (w *whatsappService) UpdateSchedule(apiKey, deviceID string, id int, to, me
 }
 
 // ScheduleMessage: POST /api/schedule/message
-func (w *whatsappService) ScheduleMessage(apiKey, deviceID, to, message, runAt string) (int, error) {
+func (w *whatsappService) ScheduleMessage(apiKey, deviceID, to, message, runAt string, isGroup bool) (int, error) {
 	// Fallback device_id if empty
 	if deviceID == "" {
 		deviceID = "3"
@@ -166,6 +167,7 @@ func (w *whatsappService) ScheduleMessage(apiKey, deviceID, to, message, runAt s
 		"to":        to,
 		"message":   message,
 		"run_at":    runAt,
+		"is_group":  isGroup,
 	}
 	jsonData, _ := json.Marshal(payloadData)
 

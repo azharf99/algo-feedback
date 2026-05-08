@@ -447,7 +447,7 @@ func (u *feedbackUsecase) Update(ctx context.Context, id uint, req *domain.Feedb
 					deviceID = user.WhatsappDeviceID
 				}
 
-				_ = u.waService.UpdateSchedule(apiKey, deviceID, scheduleIDInt, to, caption, newRunAt)
+				_ = u.waService.UpdateSchedule(apiKey, deviceID, scheduleIDInt, to, caption, newRunAt, false)
 				existing.IsSent = true
 			}
 		}
