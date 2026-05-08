@@ -65,6 +65,14 @@ type Feedback struct {
 	Student   *Student `json:"student,omitempty" gorm:"foreignKey:StudentID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
 
+// FeedbackStats menyimpan statistik feedback untuk dashboard/list view
+type FeedbackStats struct {
+	Total        int64 `json:"total"`
+	PdfGenerated int64 `json:"pdf_generated"`
+	PdfPending   int64 `json:"pdf_pending"`
+	IsSent       int64 `json:"is_sent"`
+}
+
 // FeedbackRepository mendefinisikan operasi DB untuk Feedback
 type FeedbackRepository interface {
 	Create(ctx context.Context, feedback *Feedback) error
@@ -74,6 +82,7 @@ type FeedbackRepository interface {
 	Update(ctx context.Context, feedback *Feedback) error
 	Delete(ctx context.Context, id uint) error
 	BulkDelete(ctx context.Context, ids []uint) error
+	GetStats(ctx context.Context) (FeedbackStats, error)
 	UpsertSeeder(ctx context.Context, feedback *Feedback) (bool, error)
 	GetUnsentFeedbacks(ctx context.Context, studentID *uint, course *string, number *uint) ([]Feedback, error)
 	GetFeedbacks(ctx context.Context, studentID *uint, course *string, number *uint, onlyUnsent bool) ([]Feedback, error)
@@ -83,7 +92,7 @@ type FeedbackUsecase interface {
 	Create(ctx context.Context, feedback *Feedback) error
 	GetByID(ctx context.Context, id uint) (*Feedback, error)
 	GetAll(ctx context.Context) ([]Feedback, error)
-	GetPaginated(ctx context.Context, params PaginationParams) (*PaginatedResult[Feedback], error)
+	GetPaginated(ctx context.Context, params PaginationParams) (*PaginatedResult[Feedback], *FeedbackStats, error)
 	Update(ctx context.Context, id uint, req *Feedback) error
 	Delete(ctx context.Context, id uint) error
 	BulkDelete(ctx context.Context, ids []uint) error

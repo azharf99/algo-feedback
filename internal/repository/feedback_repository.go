@@ -69,6 +69,27 @@ func (r *feedbackRepository) BulkDelete(ctx context.Context, ids []uint) error {
 	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Delete(&domain.Feedback{}, ids).Error
 }
 
+func (r *feedbackRepository) GetStats(ctx context.Context) (domain.FeedbackStats, error) {
+	var stats domain.FeedbackStats
+	baseQuery := r.db.WithContext(ctx).Model(&domain.Feedback{}).Scopes(scopeByUser(ctx))
+
+	if err := baseQuery.Count(&stats.Total).Error; err != nil {
+		return stats, err
+	}
+
+	if err := baseQuery.Where("url_pdf IS NOT NULL AND url_pdf != ?", "").Count(&stats.PdfGenerated).Error; err != nil {
+		return stats, err
+	}
+
+	stats.PdfPending = stats.Total - stats.PdfGenerated
+
+	if err := baseQuery.Where("is_sent = ?", true).Count(&stats.IsSent).Error; err != nil {
+		return stats, err
+	}
+
+	return stats, nil
+}
+
 // UpsertSeeder menggantikan update_or_create milik Django
 func (r *feedbackRepository) UpsertSeeder(ctx context.Context, f *domain.Feedback) (bool, error) {
 	var existing domain.Feedback

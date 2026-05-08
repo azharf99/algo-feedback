@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"path/filepath"
@@ -378,16 +379,23 @@ func (u *feedbackUsecase) GetByID(ctx context.Context, id uint) (*domain.Feedbac
 func (u *feedbackUsecase) GetAll(ctx context.Context) ([]domain.Feedback, error) {
 	return u.feedRepo.GetAll(ctx)
 }
-func (u *feedbackUsecase) GetPaginated(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedResult[domain.Feedback], error) {
+func (u *feedbackUsecase) GetPaginated(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedResult[domain.Feedback], *domain.FeedbackStats, error) {
 	params = pagination.Normalize(params)
 	feedbacks, totalRows, err := u.feedRepo.GetPaginated(ctx, params)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+
+	stats, err := u.feedRepo.GetStats(ctx)
+	if err != nil {
+		// Log error tapi jangan gagalkan request utama
+		log.Printf("Gagal mengambil statistik feedback: %v", err)
+	}
+
 	totalPages := int(math.Ceil(float64(totalRows) / float64(params.Limit)))
 	return &domain.PaginatedResult[domain.Feedback]{
 		Data: feedbacks, Total: totalRows, TotalPages: totalPages, Page: params.Page, Limit: params.Limit,
-	}, nil
+	}, &stats, nil
 }
 func (u *feedbackUsecase) Update(ctx context.Context, id uint, req *domain.Feedback) error {
 	// 1. Ambil data feedback yang sudah ada

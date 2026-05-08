@@ -132,21 +132,29 @@ func (h *FeedbackHandler) GetAll(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Parameter pagination tidak valid"})
 			return
 		}
-		result, err := h.usecase.GetPaginated(c.Request.Context(), params)
+		result, stats, err := h.usecase.GetPaginated(c.Request.Context(), params)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusOK, result)
+		c.JSON(http.StatusOK, gin.H{
+			"data":  result.Data,
+			"meta":  result,
+			"stats": stats,
+		})
 		return
 	}
 
-	feedbacks, err := h.usecase.GetAll(c.Request.Context())
+	result, stats, err := h.usecase.GetPaginated(c.Request.Context(), domain.PaginationParams{Page: 1, Limit: 100})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": feedbacks})
+	c.JSON(http.StatusOK, gin.H{
+		"data":  result.Data,
+		"meta":  result,
+		"stats": stats,
+	})
 }
 
 // GetByID: GET /feedbacks/:id
