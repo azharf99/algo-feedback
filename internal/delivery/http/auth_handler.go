@@ -251,7 +251,8 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	// Batasi pembacaan body hingga 1MB untuk keamanan
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal membaca respons profil Google"})
 		return
@@ -292,7 +293,7 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 	userEncoded := url.QueryEscape(string(userBytes))
 
 	redirectURL := fmt.Sprintf(
-		"%s/auth/success?access_token=%s&refresh_token=%s&user=%s",
+		"%s/auth/success#access_token=%s&refresh_token=%s&user=%s",
 		frontendURL,
 		loginRes.AccessToken,
 		loginRes.RefreshToken,

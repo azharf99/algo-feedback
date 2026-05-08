@@ -25,6 +25,7 @@ func NewFeedbackHandler(r *gin.RouterGroup, us domain.FeedbackUsecase) {
 
 		feedbackRoutes.GET("", handler.GetAll)
 		feedbackRoutes.GET("/:id", handler.GetByID)
+		feedbackRoutes.GET("/:id/download", handler.DownloadPDF)
 		feedbackRoutes.POST("", handler.Create)
 		feedbackRoutes.PUT("/:id", handler.Update)
 		feedbackRoutes.DELETE("/:id", handler.Delete)
@@ -144,6 +145,24 @@ func (h *FeedbackHandler) GetByID(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": feedback})
+}
+
+// DownloadPDF: GET /feedbacks/:id/download
+func (h *FeedbackHandler) DownloadPDF(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID tidak valid"})
+		return
+	}
+
+	feedback, err := h.usecase.GetByID(c.Request.Context(), uint(id))
+	if err != nil || feedback.URLPDF == nil || *feedback.URLPDF == "" {
+		c.JSON(http.StatusNotFound, gin.H{"error": "File PDF tidak ditemukan"})
+		return
+	}
+
+	// File served from local storage
+	c.File(*feedback.URLPDF)
 }
 
 // Create: POST /feedbacks

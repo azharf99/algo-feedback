@@ -31,6 +31,9 @@ type workerPool struct {
 	taskQueue  chan Task
 	quit       chan struct{}
 	wg         sync.WaitGroup
+	once       sync.Once
+	stopped    bool
+	mu         sync.Mutex
 }
 
 // NewWorkerPool membuat instance baru WorkerPool
@@ -53,14 +56,32 @@ func (p *workerPool) Start() {
 
 // Stop menghentikan seluruh worker dengan aman (Graceful Shutdown)
 func (p *workerPool) Stop() {
-	close(p.quit)
-	p.wg.Wait()
-	close(p.taskQueue)
+	p.mu.Lock()
+	if p.stopped {
+		p.mu.Unlock()
+		return
+	}
+	p.stopped = true
+	p.mu.Unlock()
+
+	p.once.Do(func() {
+		close(p.quit)
+		p.wg.Wait()
+		close(p.taskQueue)
+	})
 	log.Println("[TASK-QUEUE] Stopped all workers")
 }
 
 // Submit memasukkan tugas baru ke dalam antrian
 func (p *workerPool) Submit(task Task) {
+	p.mu.Lock()
+	if p.stopped {
+		p.mu.Unlock()
+		log.Println("[TASK-QUEUE] Warning: Pool is stopped, task rejected")
+		return
+	}
+	p.mu.Unlock()
+
 	select {
 	case p.taskQueue <- task:
 		// Tugas berhasil masuk antrian
@@ -68,6 +89,13 @@ func (p *workerPool) Submit(task Task) {
 		log.Println("[TASK-QUEUE] Warning: Pool is stopping, task rejected")
 	default:
 		log.Println("[TASK-QUEUE] Warning: Queue is full, task might block or be dropped")
+		// Re-check stopped state before blocking send
+		p.mu.Lock()
+		if p.stopped {
+			p.mu.Unlock()
+			return
+		}
+		p.mu.Unlock()
 		p.taskQueue <- task // Blocking submit jika antrian penuh
 	}
 }

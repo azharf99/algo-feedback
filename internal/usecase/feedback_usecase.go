@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -25,6 +27,13 @@ func strVal(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// sanitizeFilename membersihkan nama file dari karakter berbahaya
+func sanitizeFilename(s string) string {
+	// Ganti karakter non-alphanumeric dengan underscore
+	reg := regexp.MustCompile(`[^a-zA-Z0-9._-]+`)
+	return reg.ReplaceAllString(s, "_")
 }
 
 type feedbackUsecase struct {
@@ -227,12 +236,12 @@ func (u *feedbackUsecase) GeneratePDFAsync(ctx context.Context, studentID *uint,
 			TeacherFeedback:     teacherFeedback,
 		}
 
-		fileName := fmt.Sprintf("Rapor %s Bulan ke-%d.pdf", f.Student.Fullname, f.Number)
-		groupName := strVal(f.GroupName)
+		fileName := fmt.Sprintf("Rapor %s Bulan ke-%d.pdf", sanitizeFilename(f.Student.Fullname), f.Number)
+		groupName := sanitizeFilename(strVal(f.GroupName))
 		if groupName == "" {
 			groupName = "UnknownGroup"
 		}
-		outputPath := fmt.Sprintf("mediafiles/%d/%s/%s", f.UserID, groupName, fileName)
+		outputPath := filepath.Join("mediafiles", fmt.Sprintf("%d", f.UserID), groupName, fileName)
 
 		// ⚡ GOROUTINE ACTION (Background Task) ⚡
 		// Kita kirim ke Worker Pool agar tidak blocking request HTTP
@@ -281,12 +290,12 @@ func (u *feedbackUsecase) SendFeedbackPDF(ctx context.Context, studentID *uint) 
 			continue
 		}
 
-		fileName := fmt.Sprintf("Rapor %s Bulan ke-%d.pdf", f.Student.Fullname, f.Number)
-		groupName := strVal(f.GroupName)
+		fileName := fmt.Sprintf("Rapor %s Bulan ke-%d.pdf", sanitizeFilename(f.Student.Fullname), f.Number)
+		groupName := sanitizeFilename(strVal(f.GroupName))
 		if groupName == "" {
 			groupName = "UnknownGroup"
 		}
-		filePath := fmt.Sprintf("mediafiles/%d/%s/%s", f.UserID, groupName, fileName)
+		filePath := filepath.Join("mediafiles", fmt.Sprintf("%d", f.UserID), groupName, fileName)
 
 		// Persiapkan data kirim
 		to := strVal(f.Student.ParentContact)

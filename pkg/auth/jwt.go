@@ -13,12 +13,20 @@ import (
 
 // GetJWTSecret mengambil secret key dari environment variable
 func GetJWTSecret() []byte {
-	return []byte(os.Getenv("JWT_SECRET"))
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		panic("JWT_SECRET environment variable is not set")
+	}
+	return []byte(secret)
 }
 
 // GetJWTRefreshSecret mengambil refresh secret key dari environment variable
 func GetJWTRefreshSecret() []byte {
-	return []byte(os.Getenv("JWT_REFRESH_SECRET"))
+	secret := os.Getenv("JWT_REFRESH_SECRET")
+	if secret == "" {
+		panic("JWT_REFRESH_SECRET environment variable is not set")
+	}
+	return []byte(secret)
 }
 
 type JwtCustomClaims struct {
