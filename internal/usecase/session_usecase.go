@@ -317,3 +317,7 @@ func (u *sessionUsecase) TriggerAfterSessionFeedback(ctx context.Context, sessio
 func (u *sessionUsecase) MarkDoneUpToDate(ctx context.Context, groupID uint, date time.Time) error {
 	return u.repo.MarkDoneUpToDate(ctx, groupID, date)
 }
+
+func (u *sessionUsecase) AutoFillAttendance(ctx context.Context, groupID uint, date time.Time) error {
+	return u.repo.AutoFillAttendance(ctx, groupID, date)
+}

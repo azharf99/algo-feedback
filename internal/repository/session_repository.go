@@ -150,3 +150,29 @@ func (r *sessionRepository) MarkDoneUpToDate(ctx context.Context, groupID uint, 
 		Where("group_id = ? AND date_start <= ?", groupID, date.Format("2006-01-02")).
 		Update("is_done", true).Error
 }
+
+func (r *sessionRepository) AutoFillAttendance(ctx context.Context, groupID uint, date time.Time) error {
+	var group domain.Group
+	if err := r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Preload("Students").First(&group, groupID).Error; err != nil {
+		return err
+	}
+
+	var sessions []domain.Session
+	if err := r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).
+		Where("group_id = ? AND date_start <= ?", groupID, date.Format("2006-01-02")).
+		Find(&sessions).Error; err != nil {
+		return err
+	}
+
+	for _, s := range sessions {
+		if err := r.db.WithContext(ctx).Model(&s).Update("is_done", true).Error; err != nil {
+			return err
+		}
+
+		if err := r.db.WithContext(ctx).Model(&s).Association("StudentsAttended").Replace(group.Students); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

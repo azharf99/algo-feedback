@@ -189,6 +189,7 @@ type SessionRepository interface {
 	Upsert(ctx context.Context, session *Session) (bool, error)
 	UpsertAttendance(ctx context.Context, session *Session, studentIDs []uint) error
 	MarkDoneUpToDate(ctx context.Context, groupID uint, date time.Time) error
+	AutoFillAttendance(ctx context.Context, groupID uint, date time.Time) error
 }
 
 type SessionUsecase interface {
@@ -204,4 +205,5 @@ type SessionUsecase interface {
 	UpdateAttendance(ctx context.Context, sessionID uint, studentIDs []uint) error
 	TriggerAfterSessionFeedback(ctx context.Context, session *Session)
 	MarkDoneUpToDate(ctx context.Context, groupID uint, date time.Time) error
+	AutoFillAttendance(ctx context.Context, groupID uint, date time.Time) error
 }
