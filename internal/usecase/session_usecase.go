@@ -73,6 +73,13 @@ func (u *sessionUsecase) Update(ctx context.Context, id uint, req *domain.Sessio
 		return errors.New("sesi tidak ditemukan")
 	}
 
+	var daysShift int
+	oldDate := existing.DateStart.Time
+
+	if req.ShiftSubsequent && !req.DateStart.Time.IsZero() && !oldDate.IsZero() {
+		daysShift = int(req.DateStart.Time.Sub(oldDate).Hours() / 24)
+	}
+
 	if req.GroupID != 0 {
 		existing.GroupID = req.GroupID
 	}
@@ -103,6 +110,22 @@ func (u *sessionUsecase) Update(ctx context.Context, id uint, req *domain.Sessio
 	err = u.repo.Update(ctx, existing)
 	if err != nil {
 		return err
+	}
+
+	// Shift subsequent sessions if requested and date changed
+	if daysShift != 0 {
+		sessions, err := u.repo.GetByGroup(ctx, existing.GroupID)
+		if err == nil {
+			for _, s := range sessions {
+				if s.ID != existing.ID && s.DateStart.Time.After(oldDate) {
+					s.DateStart.Time = s.DateStart.Time.AddDate(0, 0, daysShift)
+					err := u.repo.Update(ctx, &s)
+					if err != nil {
+						log.Printf("Gagal mengupdate tanggal sesi %d saat shifting: %v", s.ID, err)
+					}
+				}
+			}
+		}
 	}
 
 	if req.IsDone && !wasDone {
