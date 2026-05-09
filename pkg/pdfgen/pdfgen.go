@@ -125,8 +125,8 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 		row.New(20).Add(
 			// Kiri: Proyek Hasil
 			col.New(7).WithStyle(linkBackgroundColor).Add(
-				image.NewFromFile(filepath.Join(g.assetDir, "present.png"), props.Rect{Top: 2, Left: 14, Percent: 30}),
-				text.New("Proyek Hasil Student", props.Text{Top: 2.5, Left: 7, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				image.NewFromFile(filepath.Join(g.assetDir, "present.png"), props.Rect{Top: 2, Left: 16, Percent: 25}),
+				text.New("Proyek Hasil Student", props.Text{Top: 2.5, Left: 6, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
 				text.New("Proyek akhir diakses melalui link dibawah ini:", props.Text{Top: 8, Left: 2, Size: 9, Align: align.Center}),
 				text.New(data.StudentProjectLink, props.Text{Top: 14, Left: 2, Size: 5, Style: fontstyle.BoldItalic, Align: align.Center, Color: &props.Color{Red: 91, Green: 136, Blue: 239}}),
 			),
@@ -134,7 +134,7 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 			col.New(1),
 			// Kanan: Free Lesson
 			col.New(7).WithStyle(linkBackgroundColor).Add(
-				image.NewFromFile(filepath.Join(g.assetDir, "computer.png"), props.Rect{Top: 2, Left: 16, Percent: 30}),
+				image.NewFromFile(filepath.Join(g.assetDir, "computer.png"), props.Rect{Top: 2, Left: 22, Percent: 30}),
 				text.New("Free Lesson", props.Text{Top: 2.5, Left: 8, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
 				text.New("Mau dapatkan free lesson?", props.Text{Top: 8, Left: 2, Size: 9, Align: align.Center}),
 				text.New("Bagikan link ini: "+data.StudentReferralLink, props.Text{Top: 14, Left: 2, Size: 10, Style: fontstyle.BoldItalic, Align: align.Center, Color: &props.Color{Red: 91, Green: 136, Blue: 239}}),
@@ -149,8 +149,8 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 		row.New(80).Add(
 			// Kiri: Tentang Modul
 			col.New(7).WithStyle(purpleBorder).Add(
-				image.NewFromFile(filepath.Join(g.assetDir, "notebook.png"), props.Rect{Top: 2, Left: 14, Percent: 8}),
-				text.New("Tentang Modul Ini", props.Text{Top: 2.5, Left: 8, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				image.NewFromFile(filepath.Join(g.assetDir, "notebook.png"), props.Rect{Top: 2, Left: 18, Percent: 8}),
+				text.New("Tentang Modul Ini", props.Text{Top: 2.5, Left: 4, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
 				text.New("Topik Modul: "+data.ModuleTopic, props.Text{Top: 10, Left: 4, Right: 4, Bottom: 4, Style: fontstyle.Bold, Size: 9}),
 				text.New("Hasil: "+data.ModuleResult, props.Text{Top: 20, Left: 4, Right: 4, Bottom: 4, Size: 9}),
 				text.New(fmt.Sprintf("Menyelesaikan bulan ke-%d di level %s/9", data.StudentMonthCourse, data.StudentLevel), props.Text{Top: 75, Left: 4, Right: 4, Size: 8, Style: fontstyle.Italic}),
@@ -159,8 +159,8 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 			col.New(1),
 			// Kanan: Keahlian
 			col.New(7).WithStyle(purpleBorder).Add(
-				image.NewFromFile(filepath.Join(g.assetDir, "computer.png"), props.Rect{Top: 2, Left: 6, Percent: 8}),
-				text.New("Keahlian yang Didapatkan", props.Text{Top: 2.5, Left: 8, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				image.NewFromFile(filepath.Join(g.assetDir, "computer.png"), props.Rect{Top: 2, Left: 16, Percent: 8}),
+				text.New("Keahlian yang Didapatkan", props.Text{Top: 2.5, Left: 4, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
 				text.New(data.SkillResult, props.Text{Top: 8, Left: 4, Right: 4, Bottom: 4, Size: 9, Align: align.Justify}),
 			),
 		),
@@ -186,8 +186,8 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 			col.New(1),
 			// Kanan: Tutor's Feedback
 			col.New(7).WithStyle(purpleBorder).Add(
-				image.NewFromFile(filepath.Join(g.assetDir, "checklist.png"), props.Rect{Top: 2, Left: 14, Percent: 8}),
-				text.New("Tutor's Feedback", props.Text{Top: 2.5, Left: 7, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				image.NewFromFile(filepath.Join(g.assetDir, "checklist.png"), props.Rect{Top: 2, Left: 16, Percent: 8}),
+				text.New("Tutor's Feedback", props.Text{Top: 2.5, Left: 4, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
 				text.New(data.TeacherFeedback, props.Text{Top: 8, Left: 4, Right: 4, Bottom: 4, Size: 9, Align: align.Justify}),
 			),
 		),
