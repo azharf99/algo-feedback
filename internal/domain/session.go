@@ -168,6 +168,7 @@ type Session struct {
 	TimeStart            TimeOnly       `json:"time_start" gorm:"type:time"`
 	AfterSessionFeedback *string        `json:"after_session_feedback" gorm:"type:text"`
 	IsDone               bool           `json:"is_done" gorm:"default:false"`
+	Status               string         `json:"status" gorm:"type:varchar(20);default:'Active'"`
 	ScheduledMessageID   *uint          `json:"scheduled_message_id"`
 	ShiftSubsequent      bool           `json:"shift_subsequent" gorm:"-"`
 	StudentsAttended     []Student      `json:"students_attended" gorm:"many2many:session_students;"`
@@ -191,6 +192,7 @@ type SessionRepository interface {
 	MarkDoneUpToDate(ctx context.Context, groupID uint, date time.Time) error
 	AutoFillAttendance(ctx context.Context, groupID uint, date time.Time) error
 	GetByDateRange(ctx context.Context, startDate, endDate time.Time) ([]Session, error)
+	MarkCancelled(ctx context.Context, groupID uint, fromDate, beforeDate time.Time) error
 }
 
 type SessionUsecase interface {
@@ -208,4 +210,5 @@ type SessionUsecase interface {
 	MarkDoneUpToDate(ctx context.Context, groupID uint, date time.Time) error
 	AutoFillAttendance(ctx context.Context, groupID uint, date time.Time) error
 	GetWeeklySummary(ctx context.Context) (map[string][]Session, error)
+	MarkCancelled(ctx context.Context, groupID uint, fromDate, beforeDate time.Time) error
 }

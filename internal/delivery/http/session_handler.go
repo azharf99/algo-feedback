@@ -31,6 +31,7 @@ func NewSessionHandler(r *gin.RouterGroup, us domain.SessionUsecase) {
 		// Endpoint Khusus Absensi
 		routes.POST("/:id/attendance", handler.UpdateAttendance)
 		routes.POST("/mark-done", handler.MarkDoneUpToDate)
+		routes.POST("/mark-cancelled", handler.MarkCancelled)
 		routes.POST("/auto-fill-attendance", handler.AutoFillAttendance)
 	}
 }
@@ -198,4 +199,36 @@ func (h *SessionHandler) AutoFillAttendance(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Absensi berhasil diisi otomatis"})
+}
+
+func (h *SessionHandler) MarkCancelled(c *gin.Context) {
+	var req struct {
+		GroupID    uint   `json:"group_id" binding:"required"`
+		FromDate   string `json:"from_date" binding:"required"`   // YYYY-MM-DD
+		BeforeDate string `json:"before_date" binding:"required"` // YYYY-MM-DD
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	fromDate, err := time.Parse("2006-01-02", req.FromDate)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format from_date tidak valid, gunakan YYYY-MM-DD"})
+		return
+	}
+
+	beforeDate, err := time.Parse("2006-01-02", req.BeforeDate)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format before_date tidak valid, gunakan YYYY-MM-DD"})
+		return
+	}
+
+	if err := h.usecase.MarkCancelled(c.Request.Context(), req.GroupID, fromDate, beforeDate); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Sesi berhasil dibatalkan"})
 }

@@ -24,6 +24,7 @@ type WhatsappService interface {
 	ScheduleMedia(apiKey, deviceID, to, caption, filePath, runAt string, isGroup bool) (int, error)
 	ScheduleMessage(apiKey, deviceID, to, message, runAt string, isGroup bool) (int, error)
 	UpdateSchedule(apiKey, deviceID string, id int, to, message, runAt string, isGroup bool) error
+	DeleteSchedule(apiKey string, id int) error
 }
 
 type whatsappService struct {
@@ -231,4 +232,39 @@ func (w *whatsappService) ScheduleMessage(apiKey, deviceID, to, message, runAt s
 	fmt.Println("----------------------------")
 
 	return result.Data, nil
+}
+
+// DeleteSchedule: DELETE /api/schedule/delete?id=<id>
+func (w *whatsappService) DeleteSchedule(apiKey string, id int) error {
+	url := fmt.Sprintf("%s/api/schedule/delete?id=%d", w.config.BaseURL, id)
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return err
+	}
+
+	w.setAuthHeader(req, apiKey)
+
+	resp, err := w.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return err
+	}
+
+	if result.Status != "success" {
+		return fmt.Errorf("gateway error: %s", result.Message)
+	}
+
+	fmt.Println("DEBUG: DeleteSchedule Sent")
+	fmt.Println("  Schedule ID:", id)
+	fmt.Println("----------------------------")
+
+	return nil
 }

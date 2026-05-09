@@ -190,3 +190,15 @@ func (r *sessionRepository) GetByDateRange(ctx context.Context, startDate, endDa
 		Find(&sessions).Error
 	return sessions, err
 }
+
+func (r *sessionRepository) MarkCancelled(ctx context.Context, groupID uint, fromDate, beforeDate time.Time) error {
+	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).
+		Model(&domain.Session{}).
+		Where("group_id = ? AND date_start >= ? AND date_start <= ?", groupID, fromDate.Format("2006-01-02"), beforeDate.Format("2006-01-02")).
+		Updates(map[string]interface{}{
+			"status":                 "Cancelled",
+			"is_done":                false,
+			"after_session_feedback": nil,
+			"scheduled_message_id":   nil,
+		}).Error
+}

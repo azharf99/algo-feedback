@@ -73,6 +73,10 @@ func (u *sessionUsecase) Update(ctx context.Context, id uint, req *domain.Sessio
 		return errors.New("sesi tidak ditemukan")
 	}
 
+	if existing.Status == "Cancelled" && req.IsDone {
+		return errors.New("sesi yang dicancel tidak boleh bisa diubah isDone menjadi true")
+	}
+
 	var daysShift int
 	oldDate := existing.DateStart.Time
 
@@ -143,9 +147,13 @@ func (u *sessionUsecase) BulkDelete(ctx context.Context, ids []uint) error {
 }
 
 func (u *sessionUsecase) UpdateAttendance(ctx context.Context, sessionID uint, studentIDs []uint) error {
-	_, err := u.repo.GetByID(ctx, sessionID)
+	existing, err := u.repo.GetByID(ctx, sessionID)
 	if err != nil {
 		return errors.New("sesi tidak ditemukan")
+	}
+
+	if existing.Status == "Cancelled" {
+		return errors.New("sesi yang dicancel tidak boleh dilakukan UpdateAttendace")
 	}
 
 	// Menyiapkan struct Session dengan IsDone otomatis True saat absen dikirim
@@ -231,6 +239,10 @@ func formatIndonesianDate(t time.Time) string {
 }
 
 func (u *sessionUsecase) TriggerAfterSessionFeedback(ctx context.Context, session *domain.Session) {
+	if session.Status == "Cancelled" {
+		return
+	}
+
 	sessionDate := session.DateStart.Time
 	sessionTime := session.TimeStart.Time
 
@@ -360,4 +372,29 @@ func (u *sessionUsecase) GetWeeklySummary(ctx context.Context) (map[string][]dom
 		"this_week": thisWeekSessions,
 		"next_week": nextWeekSessions,
 	}, nil
+}
+
+func (u *sessionUsecase) MarkCancelled(ctx context.Context, groupID uint, fromDate, beforeDate time.Time) error {
+	sessions, err := u.repo.GetByGroup(ctx, groupID)
+	if err != nil {
+		return err
+	}
+
+	for _, s := range sessions {
+		if (s.DateStart.Time.After(fromDate) || s.DateStart.Time.Equal(fromDate)) &&
+			(s.DateStart.Time.Before(beforeDate) || s.DateStart.Time.Equal(beforeDate)) {
+			if s.ScheduledMessageID != nil {
+				var apiKey string
+				if user, err := u.userRepo.GetByID(ctx, s.UserID); err == nil {
+					apiKey = user.WhatsappAPIKey
+				}
+				err := u.waService.DeleteSchedule(apiKey, int(*s.ScheduledMessageID))
+				if err != nil {
+					log.Printf("Gagal menghapus jadwal WhatsApp %d: %v", *s.ScheduledMessageID, err)
+				}
+			}
+		}
+	}
+
+	return u.repo.MarkCancelled(ctx, groupID, fromDate, beforeDate)
 }
