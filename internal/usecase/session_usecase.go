@@ -250,11 +250,6 @@ func (u *sessionUsecase) TriggerAfterSessionFeedback(ctx context.Context, sessio
 
 	groupPhone := *session.Group.GroupPhone
 	isGroup := len(groupPhone) > 14
-	if isGroup {
-		groupPhone += "@g.us"
-	} else {
-		groupPhone += "@s.whatsapp.net"
-	}
 
 	// Dapatkan credentials WhatsApp dari User
 	var apiKey, deviceID string

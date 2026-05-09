@@ -59,7 +59,7 @@ func (w *whatsappService) ScheduleMedia(apiKey, deviceID, to, caption, filePath,
 
 	// Fallback device_id if empty
 	if deviceID == "" {
-		deviceID = "3"
+		return 0, fmt.Errorf("deviceID is required")
 	}
 
 	// Fields sesuai spesifikasi gateway baru
@@ -105,6 +105,13 @@ func (w *whatsappService) ScheduleMedia(apiKey, deviceID, to, caption, filePath,
 		return 0, fmt.Errorf("gateway error: %s", result.Message)
 	}
 
+	fmt.Println("DEBUG: ScheduleMedia Sent")
+	fmt.Println("  To:", to)
+	fmt.Println("  IsGroup:", false)
+	fmt.Println("  Message Length:", len(caption))
+	fmt.Println("  Schedule ID:", result.Data)
+	fmt.Println("----------------------------")
+
 	return result.Data, nil
 }
 
@@ -112,7 +119,7 @@ func (w *whatsappService) ScheduleMedia(apiKey, deviceID, to, caption, filePath,
 func (w *whatsappService) UpdateSchedule(apiKey, deviceID string, id int, to, message, runAt string, isGroup bool) error {
 	// Fallback device_id if empty
 	if deviceID == "" {
-		deviceID = "3"
+		return fmt.Errorf("deviceID is required")
 	}
 
 	payloadData := map[string]interface{}{
@@ -152,6 +159,13 @@ func (w *whatsappService) UpdateSchedule(apiKey, deviceID string, id int, to, me
 		return fmt.Errorf("gateway error: %s", result.Message)
 	}
 
+	fmt.Println("DEBUG: UpdateSchedule Sent")
+	fmt.Println("  To:", to)
+	fmt.Println("  IsGroup:", isGroup)
+	fmt.Println("  Message Length:", len(message))
+	fmt.Println("  Schedule ID:", id)
+	fmt.Println("----------------------------")
+
 	return nil
 }
 
@@ -159,7 +173,7 @@ func (w *whatsappService) UpdateSchedule(apiKey, deviceID string, id int, to, me
 func (w *whatsappService) ScheduleMessage(apiKey, deviceID, to, message, runAt string, isGroup bool) (int, error) {
 	// Fallback device_id if empty
 	if deviceID == "" {
-		deviceID = "3"
+		return 0, fmt.Errorf("deviceID is required")
 	}
 
 	payloadData := map[string]interface{}{
@@ -198,6 +212,13 @@ func (w *whatsappService) ScheduleMessage(apiKey, deviceID, to, message, runAt s
 	if result.Status != "success" {
 		return 0, fmt.Errorf("gateway error: %s", result.Message)
 	}
+
+	fmt.Println("DEBUG: ScheduleMessage Sent")
+	fmt.Println("  To:", to)
+	fmt.Println("  IsGroup:", isGroup)
+	fmt.Println("  Message Length:", len(message))
+	fmt.Println("  Schedule ID:", result.Data)
+	fmt.Println("----------------------------")
 
 	return result.Data, nil
 }
