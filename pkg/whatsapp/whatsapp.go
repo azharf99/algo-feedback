@@ -122,13 +122,18 @@ func (w *whatsappService) UpdateSchedule(apiKey, deviceID string, id int, to, me
 		return fmt.Errorf("deviceID is required")
 	}
 
+	isGroupStr := "false"
+	if isGroup {
+		isGroupStr = "true"
+	}
+
 	payloadData := map[string]interface{}{
 		"id":        id,
 		"device_id": deviceID,
 		"to":        to,
 		"message":   message,
 		"run_at":    runAt,
-		"is_group":  isGroup,
+		"is_group":  isGroupStr,
 	}
 	jsonData, _ := json.Marshal(payloadData)
 
@@ -161,7 +166,7 @@ func (w *whatsappService) UpdateSchedule(apiKey, deviceID string, id int, to, me
 
 	fmt.Println("DEBUG: UpdateSchedule Sent")
 	fmt.Println("  To:", to)
-	fmt.Println("  IsGroup:", isGroup)
+	fmt.Println("  IsGroup:", isGroupStr)
 	fmt.Println("  Message Length:", len(message))
 	fmt.Println("  Schedule ID:", id)
 	fmt.Println("----------------------------")
@@ -176,12 +181,17 @@ func (w *whatsappService) ScheduleMessage(apiKey, deviceID, to, message, runAt s
 		return 0, fmt.Errorf("deviceID is required")
 	}
 
+	isGroupStr := "false"
+	if isGroup {
+		isGroupStr = "true"
+	}
+
 	payloadData := map[string]interface{}{
 		"device_id": deviceID,
 		"to":        to,
 		"message":   message,
 		"run_at":    runAt,
-		"is_group":  isGroup,
+		"is_group":  isGroupStr,
 	}
 	jsonData, _ := json.Marshal(payloadData)
 
@@ -215,7 +225,7 @@ func (w *whatsappService) ScheduleMessage(apiKey, deviceID, to, message, runAt s
 
 	fmt.Println("DEBUG: ScheduleMessage Sent")
 	fmt.Println("  To:", to)
-	fmt.Println("  IsGroup:", isGroup)
+	fmt.Println("  IsGroup:", isGroupStr)
 	fmt.Println("  Message Length:", len(message))
 	fmt.Println("  Schedule ID:", result.Data)
 	fmt.Println("----------------------------")

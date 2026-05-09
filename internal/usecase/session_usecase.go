@@ -249,7 +249,14 @@ func (u *sessionUsecase) TriggerAfterSessionFeedback(ctx context.Context, sessio
 	}
 
 	groupPhone := *session.Group.GroupPhone
-	isGroup := len(groupPhone) > 14
+	// Clean phone number from spaces and '+' if it's not a group JID format
+	if !strings.Contains(groupPhone, "@") {
+		groupPhone = strings.ReplaceAll(groupPhone, " ", "")
+		groupPhone = strings.ReplaceAll(groupPhone, "+", "")
+	}
+
+	// More robust isGroup detection
+	isGroup := strings.Contains(groupPhone, "-") || strings.Contains(groupPhone, "@g.us")
 
 	// Dapatkan credentials WhatsApp dari User
 	var apiKey, deviceID string

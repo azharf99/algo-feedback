@@ -109,11 +109,11 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 			col.New(6).WithStyle(infoBackgroundColor).Add(
 				text.New("SKOR TOTAL", props.Text{Top: 2, Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
 				text.New(data.StudentLevel, props.Text{Top: 10, Size: 12, Align: align.Center, Style: fontstyle.Bold}),
-				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 18, Left: 25, Percent: 10}),
-				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 18, Left: 35, Percent: 10}),
-				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 18, Left: 45, Percent: 10}),
-				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 18, Left: 55, Percent: 10}),
-				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 18, Left: 65, Percent: 10}),
+				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 22, Left: 25, Percent: 30}),
+				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 22, Left: 35, Percent: 30}),
+				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 22, Left: 45, Percent: 30}),
+				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 22, Left: 55, Percent: 30}),
+				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 22, Left: 65, Percent: 30}),
 			),
 		),
 	)
