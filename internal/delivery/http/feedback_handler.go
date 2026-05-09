@@ -21,6 +21,7 @@ func NewFeedbackHandler(r *gin.RouterGroup, us domain.FeedbackUsecase) {
 		// Endpoints canggih!
 		feedbackRoutes.POST("/seeder", handler.RunSeeder)
 		feedbackRoutes.POST("/generate-pdf", handler.GeneratePDF)
+		feedbackRoutes.POST("/generate-all-pdf", handler.GenerateAllPendingPDF)
 		feedbackRoutes.POST("/send-wa", handler.SendWhatsApp)
 
 		feedbackRoutes.GET("", handler.GetAll)
@@ -97,6 +98,20 @@ func (h *FeedbackHandler) GeneratePDF(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Task PDF berjalan di background",
+		"tasks":   result,
+	})
+}
+
+// GenerateAllPendingPDF: POST /feedbacks/generate-all-pdf
+func (h *FeedbackHandler) GenerateAllPendingPDF(c *gin.Context) {
+	result, err := h.usecase.GeneratePendingPDFs(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menjalankan task PDF massal"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Task PDF massal berjalan di background",
 		"tasks":   result,
 	})
 }

@@ -208,6 +208,19 @@ func (u *feedbackUsecase) GeneratePDFAsync(ctx context.Context, studentID *uint,
 		return nil, err
 	}
 
+	return u.processPDFTasks(ctx, feedbacks), nil
+}
+
+func (u *feedbackUsecase) GeneratePendingPDFs(ctx context.Context) ([]map[string]interface{}, error) {
+	feedbacks, err := u.feedRepo.GetPendingPDFFeedbacks(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return u.processPDFTasks(ctx, feedbacks), nil
+}
+
+func (u *feedbackUsecase) processPDFTasks(ctx context.Context, feedbacks []domain.Feedback) []map[string]interface{} {
 	var response []map[string]interface{}
 
 	for _, f := range feedbacks {
@@ -281,7 +294,7 @@ func (u *feedbackUsecase) GeneratePDFAsync(ctx context.Context, studentID *uint,
 		})
 	}
 
-	return response, nil
+	return response
 }
 
 // -------------------------------------------------------------------------
