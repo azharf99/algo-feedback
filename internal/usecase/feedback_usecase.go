@@ -359,7 +359,7 @@ func (u *feedbackUsecase) SendFeedbackPDF(ctx context.Context, studentID *uint) 
 		}
 
 		// Panggil Gateway baru: ScheduleMedia
-		scheduleID, err := u.waService.ScheduleMedia(apiKey, deviceID, to, caption, filePath, runAt)
+		scheduleID, err := u.waService.ScheduleMedia(apiKey, deviceID, to, caption, filePath, runAt, false)
 		if err != nil {
 			continue
 		}

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
 // WhatsappConfig menyimpan konfigurasi API (Nanti diisi dari .env)
@@ -20,7 +21,7 @@ type WhatsappConfig struct {
 
 // WhatsappService mendefinisikan kontrak fungsi WhatsApp
 type WhatsappService interface {
-	ScheduleMedia(apiKey, deviceID, to, caption, filePath, runAt string) (int, error)
+	ScheduleMedia(apiKey, deviceID, to, caption, filePath, runAt string, isGroup bool) (int, error)
 	ScheduleMessage(apiKey, deviceID, to, message, runAt string, isGroup bool) (int, error)
 	UpdateSchedule(apiKey, deviceID string, id int, to, message, runAt string, isGroup bool) error
 }
@@ -47,7 +48,7 @@ func (w *whatsappService) setAuthHeader(req *http.Request, apiKey string) {
 }
 
 // ScheduleMedia: POST /api/schedule/media
-func (w *whatsappService) ScheduleMedia(apiKey, deviceID, to, caption, filePath, runAt string) (int, error) {
+func (w *whatsappService) ScheduleMedia(apiKey, deviceID, to, caption, filePath, runAt string, isGroup bool) (int, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return 0, fmt.Errorf("gagal membuka file: %w", err)
@@ -62,10 +63,15 @@ func (w *whatsappService) ScheduleMedia(apiKey, deviceID, to, caption, filePath,
 		return 0, fmt.Errorf("deviceID is required")
 	}
 
+	isGroupStr := "false"
+	if isGroup {
+		isGroupStr = "true"
+	}
+
 	// Fields sesuai spesifikasi gateway baru
 	_ = writer.WriteField("device_id", deviceID)
 	_ = writer.WriteField("to", to)
-	_ = writer.WriteField("is_group", "false")
+	_ = writer.WriteField("is_group", isGroupStr)
 	_ = writer.WriteField("caption", caption)
 	_ = writer.WriteField("media_type", "document")
 	_ = writer.WriteField("run_at", runAt)
@@ -107,7 +113,7 @@ func (w *whatsappService) ScheduleMedia(apiKey, deviceID, to, caption, filePath,
 
 	fmt.Println("DEBUG: ScheduleMedia Sent")
 	fmt.Println("  To:", to)
-	fmt.Println("  IsGroup:", false)
+	fmt.Println("  IsGroup:", isGroup)
 	fmt.Println("  Message Length:", len(caption))
 	fmt.Println("  Schedule ID:", result.Data)
 	fmt.Println("----------------------------")
@@ -122,18 +128,15 @@ func (w *whatsappService) UpdateSchedule(apiKey, deviceID string, id int, to, me
 		return fmt.Errorf("deviceID is required")
 	}
 
-	isGroupStr := "false"
-	if isGroup {
-		isGroupStr = "true"
-	}
+	deviceIDInt, _ := strconv.Atoi(deviceID)
 
 	payloadData := map[string]interface{}{
 		"id":        id,
-		"device_id": deviceID,
+		"device_id": deviceIDInt,
 		"to":        to,
 		"message":   message,
 		"run_at":    runAt,
-		"is_group":  isGroupStr,
+		"is_group":  isGroup,
 	}
 	jsonData, _ := json.Marshal(payloadData)
 
@@ -166,7 +169,7 @@ func (w *whatsappService) UpdateSchedule(apiKey, deviceID string, id int, to, me
 
 	fmt.Println("DEBUG: UpdateSchedule Sent")
 	fmt.Println("  To:", to)
-	fmt.Println("  IsGroup:", isGroupStr)
+	fmt.Println("  IsGroup:", isGroup)
 	fmt.Println("  Message Length:", len(message))
 	fmt.Println("  Schedule ID:", id)
 	fmt.Println("----------------------------")
@@ -181,17 +184,14 @@ func (w *whatsappService) ScheduleMessage(apiKey, deviceID, to, message, runAt s
 		return 0, fmt.Errorf("deviceID is required")
 	}
 
-	isGroupStr := "false"
-	if isGroup {
-		isGroupStr = "true"
-	}
+	deviceIDInt, _ := strconv.Atoi(deviceID)
 
 	payloadData := map[string]interface{}{
-		"device_id": deviceID,
+		"device_id": deviceIDInt,
 		"to":        to,
 		"message":   message,
 		"run_at":    runAt,
-		"is_group":  isGroupStr,
+		"is_group":  isGroup,
 	}
 	jsonData, _ := json.Marshal(payloadData)
 
@@ -225,7 +225,7 @@ func (w *whatsappService) ScheduleMessage(apiKey, deviceID, to, message, runAt s
 
 	fmt.Println("DEBUG: ScheduleMessage Sent")
 	fmt.Println("  To:", to)
-	fmt.Println("  IsGroup:", isGroupStr)
+	fmt.Println("  IsGroup:", isGroup)
 	fmt.Println("  Message Length:", len(message))
 	fmt.Println("  Schedule ID:", result.Data)
 	fmt.Println("----------------------------")
