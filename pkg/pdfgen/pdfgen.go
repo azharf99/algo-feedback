@@ -49,7 +49,7 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 
 	cfg := config.NewBuilder().
 		WithPageNumber().
-		WithMaxGridSize(13).
+		WithMaxGridSize(15).
 		WithTopMargin(10).
 		WithLeftMargin(10).
 		WithRightMargin(10).
@@ -82,7 +82,7 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 	// 1. BANNER (Full 14) - Tanpa Border
 	m.AddRows(
 		row.New(40).Add(
-			col.New(13).Add(
+			col.New(15).Add(
 				image.NewFromFile(filepath.Join(g.assetDir, "header.png"), props.Rect{
 					Center:  true,
 					Percent: 100,
@@ -97,7 +97,7 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 	m.AddRows(
 		row.New(30).Add(
 			// Kiri: Informasi Siswa
-			col.New(6).WithStyle(infoBackgroundColor).Add(
+			col.New(7).WithStyle(infoBackgroundColor).Add(
 				text.New("INFORMASI SISWA", props.Text{Top: 2, Left: 2, Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
 				text.New(fmt.Sprintf("Nama Siswa		: %s", data.StudentName), props.Text{Top: 8, Left: 2, Size: 10}),
 				text.New(fmt.Sprintf("Nama Kursus	: %s", data.StudentClass), props.Text{Top: 14, Left: 2, Size: 10}),
@@ -106,14 +106,14 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 			// Ini adalah GAP / Spacer
 			col.New(1),
 			// Kanan: Skor Total
-			col.New(6).WithStyle(infoBackgroundColor).Add(
+			col.New(7).WithStyle(infoBackgroundColor).Add(
 				text.New("SKOR TOTAL", props.Text{Top: 2, Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
 				text.New(data.StudentLevel, props.Text{Top: 10, Size: 12, Align: align.Center, Style: fontstyle.Bold}),
-				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 22, Left: 25, Percent: 30}),
-				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 22, Left: 35, Percent: 30}),
-				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 22, Left: 45, Percent: 30}),
-				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 22, Left: 55, Percent: 30}),
-				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 22, Left: 65, Percent: 30}),
+				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 16, Left: 20, Percent: 30}),
+				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 16, Left: 30, Percent: 30}),
+				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 16, Left: 40, Percent: 30}),
+				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 16, Left: 50, Percent: 30}),
+				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 16, Left: 60, Percent: 30}),
 			),
 		),
 	)
@@ -124,18 +124,18 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 	m.AddRows(
 		row.New(20).Add(
 			// Kiri: Proyek Hasil
-			col.New(6).WithStyle(linkBackgroundColor).Add(
-				image.NewFromFile(filepath.Join(g.assetDir, "present.png"), props.Rect{Top: 2, Left: 4, Percent: 10}),
-				text.New("Proyek Hasil Student", props.Text{Top: 2.5, Left: 16, Style: fontstyle.Bold, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+			col.New(7).WithStyle(linkBackgroundColor).Add(
+				image.NewFromFile(filepath.Join(g.assetDir, "present.png"), props.Rect{Top: 2, Left: 14, Percent: 30}),
+				text.New("Proyek Hasil Student", props.Text{Top: 2.5, Left: 16, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
 				text.New("Proyek akhir diakses melalui link dibawah ini:", props.Text{Top: 8, Left: 2, Size: 9, Align: align.Center}),
 				text.New(data.StudentProjectLink, props.Text{Top: 14, Left: 2, Size: 5, Style: fontstyle.BoldItalic, Align: align.Center, Color: &props.Color{Red: 91, Green: 136, Blue: 239}}),
 			),
 			// Ini adalah GAP / Spacer
 			col.New(1),
 			// Kanan: Free Lesson
-			col.New(6).WithStyle(linkBackgroundColor).Add(
-				image.NewFromFile(filepath.Join(g.assetDir, "computer.png"), props.Rect{Top: 2, Left: 4, Percent: 10}),
-				text.New("Free Lesson", props.Text{Top: 2.5, Left: 16, Style: fontstyle.Bold, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+			col.New(7).WithStyle(linkBackgroundColor).Add(
+				image.NewFromFile(filepath.Join(g.assetDir, "computer.png"), props.Rect{Top: 2, Left: 16, Percent: 30}),
+				text.New("Free Lesson", props.Text{Top: 2.5, Left: 16, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
 				text.New("Mau dapatkan free lesson?", props.Text{Top: 8, Left: 2, Size: 9, Align: align.Center}),
 				text.New("Bagikan link ini: "+data.StudentReferralLink, props.Text{Top: 14, Left: 2, Size: 10, Style: fontstyle.BoldItalic, Align: align.Center, Color: &props.Color{Red: 91, Green: 136, Blue: 239}}),
 			),
@@ -148,9 +148,9 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 	m.AddRows(
 		row.New(80).Add(
 			// Kiri: Tentang Modul
-			col.New(6).WithStyle(purpleBorder).Add(
-				image.NewFromFile(filepath.Join(g.assetDir, "notebook.png"), props.Rect{Top: 2, Left: 4, Percent: 10}),
-				text.New("Tentang Modul Ini", props.Text{Top: 2.5, Left: 16, Style: fontstyle.Bold, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+			col.New(7).WithStyle(purpleBorder).Add(
+				image.NewFromFile(filepath.Join(g.assetDir, "notebook.png"), props.Rect{Top: 2, Left: 14, Percent: 8}),
+				text.New("Tentang Modul Ini", props.Text{Top: 2.5, Left: 16, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
 				text.New("Topik Modul: "+data.ModuleTopic, props.Text{Top: 10, Left: 4, Right: 4, Bottom: 4, Style: fontstyle.Bold, Size: 9}),
 				text.New("Hasil: "+data.ModuleResult, props.Text{Top: 20, Left: 4, Right: 4, Bottom: 4, Size: 9}),
 				text.New(fmt.Sprintf("Menyelesaikan bulan ke-%d di level %s/9", data.StudentMonthCourse, data.StudentLevel), props.Text{Top: 75, Left: 4, Right: 4, Size: 8, Style: fontstyle.Italic}),
@@ -158,9 +158,9 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 			// Ini adalah GAP / Spacer
 			col.New(1),
 			// Kanan: Keahlian
-			col.New(6).WithStyle(purpleBorder).Add(
-				image.NewFromFile(filepath.Join(g.assetDir, "computer.png"), props.Rect{Top: 2, Left: 4, Percent: 10}),
-				text.New("Keahlian yang Didapatkan", props.Text{Top: 2.5, Left: 16, Style: fontstyle.Bold, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+			col.New(7).WithStyle(purpleBorder).Add(
+				image.NewFromFile(filepath.Join(g.assetDir, "computer.png"), props.Rect{Top: 2, Left: 6, Percent: 8}),
+				text.New("Keahlian yang Didapatkan", props.Text{Top: 2.5, Left: 16, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
 				text.New(data.SkillResult, props.Text{Top: 8, Left: 4, Right: 4, Bottom: 4, Size: 9, Align: align.Justify}),
 			),
 		),
@@ -172,7 +172,7 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 	m.AddRows(
 		row.New(75).Add(
 			// Kiri: Jalur Pendidikan (Image Path)
-			col.New(6).WithStyle(linkBackgroundColor).Add(
+			col.New(7).WithStyle(linkBackgroundColor).Add(
 				text.New("Jalur Pendidikan", props.Text{Top: 2, Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
 				image.NewFromFile(filepath.Join(g.assetDir, "path.png"), props.Rect{
 					Top:     8,
@@ -185,9 +185,9 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 			// Ini adalah GAP / Spacer
 			col.New(1),
 			// Kanan: Tutor's Feedback
-			col.New(6).WithStyle(purpleBorder).Add(
-				image.NewFromFile(filepath.Join(g.assetDir, "checklist.png"), props.Rect{Top: 2, Left: 4, Percent: 10}),
-				text.New("Tutor's Feedback", props.Text{Top: 2.5, Left: 16, Style: fontstyle.Bold, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+			col.New(7).WithStyle(purpleBorder).Add(
+				image.NewFromFile(filepath.Join(g.assetDir, "checklist.png"), props.Rect{Top: 2, Left: 14, Percent: 8}),
+				text.New("Tutor's Feedback", props.Text{Top: 2.5, Left: 16, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
 				text.New(data.TeacherFeedback, props.Text{Top: 8, Left: 4, Right: 4, Bottom: 4, Size: 9, Align: align.Justify}),
 			),
 		),
@@ -198,7 +198,7 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 	// 6. FOOTER (Full 12) - Tanpa Border
 	m.AddRows(
 		row.New(8).Add(
-			col.New(13).Add(
+			col.New(15).Add(
 				text.New("Laporan dibuat oleh: Azhar Faturohman Ahidin", props.Text{
 					Size:  9,
 					Style: fontstyle.Italic,
