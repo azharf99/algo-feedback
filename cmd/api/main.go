@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -146,6 +147,9 @@ func main() {
 		userRepo,
 		pool, // <-- Masukkan Worker Pool
 	)
+
+	// Start Session Bot
+	sessionUsecase.StartSessionBot(context.Background())
 
 	// 6. Routing API
 	api := r.Group("/api")

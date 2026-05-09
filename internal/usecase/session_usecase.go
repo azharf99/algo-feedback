@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/ctxutil"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 	"github.com/azharf99/algo-feedback/pkg/whatsapp"
 )
@@ -100,16 +101,17 @@ func (u *sessionUsecase) Update(ctx context.Context, id uint, req *domain.Sessio
 		existing.AfterSessionFeedback = req.AfterSessionFeedback
 	}
 
-	// Untuk boolean, kita asumsikan jika dikirim dalam JSON akan ter-bind.
-	// Namun Gin ShouldBindJSON akan selalu set false jika tidak ada.
-	// Untuk keamanan, kita hanya update jika ada perubahan nilai dari existing.
-	if req.IsDone && !existing.IsDone {
-		// It will trigger in the end after update to ensure DB is saved, wait, if we trigger it needs to save ScheduledMessageID.
-		// Actually, let's just trigger it before, but we must update the DB. triggerAfterSessionFeedback will save it.
-		// So we update existing.IsDone first.
+	if req.Status != existing.Status {
+		existing.Status = req.Status
 	}
+
 	wasDone := existing.IsDone
-	existing.IsDone = req.IsDone
+
+	if req.Status == "Cancelled" {
+		existing.IsDone = false
+	} else {
+		existing.IsDone = req.IsDone
+	}
 
 	err = u.repo.Update(ctx, existing)
 	if err != nil {
@@ -398,3 +400,64 @@ func (u *sessionUsecase) MarkCancelled(ctx context.Context, groupID uint, fromDa
 
 	return u.repo.MarkCancelled(ctx, groupID, fromDate, beforeDate)
 }
+
+func (u *sessionUsecase) StartSessionBot(ctx context.Context) {
+	ticker := time.NewTicker(1 * time.Hour)
+	go func() {
+		defer ticker.Stop()
+		log.Println("[SESSION-BOT] Bot started, running every 1 hour")
+
+		// Run once on startup
+		if err := u.processSessionBot(ctx); err != nil {
+			log.Printf("[SESSION-BOT] Error: %v", err)
+		}
+
+		for {
+			select {
+			case <-ticker.C:
+				if err := u.processSessionBot(ctx); err != nil {
+					log.Printf("[SESSION-BOT] Error: %v", err)
+				}
+			case <-ctx.Done():
+				log.Println("[SESSION-BOT] Bot stopped")
+				return
+			}
+		}
+	}()
+}
+
+func (u *sessionUsecase) processSessionBot(ctx context.Context) error {
+	log.Println("[SESSION-BOT] Checking sessions...")
+
+	// Create admin context to bypass user scoping
+	botCtx := ctxutil.WithRole(ctx, "Admin")
+	botCtx = ctxutil.WithUserID(botCtx, 1) // Fallback admin user ID
+
+	now := time.Now()
+	sessions, err := u.repo.GetSessionsToAutoComplete(botCtx, now)
+	if err != nil {
+		return fmt.Errorf("failed to get sessions: %w", err)
+	}
+
+	log.Printf("[SESSION-BOT] Found %d sessions to process", len(sessions))
+
+	for _, s := range sessions {
+		var studentIDs []uint
+		if s.Group != nil {
+			for _, student := range s.Group.Students {
+				studentIDs = append(studentIDs, student.ID)
+			}
+		}
+
+		log.Printf("[SESSION-BOT] Processing session %d (Group: %s)", s.ID, s.GroupName)
+
+		// Re-use UpdateAttendance which marks done and triggers feedback
+		err := u.UpdateAttendance(botCtx, s.ID, studentIDs)
+		if err != nil {
+			log.Printf("[SESSION-BOT] Failed to process session %d: %v", s.ID, err)
+		}
+	}
+
+	return nil
+}
+

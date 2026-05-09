@@ -193,6 +193,7 @@ type SessionRepository interface {
 	AutoFillAttendance(ctx context.Context, groupID uint, date time.Time) error
 	GetByDateRange(ctx context.Context, startDate, endDate time.Time) ([]Session, error)
 	MarkCancelled(ctx context.Context, groupID uint, fromDate, beforeDate time.Time) error
+	GetSessionsToAutoComplete(ctx context.Context, now time.Time) ([]Session, error)
 }
 
 type SessionUsecase interface {
@@ -211,4 +212,5 @@ type SessionUsecase interface {
 	AutoFillAttendance(ctx context.Context, groupID uint, date time.Time) error
 	GetWeeklySummary(ctx context.Context) (map[string][]Session, error)
 	MarkCancelled(ctx context.Context, groupID uint, fromDate, beforeDate time.Time) error
+	StartSessionBot(ctx context.Context)
 }
