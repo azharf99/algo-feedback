@@ -58,7 +58,7 @@ func (r *feedbackRepository) GetPaginated(ctx context.Context, params domain.Pag
 func (r *feedbackRepository) Update(ctx context.Context, feedback *domain.Feedback) error {
 	userID, _ := ctxutil.GetUserID(ctx)
 	feedback.UserID = userID
-	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Where("id = ?", feedback.ID).Updates(feedback).Error
+	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Model(feedback).Updates(feedback).Error
 }
 
 func (r *feedbackRepository) Delete(ctx context.Context, id uint) error {

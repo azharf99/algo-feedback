@@ -449,7 +449,7 @@ func (u *sessionUsecase) processSessionBot(ctx context.Context) error {
 			}
 		}
 
-		log.Printf("[SESSION-BOT] Processing session %d (Group: %s)", s.ID, s.GroupName)
+		log.Printf("[SESSION-BOT] Processing session %d", s.ID)
 
 		// Re-use UpdateAttendance which marks done and triggers feedback
 		err := u.UpdateAttendance(botCtx, s.ID, studentIDs)

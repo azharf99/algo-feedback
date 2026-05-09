@@ -277,15 +277,12 @@ func (u *feedbackUsecase) processPDFTasks(ctx context.Context, feedbacks []domai
 				return fmt.Errorf("gagal generate PDF untuk student %s: %w", pdfData.StudentName, err)
 			}
 
-			// 2. Update URL PDF di Database
-			// Kita ambil data terbaru dulu agar tidak menimpa data lain (pattern Fetch-then-Update)
-			existing, err := u.feedRepo.GetByID(bgCtx, fID)
-			if err != nil {
-				return err
+			// 2. Update URL PDF di Database menggunakan sparse struct
+			updateFeedback := &domain.Feedback{
+				ID:     fID,
+				URLPDF: &outputPath,
 			}
-
-			existing.URLPDF = &outputPath
-			return u.feedRepo.Update(bgCtx, existing)
+			return u.feedRepo.Update(bgCtx, updateFeedback)
 		}))
 
 		response = append(response, map[string]interface{}{
@@ -364,11 +361,14 @@ func (u *feedbackUsecase) SendFeedbackPDF(ctx context.Context, studentID *uint) 
 			continue
 		}
 
-		// Update schedule_id di Database
+		// Update schedule_id di Database menggunakan sparse struct
 		scheduleIDStr := fmt.Sprintf("%d", scheduleID)
-		f.ScheduleID = &scheduleIDStr
-		f.IsSent = true
-		_ = u.feedRepo.Update(ctx, &f)
+		updateFeedback := &domain.Feedback{
+			ID:         f.ID,
+			ScheduleID: &scheduleIDStr,
+			IsSent:     true,
+		}
+		_ = u.feedRepo.Update(ctx, updateFeedback)
 
 		responseList = append(responseList, map[string]interface{}{
 			"student":     f.Student.Fullname,
@@ -418,30 +418,40 @@ func (u *feedbackUsecase) Update(ctx context.Context, id uint, req *domain.Feedb
 	}
 
 	// 2. Update hanya field yang diizinkan untuk diubah manual
+	updateFeedback := &domain.Feedback{ID: id}
+
 	if req.AttendanceScore != "" {
 		existing.AttendanceScore = req.AttendanceScore
+		updateFeedback.AttendanceScore = req.AttendanceScore
 	}
 	if req.ActivityScore != "" {
 		existing.ActivityScore = req.ActivityScore
+		updateFeedback.ActivityScore = req.ActivityScore
 	}
 	if req.TaskScore != "" {
 		existing.TaskScore = req.TaskScore
+		updateFeedback.TaskScore = req.TaskScore
 	}
 	if req.TutorFeedback != nil {
 		existing.TutorFeedback = req.TutorFeedback
+		updateFeedback.TutorFeedback = req.TutorFeedback
 	}
 	if req.Result != nil {
 		existing.Result = req.Result
+		updateFeedback.Result = req.Result
 	}
 	if req.ProjectLink != nil {
 		existing.ProjectLink = req.ProjectLink
+		updateFeedback.ProjectLink = req.ProjectLink
 	}
 
 	if req.LessonDate != nil {
 		existing.LessonDate = req.LessonDate
+		updateFeedback.LessonDate = req.LessonDate
 	}
 	if req.LessonTime != nil {
 		existing.LessonTime = req.LessonTime
+		updateFeedback.LessonTime = req.LessonTime
 	}
 
 	// 3. Sinkronisasi dengan WhatsApp Gateway jika ada schedule_id
@@ -480,11 +490,12 @@ func (u *feedbackUsecase) Update(ctx context.Context, id uint, req *domain.Feedb
 
 				_ = u.waService.UpdateSchedule(apiKey, deviceID, scheduleIDInt, to, caption, newRunAt, false)
 				existing.IsSent = true
+				updateFeedback.IsSent = true
 			}
 		}
 	}
 
-	return u.feedRepo.Update(ctx, existing)
+	return u.feedRepo.Update(ctx, updateFeedback)
 }
 func (u *feedbackUsecase) Delete(ctx context.Context, id uint) error {
 	// 1. Ambil data feedback untuk cek URL PDF
