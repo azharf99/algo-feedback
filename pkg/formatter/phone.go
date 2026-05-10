@@ -24,7 +24,7 @@ func NormalizePhoneNumber(phone string) string {
 	// 4. Pastikan diawali dengan 62 (misal inputnya hanya 812...)
 	// Tapi biasanya di Indonesia formatnya 08 atau 628.
 	// Jika ada yang input "812..." tanpa 0, kita asumsikan 628.
-	if !strings.HasPrefix(cleaned, "62") {
+	if len(cleaned) < 14 && !strings.HasPrefix(cleaned, "62") {
 		cleaned = "62" + cleaned
 	}
 
