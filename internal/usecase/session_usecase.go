@@ -197,12 +197,10 @@ func (u *sessionUsecase) generateFeedbackMessage(_ context.Context, session *dom
 
 	// Lesson dan Course
 	lessonName := "-"
+	courseName := "-"
 	if session.Lesson != nil {
 		lessonName = session.Lesson.Title
-	}
-	courseName := "-"
-	if session.Group != nil && session.Group.Course != nil {
-		courseName = session.Group.Course.Title
+		courseName = session.Lesson.Module
 	}
 
 	// Competency
@@ -460,4 +458,3 @@ func (u *sessionUsecase) processSessionBot(ctx context.Context) error {
 
 	return nil
 }
-
