@@ -9,3 +9,6 @@ data/
 .trae/
 *.exe
 walkthrough*.md
+.gemini/
+gha-creds-*.json
+test_build

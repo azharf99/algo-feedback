@@ -12,7 +12,9 @@ import (
 	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/ctxutil"
 	"github.com/azharf99/algo-feedback/pkg/formatter"
+	"github.com/azharf99/algo-feedback/pkg/i18n"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 )
 
@@ -21,6 +23,10 @@ type groupUsecase struct {
 	repo        domain.GroupRepository
 	lessonRepo  domain.LessonRepository
 	sessionRepo domain.SessionRepository
+}
+
+func (u *groupUsecase) getLang(ctx context.Context) string {
+	return ctxutil.GetLanguage(ctx)
 }
 
 func NewGroupUsecase(repo domain.GroupRepository, lessonRepo domain.LessonRepository, sessionRepo domain.SessionRepository) domain.GroupUsecase {
@@ -79,11 +85,12 @@ func (u *groupUsecase) BulkDelete(ctx context.Context, ids []uint) error {
 
 func (u *groupUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*domain.ImportResult, error) {
 	result := &domain.ImportResult{Errors: make([]map[string]interface{}, 0)}
+	lang := u.getLang(ctx)
 
 	reader := csv.NewReader(fileReader)
 	headers, err := reader.Read()
 	if err != nil {
-		return nil, fmt.Errorf("gagal membaca header CSV: %w", err)
+		return nil, fmt.Errorf("%s: %w", i18n.T(lang, "error_csv_header"), err)
 	}
 
 	headerMap := make(map[string]int)
@@ -106,14 +113,14 @@ func (u *groupUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*do
 		// Validasi ID Group
 		idUint, err := strconv.ParseUint(record[headerMap["id"]], 10, 32)
 		if err != nil || idUint == 0 {
-			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": "ID tidak valid"})
+			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": i18n.T(lang, "error_invalid_id")})
 			continue
 		}
 
 		// Validasi Course ID (Wajib ada)
 		courseID, err := strconv.ParseUint(record[headerMap["course_id"]], 10, 32)
 		if err != nil || courseID == 0 {
-			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": "course_id tidak valid"})
+			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": i18n.T(lang, "error_invalid_course_id")})
 			continue
 		}
 
@@ -193,6 +200,7 @@ func (u *groupUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*do
 }
 
 func (u *groupUsecase) seedSessions(ctx context.Context, group *domain.Group) error {
+	lang := u.getLang(ctx)
 	if group.FirstLessonDate == nil {
 		return nil // Nothing to schedule if there's no first lesson date
 	}
@@ -223,8 +231,7 @@ func (u *groupUsecase) seedSessions(ctx context.Context, group *domain.Group) er
 
 		_, err := u.sessionRepo.Upsert(ctx, session)
 		if err != nil {
-			// You might want to log this error, but we'll return it for now
-			return fmt.Errorf("failed to upsert session for lesson %d: %w", lesson.ID, err)
+			return fmt.Errorf("%s %d: %w", i18n.T(lang, "error_session_upsert"), lesson.ID, err)
 		}
 	}
 

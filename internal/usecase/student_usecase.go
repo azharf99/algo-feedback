@@ -13,12 +13,18 @@ import (
 
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/auth"
+	"github.com/azharf99/algo-feedback/pkg/ctxutil"
 	"github.com/azharf99/algo-feedback/pkg/formatter"
+	"github.com/azharf99/algo-feedback/pkg/i18n"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 )
 
 type studentUsecase struct {
 	repo domain.StudentRepository
+}
+
+func (u *studentUsecase) getLang(ctx context.Context) string {
+	return ctxutil.GetLanguage(ctx)
 }
 
 func NewStudentUsecase(repo domain.StudentRepository) domain.StudentUsecase {
@@ -29,6 +35,7 @@ func NewStudentUsecase(repo domain.StudentRepository) domain.StudentUsecase {
 
 // Create menambah siswa baru
 func (u *studentUsecase) Create(ctx context.Context, req *domain.UpdateStudentRequest) error {
+	lang := u.getLang(ctx)
 	student := &domain.Student{
 		Fullname:      req.Fullname,
 		Surname:       req.Surname,
@@ -52,7 +59,7 @@ func (u *studentUsecase) Create(ctx context.Context, req *domain.UpdateStudentRe
 	if req.Password != "" {
 		hashedPassword, err := auth.HashPassword(req.Password)
 		if err != nil {
-			return errors.New("gagal memproses password")
+			return errors.New(i18n.T(lang, "error_password_process"))
 		}
 		student.Password = hashedPassword
 	}
@@ -88,10 +95,11 @@ func (u *studentUsecase) GetPaginated(ctx context.Context, params domain.Paginat
 
 // Update memperbarui data siswa
 func (u *studentUsecase) Update(ctx context.Context, id uint, req *domain.UpdateStudentRequest) error {
+	lang := u.getLang(ctx)
 	// 1. Cek apakah siswa ada
 	existingStudent, err := u.repo.GetByID(ctx, id)
 	if err != nil {
-		return errors.New("siswa tidak ditemukan")
+		return errors.New(i18n.T(lang, "error_student_not_found"))
 	}
 
 	// 2. Perbarui field yang diizinkan
@@ -126,7 +134,7 @@ func (u *studentUsecase) Update(ctx context.Context, id uint, req *domain.Update
 	if req.Password != "" {
 		hashedPassword, err := auth.HashPassword(req.Password)
 		if err != nil {
-			return errors.New("gagal memproses password baru")
+			return errors.New(i18n.T(lang, "error_password_process"))
 		}
 		existingStudent.Password = hashedPassword
 	}
@@ -137,10 +145,11 @@ func (u *studentUsecase) Update(ctx context.Context, id uint, req *domain.Update
 
 // Delete menghapus siswa berdasarkan ID
 func (u *studentUsecase) Delete(ctx context.Context, id uint) error {
+	lang := u.getLang(ctx)
 	// Pastikan data ada sebelum dihapus
 	_, err := u.repo.GetByID(ctx, id)
 	if err != nil {
-		return errors.New("siswa tidak ditemukan")
+		return errors.New(i18n.T(lang, "error_student_not_found"))
 	}
 	return u.repo.Delete(ctx, id)
 }
@@ -154,11 +163,12 @@ func (u *studentUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*
 	result := &domain.ImportResult{
 		Errors: make([]map[string]interface{}, 0),
 	}
+	lang := u.getLang(ctx)
 
 	reader := csv.NewReader(fileReader)
 	headers, err := reader.Read()
 	if err != nil {
-		return nil, fmt.Errorf("gagal membaca header CSV: %w", err)
+		return nil, fmt.Errorf("%s: %w", i18n.T(lang, "error_csv_header"), err)
 	}
 
 	headerMap := make(map[string]int)
@@ -185,8 +195,8 @@ func (u *studentUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*
 		}
 
 		idUint, err := strconv.ParseUint(idStr, 10, 32)
-		if err != nil {
-			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": "Format 'id' tidak valid"})
+		if err != nil || idUint == 0 {
+			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": i18n.T(lang, "error_invalid_id")})
 			continue
 		}
 
@@ -201,7 +211,7 @@ func (u *studentUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*
 
 		hashedPassword, err := auth.HashPassword(record[headerMap["password"]])
 		if err != nil {
-			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": fmt.Sprintf("failed to hash password: %v", err)})
+			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": i18n.T(lang, "error_password_process")})
 			continue
 		}
 

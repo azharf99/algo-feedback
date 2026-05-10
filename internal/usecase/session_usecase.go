@@ -12,6 +12,7 @@ import (
 
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/ctxutil"
+	"github.com/azharf99/algo-feedback/pkg/i18n"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 	"github.com/azharf99/algo-feedback/pkg/whatsapp"
 )
@@ -28,6 +29,13 @@ func NewSessionUsecase(repo domain.SessionRepository, waService whatsapp.Whatsap
 		waService: waService,
 		userRepo:  userRepo,
 	}
+}
+
+func (u *sessionUsecase) getLanguage(session *domain.Session) string {
+	if session.Group != nil && session.Group.Language != "" {
+		return session.Group.Language
+	}
+	return "Indonesia"
 }
 
 func (u *sessionUsecase) Create(ctx context.Context, session *domain.Session) error {
@@ -69,13 +77,17 @@ func (u *sessionUsecase) GetPaginated(ctx context.Context, params domain.Paginat
 }
 
 func (u *sessionUsecase) Update(ctx context.Context, id uint, req *domain.Session) error {
+	lang := ctxutil.GetLanguage(ctx)
 	existing, err := u.repo.GetByID(ctx, id)
 	if err != nil {
-		return errors.New("sesi tidak ditemukan")
+		return errors.New(i18n.T(lang, "error_session_not_found"))
 	}
 
+
+	lang = u.getLanguage(existing)
+
 	if existing.Status == "Cancelled" && req.IsDone {
-		return errors.New("sesi yang dicancel tidak boleh bisa diubah isDone menjadi true")
+		return errors.New(i18n.T(lang, "error_cancelled_session_done"))
 	}
 
 	var daysShift int
@@ -149,13 +161,17 @@ func (u *sessionUsecase) BulkDelete(ctx context.Context, ids []uint) error {
 }
 
 func (u *sessionUsecase) UpdateAttendance(ctx context.Context, sessionID uint, studentIDs []uint) error {
+	lang := ctxutil.GetLanguage(ctx)
 	existing, err := u.repo.GetByID(ctx, sessionID)
 	if err != nil {
-		return errors.New("sesi tidak ditemukan")
+		return errors.New(i18n.T(lang, "error_session_not_found"))
 	}
 
+	lang = u.getLanguage(existing)
+
 	if existing.Status == "Cancelled" {
-		return errors.New("sesi yang dicancel tidak boleh dilakukan UpdateAttendace")
+
+		return errors.New(i18n.T(lang, "error_cancelled_session_att"))
 	}
 
 	// Menyiapkan struct Session dengan IsDone otomatis True saat absen dikirim
@@ -180,18 +196,18 @@ func (u *sessionUsecase) UpdateAttendance(ctx context.Context, sessionID uint, s
 
 func (u *sessionUsecase) generateFeedbackMessage(_ context.Context, session *domain.Session, userName string) string {
 	// Language check
-	language := "Indonesia"
-	if session.Group != nil && session.Group.Language != "" {
-		language = session.Group.Language
-	}
+	language := u.getLanguage(session)
 
 	// Format Tanggal dan Waktu
 	sessionDate := session.DateStart.Time
 	var dateStr string
-	if language == "Indonesia" {
-		dateStr = formatIndonesianDate(sessionDate)
-	} else {
+	switch language {
+	case "Russian":
+		dateStr = formatRussianDate(sessionDate)
+	case "English":
 		dateStr = formatEnglishDate(sessionDate)
+	default:
+		dateStr = formatIndonesianDate(sessionDate)
 	}
 	timeStr := session.TimeStart.Time.Format("15.04")
 
@@ -202,10 +218,13 @@ func (u *sessionUsecase) generateFeedbackMessage(_ context.Context, session *dom
 	}
 	surnamesStr := strings.Join(surnames, ", ")
 	if len(surnames) == 0 {
-		if language == "Indonesia" {
-			surnamesStr = "Siswa"
-		} else {
+		switch language {
+		case "Russian":
+			surnamesStr = "Ученики"
+		case "English":
 			surnamesStr = "Students"
+		default:
+			surnamesStr = "Siswa"
 		}
 	}
 
@@ -238,20 +257,21 @@ func (u *sessionUsecase) generateFeedbackMessage(_ context.Context, session *dom
 	competenciesStr := strings.Join(competencies, "\n")
 
 	var template string
-	if language == "Indonesia" {
-		template = `Halo, Ayah/Bunda!
+	switch language {
+	case "Russian":
+		template = `Здравствуйте!
 
-Hari ini, %s pukul %s WIB %s telah mengikuti pelajaran %s di kursus %s. Mereka telah belajar:
+Сегодня, %s в %s по МСК, %s посетил(а) урок %s по курсу %s. Они изучили:
 %s
 
-Untuk tetap belajar sambil berlatih, ayah/bunda bisa mengajak putra-putri membuka platform daring Algonova Indonesia dan menyelesaikan tugas-tugas mereka. Jika ada yang ingin dikonsultasikan, ayah/bunda bisa menghubungi saya kapan saja.
+Чтобы продолжать обучение и практику, родители могут предложить детям зайти на онлайн-платформу Algonova и выполнить задания. Если у вас есть вопросы, вы можете связаться со мной в любое время.
 
-Rekaman pelajaran bisa diakses melalui tautan berikut: 
+Запись урока доступна по следующей ссылке:
 %s
 
-Terima Kasih dan Sampai jumpa!
-%s – Algonova Indonesia`
-	} else {
+Спасибо и до встречи!
+%s – Algonova International`
+	case "English":
 		template = `Hello, parents!
 
 Today, %s at %s WIB, %s attended the %s lesson in the %s course. They learned:
@@ -263,6 +283,19 @@ The lesson recording can be accessed through the following link:
 %s
 
 Thank you and see you!
+%s – Algonova Indonesia`
+	default: // Indonesia
+		template = `Halo, Ayah/Bunda!
+
+Hari ini, %s pukul %s WIB %s telah mengikuti pelajaran %s di kursus %s. Mereka telah belajar:
+%s
+
+Untuk tetap belajar sambil berlatih, ayah/bunda bisa mengajak putra-putri membuka platform daring Algonova Indonesia dan menyelesaikan tugas-tugas mereka. Jika ada yang ingin dikonsultasikan, ayah/bunda bisa menghubungi saya kapan saja.
+
+Rekaman pelajaran bisa diakses melalui tautan berikut: 
+%s
+
+Terima Kasih dan Sampai jumpa!
 %s – Algonova Indonesia`
 	}
 
@@ -281,6 +314,16 @@ func formatIndonesianDate(t time.Time) string {
 func formatEnglishDate(t time.Time) string {
 	return t.Format("Monday, 2 January 2006")
 }
+
+func formatRussianDate(t time.Time) string {
+	days := []string{"Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"}
+	months := []string{"", "Января", "Февраля", "Марта", "Апреля", "Мая", "Июня", "Июля", "Августа", "Сентября", "Октября", "Ноября", "Декабря"}
+
+	dayName := days[t.Weekday()]
+	monthName := months[t.Month()]
+	return fmt.Sprintf("%s, %d %s %d", dayName, t.Day(), monthName, t.Year())
+}
+
 
 
 func (u *sessionUsecase) TriggerAfterSessionFeedback(ctx context.Context, session *domain.Session) {
@@ -479,7 +522,7 @@ func (u *sessionUsecase) processSessionBot(ctx context.Context) error {
 	now := time.Now()
 	sessions, err := u.repo.GetSessionsToAutoComplete(botCtx, now)
 	if err != nil {
-		return fmt.Errorf("failed to get sessions: %w", err)
+		return fmt.Errorf("%s: %w", i18n.T("Indonesia", "error_fetch_sessions"), err)
 	}
 
 	log.Printf("[SESSION-BOT] Found %d sessions to process", len(sessions))

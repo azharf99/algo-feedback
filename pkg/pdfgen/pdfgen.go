@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/azharf99/algo-feedback/pkg/i18n"
 	"github.com/johnfercher/maroto/v2"
 	"github.com/johnfercher/maroto/v2/pkg/components/col"
 	"github.com/johnfercher/maroto/v2/pkg/components/image"
@@ -14,12 +15,13 @@ import (
 	"github.com/johnfercher/maroto/v2/pkg/components/text"
 	"github.com/johnfercher/maroto/v2/pkg/config"
 	"github.com/johnfercher/maroto/v2/pkg/consts/align"
-	"github.com/johnfercher/maroto/v2/pkg/consts/border" // IMPORT BARU UNTUK BORDER
+	"github.com/johnfercher/maroto/v2/pkg/consts/border"
 	"github.com/johnfercher/maroto/v2/pkg/consts/fontstyle"
 	"github.com/johnfercher/maroto/v2/pkg/props"
 )
 
 type PDFData struct {
+	Lang                string
 	StudentName         string
 	StudentMonthCourse  uint
 	StudentClass        string
@@ -46,6 +48,10 @@ func NewPDFGenerator(assetDir string) PDFGenerator {
 }
 
 func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath string) error {
+	lang := data.Lang
+	if lang == "" {
+		lang = "Indonesia"
+	}
 
 	cfg := config.NewBuilder().
 		WithPageNumber().
@@ -59,27 +65,24 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 	m := maroto.New(cfg)
 
 	// --- STYLE DEFINITIONS ---
-	// 1. Mendefinisikan border ungu (tetap kita simpan untuk section di bawahnya)
 	purpleBorder := &props.Cell{
-		BorderType:      border.Full,                                 // Kotak penuh di 4 sisi
-		BorderColor:     &props.Color{Red: 153, Green: 0, Blue: 255}, // Hex #9900FF
-		BorderThickness: 0.5,                                         // Ketebalan garis
+		BorderType:      border.Full,
+		BorderColor:     &props.Color{Red: 153, Green: 0, Blue: 255},
+		BorderThickness: 0.5,
 	}
 
-	// 2. [BARU] Mendefinisikan warna background #D9D2E9 untuk Informasi Siswa
 	infoBackgroundColor := &props.Cell{
 		BackgroundColor: &props.Color{Red: 217, Green: 210, Blue: 233},
 	}
 
-	// 3. [BARU] Mendefinisikan warna background #D9D2E9 untuk Link Container
 	linkBackgroundColor := &props.Cell{
 		BackgroundColor: &props.Color{Red: 255, Green: 242, Blue: 204},
-		BorderType:      border.Full,                                 // Kotak penuh di 4 sisi
-		BorderColor:     &props.Color{Red: 153, Green: 0, Blue: 255}, // Hex #9900FF
+		BorderType:      border.Full,
+		BorderColor:     &props.Color{Red: 153, Green: 0, Blue: 255},
 		BorderThickness: 0.5,
 	}
 
-	// 1. BANNER (Full 14) - Tanpa Border
+	// 1. BANNER
 	m.AddRows(
 		row.New(40).Add(
 			col.New(15).Add(
@@ -91,23 +94,20 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 		),
 	)
 
-	m.AddRow(3) // Spacer
+	m.AddRow(3)
 
-	// 2. INFORMASI SISWA & SKOR TOTAL [6 | 6]
+	// 2. INFORMASI SISWA & SKOR TOTAL
 	m.AddRows(
 		row.New(30).Add(
-			// Kiri: Informasi Siswa
 			col.New(7).WithStyle(infoBackgroundColor).Add(
-				text.New("INFORMASI SISWA", props.Text{Top: 2, Left: 2, Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
-				text.New(fmt.Sprintf("Nama Siswa		: %s", data.StudentName), props.Text{Top: 8, Left: 2, Size: 9}),
-				text.New(fmt.Sprintf("Nama Kursus	: %s", data.StudentClass), props.Text{Top: 14, Left: 2, Size: 9}),
-				text.New(fmt.Sprintf("Lama Pelatihan	: Bulan ke-%d", data.StudentMonthCourse), props.Text{Top: 20, Left: 2, Size: 9}),
+				text.New(i18n.T(lang, "pdf_student_info"), props.Text{Top: 2, Left: 2, Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				text.New(fmt.Sprintf("%s		: %s", i18n.T(lang, "pdf_student_name"), data.StudentName), props.Text{Top: 8, Left: 2, Size: 9}),
+				text.New(fmt.Sprintf("%s	: %s", i18n.T(lang, "pdf_course_name"), data.StudentClass), props.Text{Top: 14, Left: 2, Size: 9}),
+				text.New(fmt.Sprintf("%s	: %s", i18n.T(lang, "pdf_training_duration"), i18n.Tf(lang, "pdf_month_count", data.StudentMonthCourse)), props.Text{Top: 20, Left: 2, Size: 9}),
 			),
-			// Ini adalah GAP / Spacer
 			col.New(1),
-			// Kanan: Skor Total
 			col.New(7).WithStyle(infoBackgroundColor).Add(
-				text.New("SKOR TOTAL", props.Text{Top: 2, Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				text.New(i18n.T(lang, "pdf_total_score"), props.Text{Top: 2, Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
 				text.New(data.StudentLevel, props.Text{Top: 10, Size: 12, Align: align.Center, Style: fontstyle.Bold}),
 				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 16, Left: 20, Percent: 30}),
 				image.NewFromFile(filepath.Join(g.assetDir, "star.png"), props.Rect{Top: 16, Left: 30, Percent: 30}),
@@ -118,49 +118,43 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 		),
 	)
 
-	m.AddRow(3) // Spacer antar baris
+	m.AddRow(3)
 
-	// 3. PROYEK SISWA & FREE LESSON [6 | 6]
+	// 3. PROYEK SISWA & FREE LESSON
 	m.AddRows(
 		row.New(20).Add(
-			// Kiri: Proyek Hasil
 			col.New(7).WithStyle(linkBackgroundColor).Add(
 				image.NewFromFile(filepath.Join(g.assetDir, "present.png"), props.Rect{Top: 2, Left: 16, Percent: 25}),
-				text.New("Proyek Hasil Student", props.Text{Top: 2.5, Left: 6, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
-				text.New("Proyek akhir diakses melalui link dibawah ini:", props.Text{Top: 8, Left: 2, Size: 9, Align: align.Center}),
+				text.New(i18n.T(lang, "pdf_student_project"), props.Text{Top: 2.5, Left: 6, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				text.New(i18n.T(lang, "pdf_project_link_desc"), props.Text{Top: 8, Left: 2, Size: 9, Align: align.Center}),
 				text.New(data.StudentProjectLink, props.Text{Top: 14, Left: 2, Size: 5, Style: fontstyle.BoldItalic, Align: align.Center, Color: &props.Color{Red: 91, Green: 136, Blue: 239}}),
 			),
-			// Ini adalah GAP / Spacer
 			col.New(1),
-			// Kanan: Free Lesson
 			col.New(7).WithStyle(linkBackgroundColor).Add(
 				image.NewFromFile(filepath.Join(g.assetDir, "computer.png"), props.Rect{Top: 2, Left: 22, Percent: 30}),
-				text.New("Free Lesson", props.Text{Top: 2.5, Left: 8, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
-				text.New("Mau dapatkan free lesson?", props.Text{Top: 8, Left: 2, Size: 9, Align: align.Center}),
-				text.New("Bagikan link ini: "+data.StudentReferralLink, props.Text{Top: 14, Left: 2, Size: 10, Style: fontstyle.BoldItalic, Align: align.Center, Color: &props.Color{Red: 91, Green: 136, Blue: 239}}),
+				text.New(i18n.T(lang, "pdf_free_lesson"), props.Text{Top: 2.5, Left: 8, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				text.New(i18n.T(lang, "pdf_free_lesson_desc"), props.Text{Top: 8, Left: 2, Size: 9, Align: align.Center}),
+				text.New(i18n.T(lang, "pdf_share_link")+" "+data.StudentReferralLink, props.Text{Top: 14, Left: 2, Size: 10, Style: fontstyle.BoldItalic, Align: align.Center, Color: &props.Color{Red: 91, Green: 136, Blue: 239}}),
 			),
 		),
 	)
 
 	m.AddRow(3)
 
-	// 4. TENTANG MODUL & KEAHLIAN [6 | 6]
+	// 4. TENTANG MODUL & KEAHLIAN
 	m.AddRows(
 		row.New(80).Add(
-			// Kiri: Tentang Modul
 			col.New(7).WithStyle(purpleBorder).Add(
 				image.NewFromFile(filepath.Join(g.assetDir, "notebook.png"), props.Rect{Top: 2, Left: 18, Percent: 8}),
-				text.New("Tentang Modul Ini", props.Text{Top: 2.5, Left: 4, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
-				text.New("Topik Modul: "+data.ModuleTopic, props.Text{Top: 10, Left: 4, Right: 4, Bottom: 4, Style: fontstyle.Bold, Size: 9}),
-				text.New("Hasil: "+data.ModuleResult, props.Text{Top: 20, Left: 4, Right: 4, Bottom: 4, Size: 9}),
-				text.New(fmt.Sprintf("Menyelesaikan bulan ke-%d di level %s/9", data.StudentMonthCourse, data.StudentLevel), props.Text{Top: 75, Left: 4, Right: 4, Size: 8, Style: fontstyle.Italic}),
+				text.New(i18n.T(lang, "pdf_about_module"), props.Text{Top: 2.5, Left: 4, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				text.New(i18n.T(lang, "pdf_module_topic")+" "+data.ModuleTopic, props.Text{Top: 10, Left: 4, Right: 4, Bottom: 4, Style: fontstyle.Bold, Size: 9}),
+				text.New(i18n.T(lang, "pdf_module_result")+" "+data.ModuleResult, props.Text{Top: 20, Left: 4, Right: 4, Bottom: 4, Size: 9}),
+				text.New(i18n.Tf(lang, "pdf_completion_footer", data.StudentMonthCourse, data.StudentLevel), props.Text{Top: 75, Left: 4, Right: 4, Size: 8, Style: fontstyle.Italic}),
 			),
-			// Ini adalah GAP / Spacer
 			col.New(1),
-			// Kanan: Keahlian
 			col.New(7).WithStyle(purpleBorder).Add(
 				image.NewFromFile(filepath.Join(g.assetDir, "computer.png"), props.Rect{Top: 2, Left: 16, Percent: 8}),
-				text.New("Keahlian yang Didapatkan", props.Text{Top: 2.5, Left: 4, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				text.New(i18n.T(lang, "pdf_skills_acquired"), props.Text{Top: 2.5, Left: 4, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
 				text.New(data.SkillResult, props.Text{Top: 8, Left: 4, Right: 4, Bottom: 4, Size: 9, Align: align.Justify}),
 			),
 		),
@@ -168,38 +162,35 @@ func (g *pdfGenerator) Generate(ctx context.Context, data PDFData, outputPath st
 
 	m.AddRow(3)
 
-	// 5. JALUR PENDIDIKAN & TUTOR FEEDBACK [6 | 6]
+	// 5. JALUR PENDIDIKAN & TUTOR FEEDBACK
 	m.AddRows(
 		row.New(75).Add(
-			// Kiri: Jalur Pendidikan (Image Path)
 			col.New(7).WithStyle(linkBackgroundColor).Add(
-				text.New("Jalur Pendidikan", props.Text{Top: 2, Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				text.New(i18n.T(lang, "pdf_education_path"), props.Text{Top: 2, Style: fontstyle.Bold, Size: 11, Align: align.Center, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
 				image.NewFromFile(filepath.Join(g.assetDir, "path.png"), props.Rect{
 					Top:     8,
 					Center:  true,
 					Percent: 80,
 				}),
-				text.New("Lihat Modul Lengkap:", props.Text{Top: 65, Left: 4, Right: 4, Size: 9, Align: align.Center}),
+				text.New(i18n.T(lang, "pdf_see_full_module"), props.Text{Top: 65, Left: 4, Right: 4, Size: 9, Align: align.Center}),
 				text.New(data.StudentModuleLink, props.Text{Top: 70, Left: 4, Right: 4, Size: 9, Style: fontstyle.Bold, Align: align.Center, Color: &props.Color{Red: 91, Green: 136, Blue: 239}}),
 			),
-			// Ini adalah GAP / Spacer
 			col.New(1),
-			// Kanan: Tutor's Feedback
 			col.New(7).WithStyle(purpleBorder).Add(
 				image.NewFromFile(filepath.Join(g.assetDir, "checklist.png"), props.Rect{Top: 2, Left: 16, Percent: 8}),
-				text.New("Tutor's Feedback", props.Text{Top: 2.5, Left: 4, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
+				text.New(i18n.T(lang, "pdf_tutor_feedback"), props.Text{Top: 2.5, Left: 4, Style: fontstyle.Bold, Align: align.Center, Size: 11, Color: &props.Color{Red: 63, Green: 31, Blue: 117}}),
 				text.New(data.TeacherFeedback, props.Text{Top: 8, Left: 4, Right: 4, Bottom: 4, Size: 9, Align: align.Justify}),
 			),
 		),
 	)
 
-	m.AddRow(3) // Spacer sebelum footer
+	m.AddRow(3)
 
-	// 6. FOOTER (Full 12) - Tanpa Border
+	// 6. FOOTER
 	m.AddRows(
 		row.New(8).Add(
 			col.New(15).Add(
-				text.New("Laporan dibuat oleh: Azhar Faturohman Ahidin", props.Text{
+				text.New(i18n.T(lang, "pdf_report_created_by")+" Azhar Faturohman Ahidin", props.Text{
 					Size:  9,
 					Style: fontstyle.Italic,
 					Align: align.Left,

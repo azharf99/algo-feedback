@@ -6,11 +6,17 @@ import (
 	"strconv"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/ctxutil"
+	"github.com/azharf99/algo-feedback/pkg/i18n"
 	"github.com/gin-gonic/gin"
 )
 
 type FeedbackHandler struct {
 	usecase domain.FeedbackUsecase
+}
+
+func (h *FeedbackHandler) getLang(c *gin.Context) string {
+	return ctxutil.GetLanguage(c.Request.Context())
 }
 
 func NewFeedbackHandler(r *gin.RouterGroup, us domain.FeedbackUsecase) {
@@ -38,8 +44,9 @@ func (h *FeedbackHandler) BulkDelete(c *gin.Context) {
 	var req struct {
 		IDs []uint `json:"ids" binding:"required"`
 	}
+	lang := h.getLang(c)
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Format data tidak valid (perlu daftar 'ids')"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(lang, "error_invalid_data")})
 		return
 	}
 
@@ -48,13 +55,14 @@ func (h *FeedbackHandler) BulkDelete(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Berhasil menghapus data feedback secara massal"})
+	c.JSON(http.StatusOK, gin.H{"message": i18n.T(lang, "msg_delete_success")})
 }
 
 // RunSeeder: POST /feedbacks/seeder?group_id=1&all=true
 func (h *FeedbackHandler) RunSeeder(c *gin.Context) {
 	allStr := c.Query("all")
 	all := allStr == "true"
+	lang := h.getLang(c)
 
 	var groupIDPtr *uint
 	if gIDStr := c.Query("group_id"); gIDStr != "" {
@@ -71,13 +79,14 @@ func (h *FeedbackHandler) RunSeeder(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Seeder berhasil dijalankan",
+		"message": i18n.T(lang, "msg_seeder_success"),
 		"data":    result,
 	})
 }
 
 // GeneratePDF: POST /feedbacks/generate-pdf
 func (h *FeedbackHandler) GeneratePDF(c *gin.Context) {
+	lang := h.getLang(c)
 	// Parsing Request Body JSON
 	var req struct {
 		StudentID *uint   `json:"student_id"`
@@ -86,38 +95,40 @@ func (h *FeedbackHandler) GeneratePDF(c *gin.Context) {
 		All       bool    `json:"all"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Format JSON tidak valid"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(lang, "error_invalid_data")})
 		return
 	}
 
 	result, err := h.usecase.GeneratePDFAsync(c.Request.Context(), req.StudentID, req.Course, req.Number, req.All)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menjalankan task PDF"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(lang, "error_pdf_task_failed")})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Task PDF berjalan di background",
+		"message": i18n.T(lang, "msg_pdf_background"),
 		"tasks":   result,
 	})
 }
 
 // GenerateAllPendingPDF: POST /feedbacks/generate-all-pdf
 func (h *FeedbackHandler) GenerateAllPendingPDF(c *gin.Context) {
+	lang := h.getLang(c)
 	result, err := h.usecase.GeneratePendingPDFs(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menjalankan task PDF massal"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(lang, "error_pdf_task_failed")})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Task PDF massal berjalan di background",
+		"message": i18n.T(lang, "msg_pdf_background"),
 		"tasks":   result,
 	})
 }
 
 // SendWhatsApp: POST /feedbacks/send-wa?student_id=1xxxxxxx
 func (h *FeedbackHandler) SendWhatsApp(c *gin.Context) {
+	lang := h.getLang(c)
 	var studentIDPtr *uint
 	if fIDStr := c.Query("student_id"); fIDStr != "" {
 		if id, err := strconv.Atoi(fIDStr); err == nil {
@@ -133,7 +144,7 @@ func (h *FeedbackHandler) SendWhatsApp(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Pesan WhatsApp berhasil dijadwalkan",
+		"message": i18n.T(lang, "msg_wa_scheduled"),
 		"data":    result,
 	})
 }
@@ -141,10 +152,11 @@ func (h *FeedbackHandler) SendWhatsApp(c *gin.Context) {
 // GetAll: GET /feedbacks
 // Mendukung pagination opsional via query params: ?page=1&limit=10
 func (h *FeedbackHandler) GetAll(c *gin.Context) {
+	lang := h.getLang(c)
 	if c.Query("page") != "" || c.Query("limit") != "" {
 		var params domain.PaginationParams
 		if err := c.ShouldBindQuery(&params); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Parameter pagination tidak valid"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(lang, "error_invalid_data")})
 			return
 		}
 		result, stats, err := h.usecase.GetPaginated(c.Request.Context(), params)
@@ -174,15 +186,16 @@ func (h *FeedbackHandler) GetAll(c *gin.Context) {
 
 // GetByID: GET /feedbacks/:id
 func (h *FeedbackHandler) GetByID(c *gin.Context) {
+	lang := h.getLang(c)
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ID tidak valid"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(lang, "error_invalid_id")})
 		return
 	}
 
 	feedback, err := h.usecase.GetByID(c.Request.Context(), uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Feedback tidak ditemukan"})
+		c.JSON(http.StatusNotFound, gin.H{"error": i18n.T(lang, "error_feedback_not_found")})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": feedback})
@@ -190,15 +203,16 @@ func (h *FeedbackHandler) GetByID(c *gin.Context) {
 
 // DownloadPDF: GET /feedbacks/:id/download
 func (h *FeedbackHandler) DownloadPDF(c *gin.Context) {
+	lang := h.getLang(c)
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ID tidak valid"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(lang, "error_invalid_id")})
 		return
 	}
 
 	feedback, err := h.usecase.GetByID(c.Request.Context(), uint(id))
 	if err != nil || feedback.URLPDF == nil || *feedback.URLPDF == "" {
-		c.JSON(http.StatusNotFound, gin.H{"error": "File PDF tidak ditemukan"})
+		c.JSON(http.StatusNotFound, gin.H{"error": i18n.T(lang, "error_file_not_found")})
 		return
 	}
 
@@ -208,6 +222,7 @@ func (h *FeedbackHandler) DownloadPDF(c *gin.Context) {
 
 // Create: POST /feedbacks
 func (h *FeedbackHandler) Create(c *gin.Context) {
+	lang := h.getLang(c)
 	var req domain.Feedback
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -215,17 +230,18 @@ func (h *FeedbackHandler) Create(c *gin.Context) {
 	}
 
 	if err := h.usecase.Create(c.Request.Context(), &req); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan data"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(lang, "msg_save_failed")})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"message": "Feedback berhasil dibuat secara manual", "data": req})
+	c.JSON(http.StatusCreated, gin.H{"message": i18n.T(lang, "msg_save_success"), "data": req})
 }
 
 // Update: PUT /feedbacks/:id
 func (h *FeedbackHandler) Update(c *gin.Context) {
+	lang := h.getLang(c)
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ID tidak valid"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(lang, "error_invalid_id")})
 		return
 	}
 
@@ -239,14 +255,15 @@ func (h *FeedbackHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Data feedback berhasil diperbarui"})
+	c.JSON(http.StatusOK, gin.H{"message": i18n.T(lang, "msg_update_success")})
 }
 
 // Delete: DELETE /feedbacks/:id
 func (h *FeedbackHandler) Delete(c *gin.Context) {
+	lang := h.getLang(c)
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ID tidak valid"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(lang, "error_invalid_id")})
 		return
 	}
 
@@ -254,5 +271,5 @@ func (h *FeedbackHandler) Delete(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Data feedback berhasil dihapus"})
+	c.JSON(http.StatusOK, gin.H{"message": i18n.T(lang, "msg_delete_success")})
 }

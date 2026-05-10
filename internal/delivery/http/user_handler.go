@@ -6,11 +6,17 @@ import (
 	"strconv"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/ctxutil"
+	"github.com/azharf99/algo-feedback/pkg/i18n"
 	"github.com/gin-gonic/gin"
 )
 
 type UserHandler struct {
 	usecase domain.UserUsecase
+}
+
+func (h *UserHandler) getLang(c *gin.Context) string {
+	return ctxutil.GetLanguage(c.Request.Context())
 }
 
 // NewUserHandler membuat instance handler dan mendaftarkan rute API User Management
@@ -85,18 +91,20 @@ func (h *UserHandler) GetAll(c *gin.Context) {
 // GetByID: GET /users/:id
 func (h *UserHandler) GetByID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
+	lang := h.getLang(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ID tidak valid"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(lang, "error_invalid_id")})
 		return
 	}
 
 	user, err := h.usecase.GetByID(c.Request.Context(), uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, gin.H{"error": i18n.T(lang, "error_user_not_found")})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": user})
 }
+
 
 // Create: POST /users
 // Membuat akun pengguna baru (oleh Admin)

@@ -12,11 +12,17 @@ import (
 	"strings"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/ctxutil"
+	"github.com/azharf99/algo-feedback/pkg/i18n"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 )
 
 type courseUsecase struct {
 	repo domain.CourseRepository
+}
+
+func (u *courseUsecase) getLang(ctx context.Context) string {
+	return ctxutil.GetLanguage(ctx)
 }
 
 func NewCourseUsecase(repo domain.CourseRepository) domain.CourseUsecase {
@@ -55,8 +61,9 @@ func (u *courseUsecase) GetPaginated(ctx context.Context, params domain.Paginati
 
 func (u *courseUsecase) Update(ctx context.Context, id uint, req *domain.Course) error {
 	existing, err := u.repo.GetByID(ctx, id)
+	lang := u.getLang(ctx)
 	if err != nil {
-		return errors.New("course tidak ditemukan")
+		return errors.New(i18n.T(lang, "error_course_not_found"))
 	}
 
 	if req.Title != "" {
@@ -85,11 +92,12 @@ func (u *courseUsecase) BulkDelete(ctx context.Context, ids []uint) error {
 // ImportCSV memproses data blueprint kurikulum dari CSV
 func (u *courseUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*domain.ImportResult, error) {
 	result := &domain.ImportResult{Errors: make([]map[string]interface{}, 0)}
+	lang := u.getLang(ctx)
 
 	reader := csv.NewReader(fileReader)
 	headers, err := reader.Read()
 	if err != nil {
-		return nil, fmt.Errorf("gagal membaca header CSV: %w", err)
+		return nil, fmt.Errorf("%s: %w", i18n.T(lang, "error_csv_header"), err)
 	}
 
 	headerMap := make(map[string]int)
@@ -112,7 +120,7 @@ func (u *courseUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*d
 		// 1. Validasi ID Course
 		idUint, err := strconv.ParseUint(record[headerMap["id"]], 10, 32)
 		if err != nil || idUint == 0 {
-			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": "ID tidak valid"})
+			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": i18n.T(lang, "error_invalid_id")})
 			continue
 		}
 

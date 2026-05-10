@@ -66,7 +66,7 @@ func GenerateTokens(user *domain.User) (string, string, error) {
 func ValidateRefreshToken(tokenStr string) (*jwt.Token, error) {
 	return jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("metode penandatanganan tidak valid")
+			return nil, errors.New("invalid signing method")
 		}
 		return GetJWTRefreshSecret(), nil
 	})

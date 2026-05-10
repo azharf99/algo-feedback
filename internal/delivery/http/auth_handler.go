@@ -14,6 +14,8 @@ import (
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/internal/middleware"
 	"github.com/azharf99/algo-feedback/pkg/auth"
+	"github.com/azharf99/algo-feedback/pkg/ctxutil"
+	"github.com/azharf99/algo-feedback/pkg/i18n"
 	"github.com/azharf99/algo-feedback/pkg/oauth"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
@@ -21,6 +23,10 @@ import (
 
 type AuthHandler struct {
 	usecase domain.AuthUsecase
+}
+
+func (h *AuthHandler) getLang(c *gin.Context) string {
+	return ctxutil.GetLanguage(c.Request.Context())
 }
 
 func NewAuthHandler(r *gin.RouterGroup, us domain.AuthUsecase) {
@@ -86,32 +92,33 @@ type GoogleUserInfo struct {
 
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req RegisterRequest
+	lang := h.getLang(c)
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(lang, "error_invalid_data")})
 		return
 	}
 
 	valid, err := auth.VerifyRecaptcha(req.CaptchaToken)
 	if err != nil || !valid {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Verifikasi captcha gagal"})
+		c.JSON(http.StatusForbidden, gin.H{"error": i18n.T(lang, "error_unauthorized")})
 		return
 	}
 
 	// Validasi Email apakah sudah ada?
 	registeredUser, err := h.usecase.GetUserByEmail(c.Request.Context(), req.Email)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data pengguna"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(lang, "error_user_not_found")})
 		return
 	}
 
 	if registeredUser != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "Email sudah terdaftar"})
+		c.JSON(http.StatusConflict, gin.H{"error": "Email already registered"})
 		return
 	}
 
 	hashPassword, err := auth.HashPassword(req.Password)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengenkripsi password"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(lang, "msg_save_failed")})
 		return
 	}
 
@@ -123,24 +130,25 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	if err := h.usecase.Register(c.Request.Context(), &user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mendaftarkan pengguna"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(lang, "msg_save_failed")})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Registrasi berhasil"})
+	c.JSON(http.StatusCreated, gin.H{"message": "Registration successful"})
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
+	lang := h.getLang(c)
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Format email atau password salah"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(lang, "error_invalid_data")})
 		return
 	}
 
 	// Verifikasi Captcha
 	valid, err := auth.VerifyRecaptcha(req.CaptchaToken)
 	if err != nil || !valid {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Verifikasi captcha gagal"})
+		c.JSON(http.StatusForbidden, gin.H{"error": i18n.T(lang, "error_unauthorized")})
 		return
 	}
 
@@ -150,13 +158,14 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Login berhasil", "data": res})
+	c.JSON(http.StatusOK, gin.H{"message": "Login successful", "data": res})
 }
 
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	var req RefreshRequest
+	lang := h.getLang(c)
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Refresh token diperlukan"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(lang, "error_invalid_data")})
 		return
 	}
 
@@ -166,7 +175,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Token berhasil diperbarui", "data": res})
+	c.JSON(http.StatusOK, gin.H{"message": i18n.T(lang, "msg_token_refreshed"), "data": res})
 }
 
 // GoogleLogin mengarahkan pengguna ke halaman consent Google OAuth2.
@@ -174,11 +183,12 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 // State disimpan di HttpOnly cookie agar tidak bisa diakses oleh JavaScript.
 func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 	oauthConfig := oauth.GoogleOAuthConfig()
+	lang := h.getLang(c)
 
 	// Generate state acak yang aman secara kriptografis (32 byte = 64 hex chars)
 	stateBytes := make([]byte, 32)
 	if _, err := rand.Read(stateBytes); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal membuat state keamanan"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(lang, "error_state_gen_failed")})
 		return
 	}
 	state := hex.EncodeToString(stateBytes)
@@ -211,17 +221,18 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 // 5. Redirect ke frontend dengan JWT token
 func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 	oauthConfig := oauth.GoogleOAuthConfig()
+	lang := h.getLang(c)
 
 	// 1. Validasi CSRF — bandingkan state dari query dengan state dari cookie
 	queryState := c.Query("state")
 	cookieState, err := c.Cookie("oauth_state")
 	if err != nil || cookieState == "" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "State cookie tidak ditemukan. Kemungkinan serangan CSRF."})
+		c.JSON(http.StatusForbidden, gin.H{"error": i18n.T(lang, "error_csrf_detected")})
 		return
 	}
 
 	if queryState != cookieState {
-		c.JSON(http.StatusForbidden, gin.H{"error": "State tidak cocok. Kemungkinan serangan CSRF."})
+		c.JSON(http.StatusForbidden, gin.H{"error": i18n.T(lang, "error_csrf_detected")})
 		return
 	}
 
@@ -232,13 +243,13 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 	// 2. Tukar authorization code dengan access token
 	code := c.Query("code")
 	if code == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Authorization code tidak ditemukan"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(lang, "error_no_auth_code")})
 		return
 	}
 
 	token, err := oauthConfig.Exchange(c.Request.Context(), code)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menukar kode otorisasi dengan token"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(lang, "error_token_exchange_failed")})
 		return
 	}
 
@@ -246,7 +257,7 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 	client := oauthConfig.Client(c.Request.Context(), token)
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data profil Google"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(lang, "error_fetch_google_profile_failed")})
 		return
 	}
 	defer resp.Body.Close()
@@ -254,19 +265,19 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 	// Batasi pembacaan body hingga 1MB untuk keamanan
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal membaca respons profil Google"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(lang, "error_read_google_resp_failed")})
 		return
 	}
 
 	var googleUser GoogleUserInfo
 	if err := json.Unmarshal(body, &googleUser); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal memproses data profil Google"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(lang, "error_process_google_data_failed")})
 		return
 	}
 
 	// 4. Validasi: pastikan email terverifikasi
 	if !googleUser.VerifiedEmail {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Email Google Anda belum terverifikasi"})
+		c.JSON(http.StatusForbidden, gin.H{"error": i18n.T(lang, "error_email_unverified")})
 		return
 	}
 
@@ -286,7 +297,7 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 	// Ubah struct User menjadi JSON byte
 	userBytes, err := json.Marshal(loginRes.User)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal memproses data pengguna"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(lang, "error_process_user_data_failed")})
 		return
 	}
 
@@ -305,21 +316,22 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 // GoogleOneTap menangani login via Google One Tap (ID Token verification)
 func (h *AuthHandler) GoogleOneTap(c *gin.Context) {
 	var req GoogleOneTapRequest
+	lang := h.getLang(c)
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Credential (ID Token) diperlukan"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(lang, "error_invalid_data")})
 		return
 	}
 
 	// 1. Verifikasi ID Token
 	googleUser, err := oauth.VerifyIDToken(c.Request.Context(), req.Credential)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Verifikasi token Google gagal: " + err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": i18n.Tf(lang, "error_google_verify_failed", err.Error())})
 		return
 	}
 
 	// 2. Pastikan email terverifikasi
 	if !googleUser.VerifiedEmail {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Email Google Anda belum terverifikasi"})
+		c.JSON(http.StatusForbidden, gin.H{"error": i18n.T(lang, "error_email_unverified")})
 		return
 	}
 
@@ -331,28 +343,30 @@ func (h *AuthHandler) GoogleOneTap(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Login Google berhasil",
+		"message": i18n.T(lang, "msg_login_success"),
 		"data":    loginRes,
 	})
 }
 
 func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 	var req ForgotPasswordRequest
+	lang := h.getLang(c)
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Email diperlukan"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(lang, "error_invalid_data")})
 		return
 	}
 
 	if err := h.usecase.ForgotPassword(c.Request.Context(), req.Email); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengirim email reset password"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(lang, "error_send_email_failed")})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Jika email terdaftar, instruksi reset password akan dikirim"})
+	c.JSON(http.StatusOK, gin.H{"message": i18n.T(lang, "msg_forgot_password_sent")})
 }
 
 func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	var req ResetPasswordRequest
+	lang := h.getLang(c)
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -363,5 +377,5 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Password berhasil diperbarui"})
+	c.JSON(http.StatusOK, gin.H{"message": i18n.T(lang, "msg_update_success")})
 }

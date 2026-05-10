@@ -12,12 +12,18 @@ import (
 	"strings"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/ctxutil"
+	"github.com/azharf99/algo-feedback/pkg/i18n"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 )
 
 type lessonUsecase struct {
 	repo           domain.LessonRepository
 	sessionUsecase domain.SessionUsecase
+}
+
+func (u *lessonUsecase) getLang(ctx context.Context) string {
+	return ctxutil.GetLanguage(ctx)
 }
 
 func NewLessonUsecase(repo domain.LessonRepository, sessionUsecase domain.SessionUsecase) domain.LessonUsecase {
@@ -59,8 +65,9 @@ func (u *lessonUsecase) GetPaginated(ctx context.Context, params domain.Paginati
 }
 func (u *lessonUsecase) Update(ctx context.Context, id uint, req *domain.Lesson) error {
 	existing, err := u.repo.GetByID(ctx, id)
+	lang := u.getLang(ctx)
 	if err != nil {
-		return errors.New("pelajaran tidak ditemukan")
+		return errors.New(i18n.T(lang, "error_lesson_not_found"))
 	}
 
 	competencyChanged := false
@@ -111,6 +118,11 @@ func (u *lessonUsecase) Update(ctx context.Context, id uint, req *domain.Lesson)
 	return nil
 }
 func (u *lessonUsecase) Delete(ctx context.Context, id uint) error {
+	lang := u.getLang(ctx)
+	_, err := u.repo.GetByID(ctx, id)
+	if err != nil {
+		return errors.New(i18n.T(lang, "error_lesson_not_found"))
+	}
 	return u.repo.Delete(ctx, id)
 }
 
@@ -120,11 +132,12 @@ func (u *lessonUsecase) BulkDelete(ctx context.Context, ids []uint) error {
 
 func (u *lessonUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*domain.ImportResult, error) {
 	result := &domain.ImportResult{Errors: make([]map[string]interface{}, 0)}
+	lang := u.getLang(ctx)
 
 	reader := csv.NewReader(fileReader)
 	headers, err := reader.Read()
 	if err != nil {
-		return nil, fmt.Errorf("gagal membaca header CSV: %w", err)
+		return nil, fmt.Errorf("%s: %w", i18n.T(lang, "error_csv_header"), err)
 	}
 
 	headerMap := make(map[string]int)
@@ -146,14 +159,14 @@ func (u *lessonUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*d
 
 		idUint, err := strconv.ParseUint(record[headerMap["id"]], 10, 32)
 		if err != nil || idUint == 0 {
-			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": "ID tidak valid"})
+			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": i18n.T(lang, "error_invalid_id")})
 			continue
 		}
 
 		// Mengubah dari group_id menjadi course_id
 		courseID, err := strconv.ParseUint(record[headerMap["course_id"]], 10, 32)
 		if err != nil || courseID == 0 {
-			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": "course_id tidak valid"})
+			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": i18n.T(lang, "error_course_not_found")})
 			continue
 		}
 
@@ -192,11 +205,12 @@ func (u *lessonUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*d
 
 func (u *lessonUsecase) ImportCompetenciesCSV(ctx context.Context, fileReader io.Reader) (*domain.ImportResult, error) {
 	result := &domain.ImportResult{Errors: make([]map[string]interface{}, 0)}
+	lang := u.getLang(ctx)
 
 	reader := csv.NewReader(fileReader)
 	headers, err := reader.Read()
 	if err != nil {
-		return nil, fmt.Errorf("gagal membaca header CSV: %w", err)
+		return nil, fmt.Errorf("%s: %w", i18n.T(lang, "error_csv_header"), err)
 	}
 
 	headerMap := make(map[string]int)
@@ -223,12 +237,12 @@ func (u *lessonUsecase) ImportCompetenciesCSV(ctx context.Context, fileReader io
 		compIdx, okComp := headerMap["competencies"]
 
 		if !okID || !okComp {
-			return nil, errors.New("header CSV harus memiliki 'ID' dan 'competencies'")
+			return nil, errors.New(i18n.T(lang, "error_csv_headers_missing"))
 		}
 
 		courseID, err := strconv.ParseUint(record[idIdx], 10, 32)
 		if err != nil {
-			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": "Course ID tidak valid"})
+			result.Errors = append(result.Errors, map[string]interface{}{"row": rowNum, "error": i18n.T(lang, "error_invalid_course_id")})
 			continue
 		}
 
@@ -244,12 +258,12 @@ func (u *lessonUsecase) ImportCompetenciesCSV(ctx context.Context, fileReader io
 	for courseID, competencies := range courseCompetencies {
 		lessons, err := u.repo.GetByCourse(ctx, courseID)
 		if err != nil {
-			result.Errors = append(result.Errors, map[string]interface{}{"course_id": courseID, "error": "gagal mengambil data lesson"})
+			result.Errors = append(result.Errors, map[string]interface{}{"course_id": courseID, "error": i18n.T(lang, "error_fetch_lesson_failed")})
 			continue
 		}
 
 		if len(lessons) == 0 {
-			result.Errors = append(result.Errors, map[string]interface{}{"course_id": courseID, "error": "tidak ada lesson ditemukan untuk course ini"})
+			result.Errors = append(result.Errors, map[string]interface{}{"course_id": courseID, "error": i18n.T(lang, "error_no_lesson_found")})
 			continue
 		}
 
@@ -267,7 +281,7 @@ func (u *lessonUsecase) ImportCompetenciesCSV(ctx context.Context, fileReader io
 		if len(competencies) != len(lessons) {
 			result.Errors = append(result.Errors, map[string]interface{}{
 				"course_id": courseID, 
-				"warning": fmt.Sprintf("jumlah kompetensi (%d) tidak sama dengan jumlah lesson (%d)", len(competencies), len(lessons)),
+				"warning": i18n.Tf(lang, "warn_count_mismatch", len(competencies), len(lessons)),
 			})
 		}
 	}

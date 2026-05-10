@@ -10,9 +10,32 @@ import (
 type contextKey string
 
 const (
-	userIDKey contextKey = "ctxutil_user_id"
-	roleKey   contextKey = "ctxutil_role"
+	userIDKey   contextKey = "ctxutil_user_id"
+	roleKey     contextKey = "ctxutil_role"
+	languageKey contextKey = "ctxutil_language"
 )
+
+func ContextKey(s string) contextKey {
+	return contextKey(s)
+}
+
+// GetLanguage mengambil language dari context.
+func GetLanguage(ctx context.Context) string {
+	v := ctx.Value(languageKey)
+	if v == nil {
+		return "Indonesia"
+	}
+	lang, ok := v.(string)
+	if !ok {
+		return "Indonesia"
+	}
+	return lang
+}
+
+// WithLanguage menyimpan language ke dalam context.
+func WithLanguage(ctx context.Context, lang string) context.Context {
+	return context.WithValue(ctx, languageKey, lang)
+}
 
 // ErrNoUserID dikembalikan jika user_id tidak ditemukan di context.
 var ErrNoUserID = errors.New("ctxutil: user_id tidak ditemukan di context")

@@ -52,7 +52,7 @@ func (w *whatsappService) setAuthHeader(req *http.Request, apiKey string) {
 func (w *whatsappService) ScheduleMedia(apiKey, deviceID, to, caption, filePath, runAt string, isGroup bool) (int, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return 0, fmt.Errorf("gagal membuka file: %w", err)
+		return 0, fmt.Errorf("failed to open file: %w", err)
 	}
 	defer file.Close()
 

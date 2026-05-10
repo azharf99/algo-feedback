@@ -17,6 +17,7 @@ import (
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/ctxutil"
 	"github.com/azharf99/algo-feedback/pkg/curriculum"
+	"github.com/azharf99/algo-feedback/pkg/i18n"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 	"github.com/azharf99/algo-feedback/pkg/pdfgen"
 	"github.com/azharf99/algo-feedback/pkg/taskqueue"
@@ -68,6 +69,13 @@ func NewFeedbackUsecase(
 	}
 }
 
+func (u *feedbackUsecase) getLanguageFromGroup(ctx context.Context, groupID uint) string {
+	if g, err := u.groupRepo.GetByID(ctx, groupID); err == nil && g.Language != "" {
+		return g.Language
+	}
+	return "Indonesia"
+}
+
 // -------------------------------------------------------------------------
 // 1. GENERATOR DATA FEEDBACK (SEEDER) - DENGAN AUTO ATTENDANCE SCORE!
 // -------------------------------------------------------------------------
@@ -95,6 +103,11 @@ func (u *feedbackUsecase) GenerateFeedback(ctx context.Context, groupID *uint, a
 	for _, group := range groups {
 		if group.Course == nil {
 			continue // Skip jika grup tidak punya kurikulum
+		}
+
+		lang := group.Language
+		if lang == "" {
+			lang = "Indonesia"
 		}
 
 		// 2. Ambil seluruh Sesi absensi untuk grup ini (sudah urut tanggal & preload StudentsAttended)
@@ -134,10 +147,10 @@ func (u *feedbackUsecase) GenerateFeedback(ctx context.Context, groupID *uint, a
 
 				for _, student := range group.Students {
 					courseName := session.Lesson.Module
-					topic := curriculum.GetTopic(courseName, int(monthNumber))
-					result := curriculum.GetResult(courseName, int(monthNumber))
-					comp := curriculum.GetCompetency(courseName, int(monthNumber))
-					tutorFb := curriculum.GetTutorIntro(student.Fullname)
+					topic := curriculum.GetTopic(courseName, int(monthNumber), lang)
+					result := curriculum.GetResult(courseName, int(monthNumber), lang)
+					comp := curriculum.GetCompetency(courseName, int(monthNumber), lang)
+					tutorFb := curriculum.GetTutorIntro(lang, student.Fullname)
 					level := curriculum.GetCourseLevel(courseName)
 
 					// --- FITUR BARU: AUTO CALCULATE ATTENDANCE SCORE ---
@@ -163,6 +176,7 @@ func (u *feedbackUsecase) GenerateFeedback(ctx context.Context, groupID *uint, a
 						Result:          &result,
 						Competency:      &comp,
 						TutorFeedback:   &tutorFb,
+						Language:        lang,
 						LessonDate:      sessionLessonDate, // Tanggal rapor = tanggal sesi ke-4
 						LessonTime:      sessionLessonTime,
 						IsSent:          false,
@@ -229,8 +243,14 @@ func (u *feedbackUsecase) processPDFTasks(ctx context.Context, feedbacks []domai
 			continue
 		}
 
+		lang := f.Language
+		if lang == "" {
+			lang = "Indonesia"
+		}
+
 		// Menggunakan GetFeedback dari curriculum untuk merangkai paragraf
 		teacherFeedback := curriculum.GetFeedback(
+			lang,
 			f.Student.Fullname,
 			f.AttendanceScore,
 			f.ActivityScore,
@@ -238,6 +258,7 @@ func (u *feedbackUsecase) processPDFTasks(ctx context.Context, feedbacks []domai
 		)
 
 		pdfData := pdfgen.PDFData{
+			Lang:                lang,
 			StudentName:         f.Student.Fullname,
 			StudentMonthCourse:  f.Number,
 			StudentClass:        strVal(f.Course),
@@ -274,7 +295,7 @@ func (u *feedbackUsecase) processPDFTasks(ctx context.Context, feedbacks []domai
 			// 1. Generate PDF
 			err := u.pdfGen.Generate(bgCtx, pdfData, outputPath)
 			if err != nil {
-				return fmt.Errorf("gagal generate PDF untuk student %s: %w", pdfData.StudentName, err)
+				return fmt.Errorf("%s %s: %w", i18n.T(lang, "error_pdf_gen"), pdfData.StudentName, err)
 			}
 
 			// 2. Update URL PDF di Database menggunakan sparse struct
@@ -311,6 +332,11 @@ func (u *feedbackUsecase) SendFeedbackPDF(ctx context.Context, studentID *uint) 
 			continue
 		}
 
+		lang := f.Language
+		if lang == "" {
+			lang = "Indonesia"
+		}
+
 		fileName := fmt.Sprintf("Rapor %s Bulan ke-%d.pdf", sanitizeFilename(f.Student.Fullname), f.Number)
 		groupName := sanitizeFilename(strVal(f.GroupName))
 		if groupName == "" {
@@ -336,8 +362,17 @@ func (u *feedbackUsecase) SendFeedbackPDF(ctx context.Context, studentID *uint) 
 			parentName = *f.Student.ParentName
 		}
 
-		caption := fmt.Sprintf("Halo %s. Semoga %s sehat selalu, berikut adalah laporan perkembangan belajar Ananda %s untuk %s bulan ke-%d.",
-			parentName, parentName, f.Student.Fullname, strVal(f.Course), f.Number)
+		var caption string
+		if lang == "Russian" {
+			caption = fmt.Sprintf("Здравствуйте, %s. Надеемся, у вас все хорошо. Вот отчет о прогрессе обучения %s по курсу %s, месяц %d.",
+				parentName, f.Student.Fullname, strVal(f.Course), f.Number)
+		} else if lang == "English" {
+			caption = fmt.Sprintf("Hello %s. We hope you are doing well. Here is the progress report for %s in the %s course, month %d.",
+				parentName, f.Student.Fullname, strVal(f.Course), f.Number)
+		} else {
+			caption = fmt.Sprintf("Halo %s. Semoga %s sehat selalu, berikut adalah laporan perkembangan belajar Ananda %s untuk %s bulan ke-%d.",
+				parentName, parentName, f.Student.Fullname, strVal(f.Course), f.Number)
+		}
 
 		// Tentukan waktu kirim (misal 5 menit dari sekarang)
 		runAt := time.Date(f.LessonDate.Year(),
@@ -411,10 +446,11 @@ func (u *feedbackUsecase) GetPaginated(ctx context.Context, params domain.Pagina
 	}, &stats, nil
 }
 func (u *feedbackUsecase) Update(ctx context.Context, id uint, req *domain.Feedback) error {
+	lang := ctxutil.GetLanguage(ctx)
 	// 1. Ambil data feedback yang sudah ada
 	existing, err := u.feedRepo.GetByID(ctx, id)
 	if err != nil {
-		return errors.New("feedback tidak ditemukan")
+		return errors.New(i18n.T(lang, "error_feedback_not_found"))
 	}
 
 	// 2. Update hanya field yang diizinkan untuk diubah manual

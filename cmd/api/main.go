@@ -90,6 +90,9 @@ func main() {
 	// Global Rate Limiter: 100 requests per second, burst 200
 	r.Use(middleware.RateLimitMiddleware(100, 200))
 
+	// Global I18n Middleware
+	r.Use(middleware.I18nMiddleware())
+
 	// 4. Inisialisasi Utilitas Pihak Ketiga (Third Party Services)
 	// Pastikan folder templates/index.html sudah ada
 	pdfService := pdfgen.NewPDFGenerator("templates")

@@ -54,6 +54,7 @@ type Feedback struct {
 	LessonDate *DateOnly `json:"lesson_date" gorm:"type:date"`
 	LessonTime *TimeOnly `json:"lesson_time" gorm:"type:time"`
 	IsSent     bool      `json:"is_sent" gorm:"default:false"`
+	Language   string    `json:"language" gorm:"type:varchar(20);default:'Indonesia'"`
 	ScheduleID *string   `json:"schedule_id" gorm:"type:varchar(150)"`
 	TaskID     *string   `json:"task_id" gorm:"type:varchar(150)"`
 	URLPDF     *string   `json:"url_pdf" gorm:"type:text"`

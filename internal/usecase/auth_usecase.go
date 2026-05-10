@@ -13,6 +13,8 @@ import (
 
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/auth"
+	"github.com/azharf99/algo-feedback/pkg/ctxutil"
+	"github.com/azharf99/algo-feedback/pkg/i18n"
 	"github.com/azharf99/algo-feedback/pkg/mail"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -21,36 +23,42 @@ type authUsecase struct {
 	userRepo domain.UserRepository
 }
 
+func (u *authUsecase) getLang(ctx context.Context) string {
+	return ctxutil.GetLanguage(ctx)
+}
+
 func NewAuthUsecase(userRepo domain.UserRepository) domain.AuthUsecase {
 	return &authUsecase{userRepo: userRepo}
 }
 
 func (u *authUsecase) Register(ctx context.Context, req *domain.User) error {
+	lang := u.getLang(ctx)
 	// Hash password sebelum disimpan
 	hashedPassword, err := auth.HashPassword(req.Password)
 	if err != nil {
-		return err
+		return errors.New(i18n.T(lang, "error_password_process"))
 	}
 	req.Password = hashedPassword
 	return u.userRepo.Create(ctx, req)
 }
 
 func (u *authUsecase) Login(ctx context.Context, email, password string) (*domain.LoginResponse, error) {
+	lang := u.getLang(ctx)
 	// 1. Cari user berdasarkan email
 	user, err := u.userRepo.GetByEmail(ctx, email)
 	if err != nil {
-		return nil, errors.New("kredensial tidak valid")
+		return nil, errors.New(i18n.T(lang, "error_unauthorized"))
 	}
 
 	// 2. Verifikasi Password
 	if !auth.CheckPasswordHash(password, user.Password) {
-		return nil, errors.New("kredensial tidak valid")
+		return nil, errors.New(i18n.T(lang, "error_unauthorized"))
 	}
 
 	// 3. Buat Access & Refresh Token
 	accessToken, refreshToken, err := auth.GenerateTokens(user)
 	if err != nil {
-		return nil, errors.New("gagal membuat token")
+		return nil, errors.New(i18n.T(lang, "msg_save_failed"))
 	}
 
 	return &domain.LoginResponse{
@@ -65,16 +73,17 @@ func (u *authUsecase) GetUserByEmail(ctx context.Context, email string) (*domain
 }
 
 func (u *authUsecase) RefreshToken(ctx context.Context, refreshTokenStr string) (*domain.LoginResponse, error) {
+	lang := u.getLang(ctx)
 	// 1. Validasi Refresh Token
 	token, err := auth.ValidateRefreshToken(refreshTokenStr)
 	if err != nil || !token.Valid {
-		return nil, errors.New("refresh token tidak valid atau kadaluarsa")
+		return nil, errors.New(i18n.T(lang, "error_unauthorized"))
 	}
 
 	// 2. Ambil User ID dari klaim token
 	claims, ok := token.Claims.(*jwt.RegisteredClaims)
 	if !ok {
-		return nil, errors.New("klaim token tidak valid")
+		return nil, errors.New(i18n.T(lang, "error_unauthorized"))
 	}
 
 	// Rune ke string ke uint (Sesuai cara kita menyimpan subject tadi)
@@ -83,13 +92,13 @@ func (u *authUsecase) RefreshToken(ctx context.Context, refreshTokenStr string) 
 	// 3. Ambil data user terbaru dari DB
 	user, err := u.userRepo.GetByID(ctx, uint(userIDInt))
 	if err != nil {
-		return nil, errors.New("pengguna tidak ditemukan")
+		return nil, errors.New(i18n.T(lang, "error_user_not_found"))
 	}
 
 	// 4. Buat pasangan token baru
 	newAccessToken, newRefreshToken, err := auth.GenerateTokens(user)
 	if err != nil {
-		return nil, errors.New("gagal membuat token baru")
+		return nil, errors.New(i18n.T(lang, "msg_save_failed"))
 	}
 
 	return &domain.LoginResponse{
@@ -103,6 +112,7 @@ func (u *authUsecase) RefreshToken(ctx context.Context, refreshTokenStr string) 
 // Jika sudah ada, langsung generate token.
 // Jika belum ada, buat akun baru dengan password acak yang aman.
 func (u *authUsecase) GoogleLogin(ctx context.Context, email, name string) (*domain.LoginResponse, error) {
+	lang := u.getLang(ctx)
 	// 1. Cari user berdasarkan email
 	user, err := u.userRepo.GetByEmail(ctx, email)
 
@@ -110,13 +120,13 @@ func (u *authUsecase) GoogleLogin(ctx context.Context, email, name string) (*dom
 		// 2. User belum ada — buat akun baru (auto-register)
 		randomBytes := make([]byte, 32)
 		if _, err := rand.Read(randomBytes); err != nil {
-			return nil, errors.New("gagal membuat password acak")
+			return nil, errors.New(i18n.T(lang, "msg_save_failed"))
 		}
 		randomPassword := hex.EncodeToString(randomBytes)
 
 		hashedPassword, err := auth.HashPassword(randomPassword)
 		if err != nil {
-			return nil, errors.New("gagal mengenkripsi password")
+			return nil, errors.New(i18n.T(lang, "error_password_process"))
 		}
 
 		user = &domain.User{
@@ -127,14 +137,14 @@ func (u *authUsecase) GoogleLogin(ctx context.Context, email, name string) (*dom
 		}
 
 		if err := u.userRepo.Create(ctx, user); err != nil {
-			return nil, errors.New("gagal membuat akun pengguna baru")
+			return nil, errors.New(i18n.T(lang, "msg_save_failed"))
 		}
 	}
 
 	// 3. Generate JWT Access & Refresh Token
 	accessToken, refreshToken, err := auth.GenerateTokens(user)
 	if err != nil {
-		return nil, errors.New("gagal membuat token")
+		return nil, errors.New(i18n.T(lang, "msg_save_failed"))
 	}
 
 	return &domain.LoginResponse{
@@ -236,21 +246,22 @@ func (u *authUsecase) ForgotPassword(ctx context.Context, email string) error {
 }
 
 func (u *authUsecase) ResetPassword(ctx context.Context, token, newPassword string) error {
+	lang := u.getLang(ctx)
 	// 1. Cari user berdasarkan token
 	user, err := u.userRepo.GetByResetToken(ctx, token)
 	if err != nil {
-		return errors.New("token reset password tidak valid")
+		return errors.New(i18n.T(lang, "error_unauthorized"))
 	}
 
 	// 2. Cek Expiry
 	if user.ResetPasswordExpiresAt == nil || time.Now().After(*user.ResetPasswordExpiresAt) {
-		return errors.New("token reset password sudah kadaluarsa")
+		return errors.New(i18n.T(lang, "error_unauthorized"))
 	}
 
 	// 3. Hash Password Baru
 	hashedPassword, err := auth.HashPassword(newPassword)
 	if err != nil {
-		return err
+		return errors.New(i18n.T(lang, "error_password_process"))
 	}
 
 	// 4. Update User & Bersihkan Token

@@ -1,7 +1,10 @@
 // File: pkg/curriculum/curriculum.go
 package curriculum
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // Levels Map (Menerjemahkan level.py)
 var levels = map[string]string{
@@ -33,22 +36,63 @@ func GetCourseLevel(module string) string {
 // var results = ModulesResult
 // var competencies = CompetencyResult
 
-func GetTopic(topicName string, number int) string {
-	if mods, ok := Topics[topicName]; ok {
+func GetTopic(topicName string, number int, lang string) string {
+	// Try to find the specific localized course name first
+	key := topicName
+	if lang == "English" && !strings.HasSuffix(key, "ENG") {
+		// If requesting English but key doesn't have ENG, try to find ENG variant
+		altKey := strings.TrimSuffix(key, " IND") + " ENG"
+		if _, ok := Topics[altKey]; ok {
+			key = altKey
+		}
+	} else if lang == "Indonesia" && !strings.HasSuffix(key, "IND") {
+		altKey := strings.TrimSuffix(key, " ENG") + " IND"
+		if _, ok := Topics[altKey]; ok {
+			key = altKey
+		}
+	}
+
+	if mods, ok := Topics[key]; ok {
 		return mods[number]
 	}
 	return ""
 }
 
-func GetResult(topicName string, number int) string {
-	if mods, ok := ModulesResult[topicName]; ok {
+func GetResult(topicName string, number int, lang string) string {
+	key := topicName
+	if lang == "English" && !strings.HasSuffix(key, "ENG") {
+		altKey := strings.TrimSuffix(key, " IND") + " ENG"
+		if _, ok := ModulesResult[altKey]; ok {
+			key = altKey
+		}
+	} else if lang == "Indonesia" && !strings.HasSuffix(key, "IND") {
+		altKey := strings.TrimSuffix(key, " ENG") + " IND"
+		if _, ok := ModulesResult[altKey]; ok {
+			key = altKey
+		}
+	}
+
+	if mods, ok := ModulesResult[key]; ok {
 		return mods[number]
 	}
 	return ""
 }
 
-func GetCompetency(topicName string, number int) string {
-	if mods, ok := CompetencyResult[topicName]; ok {
+func GetCompetency(topicName string, number int, lang string) string {
+	key := topicName
+	if lang == "English" && !strings.HasSuffix(key, "ENG") {
+		altKey := strings.TrimSuffix(key, " IND") + " ENG"
+		if _, ok := CompetencyResult[altKey]; ok {
+			key = altKey
+		}
+	} else if lang == "Indonesia" && !strings.HasSuffix(key, "IND") {
+		altKey := strings.TrimSuffix(key, " ENG") + " IND"
+		if _, ok := CompetencyResult[altKey]; ok {
+			key = altKey
+		}
+	}
+
+	if mods, ok := CompetencyResult[key]; ok {
 		return mods[number]
 	}
 	return ""
