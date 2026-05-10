@@ -188,7 +188,7 @@ func (u *sessionUsecase) generateFeedbackMessage(_ context.Context, session *dom
 	// Surnames
 	var surnames []string
 	for _, student := range session.StudentsAttended {
-		surnames = append(surnames, student.Surname)
+		surnames = append(surnames, strings.TrimSpace(student.Surname))
 	}
 	surnamesStr := strings.Join(surnames, ", ")
 	if len(surnames) == 0 {
@@ -198,9 +198,14 @@ func (u *sessionUsecase) generateFeedbackMessage(_ context.Context, session *dom
 	// Lesson dan Course
 	lessonName := "-"
 	courseName := "-"
+	recording_link := "-"
 	if session.Lesson != nil {
 		lessonName = session.Lesson.Title
 		courseName = session.Lesson.Module
+	}
+
+	if session.Group != nil {
+		recording_link = *session.Group.RecordingsLink
 	}
 
 	// Competency
@@ -216,17 +221,20 @@ func (u *sessionUsecase) generateFeedbackMessage(_ context.Context, session *dom
 	}
 	competenciesStr := strings.Join(competencies, "\n")
 
-	template := `Halo, Parents!
+	template := `Halo, Ayah/Bunda!
 
-Hari ini %s pukul %s %s telah mengikuti pelajaran %s di kursus %s. Mereka telah belajar:
+Hari ini, %s pukul %s WIB %s telah mengikuti pelajaran %s di kursus %s. Mereka telah belajar:
 %s
 
-Untuk tetap belajar sambil berlatih, Bapak/Ibu bisa mengajak anak-anak membuka platform daring Algonova Indonesia dan menyelesaikan tugas-tugas mereka. Jika ada yang ingin dikonsultasikan, Ayah/Bunda bisa hubungi saya kapan saja.
+Untuk tetap belajar sambil berlatih, ayah/bunda bisa mengajak putra-putri membuka platform daring Algonova Indonesia dan menyelesaikan tugas-tugas mereka. Jika ada yang ingin dikonsultasikan, ayah/bunda bisa menghubungi saya kapan saja.
+
+Rekaman pelajaran bisa diakses melalui tautan berikut: 
+%s
 
 Terima Kasih dan Sampai jumpa!
 %s – Algonova Indonesia`
 
-	return fmt.Sprintf(template, dateStr, timeStr, surnamesStr, lessonName, courseName, competenciesStr, userName)
+	return fmt.Sprintf(template, dateStr, timeStr, surnamesStr, lessonName, courseName, competenciesStr, recording_link, userName)
 }
 
 func formatIndonesianDate(t time.Time) string {
