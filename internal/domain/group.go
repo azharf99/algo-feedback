@@ -22,6 +22,7 @@ type Group struct {
 	FirstLessonDate *DateOnly `json:"first_lesson_date" gorm:"type:date"`
 	FirstLessonTime *TimeOnly `json:"first_lesson_time" gorm:"type:time"`
 	IsActive        bool      `json:"is_active" gorm:"default:true"`
+	Language        string    `json:"language" gorm:"type:varchar(20);default:'Indonesia'"`
 	CreatedAt       time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt       time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 	Students        []Student `json:"students" gorm:"many2many:group_students;"`

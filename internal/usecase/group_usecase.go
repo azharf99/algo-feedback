@@ -141,6 +141,11 @@ func (u *groupUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*do
 		meetLink := record[headerMap["meeting_link"]]
 		recLink := record[headerMap["recordings_link"]]
 
+		language := "Indonesia"
+		if idx, ok := headerMap["language"]; ok && record[idx] != "" {
+			language = record[idx]
+		}
+
 		group := &domain.Group{
 			ID:              uint(idUint),
 			CourseID:        uint(courseID), // <-- Tambahan Course ID
@@ -153,6 +158,7 @@ func (u *groupUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*do
 			FirstLessonDate: firstLessonDate,
 			FirstLessonTime: firstLessonTime,
 			IsActive:        strings.ToLower(record[headerMap["is_active"]]) != "false",
+			Language:        language,
 		}
 
 		// Array Many-to-Many Siswa

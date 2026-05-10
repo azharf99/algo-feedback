@@ -179,10 +179,20 @@ func (u *sessionUsecase) UpdateAttendance(ctx context.Context, sessionID uint, s
 }
 
 func (u *sessionUsecase) generateFeedbackMessage(_ context.Context, session *domain.Session, userName string) string {
+	// Language check
+	language := "Indonesia"
+	if session.Group != nil && session.Group.Language != "" {
+		language = session.Group.Language
+	}
 
 	// Format Tanggal dan Waktu
 	sessionDate := session.DateStart.Time
-	dateStr := formatIndonesianDate(sessionDate)
+	var dateStr string
+	if language == "Indonesia" {
+		dateStr = formatIndonesianDate(sessionDate)
+	} else {
+		dateStr = formatEnglishDate(sessionDate)
+	}
 	timeStr := session.TimeStart.Time.Format("15.04")
 
 	// Surnames
@@ -192,7 +202,11 @@ func (u *sessionUsecase) generateFeedbackMessage(_ context.Context, session *dom
 	}
 	surnamesStr := strings.Join(surnames, ", ")
 	if len(surnames) == 0 {
-		surnamesStr = "Siswa"
+		if language == "Indonesia" {
+			surnamesStr = "Siswa"
+		} else {
+			surnamesStr = "Students"
+		}
 	}
 
 	// Lesson dan Course
@@ -205,7 +219,9 @@ func (u *sessionUsecase) generateFeedbackMessage(_ context.Context, session *dom
 	}
 
 	if session.Group != nil {
-		recording_link = *session.Group.RecordingsLink
+		if session.Group.RecordingsLink != nil {
+			recording_link = *session.Group.RecordingsLink
+		}
 	}
 
 	// Competency
@@ -221,7 +237,9 @@ func (u *sessionUsecase) generateFeedbackMessage(_ context.Context, session *dom
 	}
 	competenciesStr := strings.Join(competencies, "\n")
 
-	template := `Halo, Ayah/Bunda!
+	var template string
+	if language == "Indonesia" {
+		template = `Halo, Ayah/Bunda!
 
 Hari ini, %s pukul %s WIB %s telah mengikuti pelajaran %s di kursus %s. Mereka telah belajar:
 %s
@@ -233,6 +251,20 @@ Rekaman pelajaran bisa diakses melalui tautan berikut:
 
 Terima Kasih dan Sampai jumpa!
 %s – Algonova Indonesia`
+	} else {
+		template = `Hello, parents!
+
+Today, %s at %s WIB, %s attended the %s lesson in the %s course. They learned:
+%s
+
+To keep learning while practicing, parents can encourage their children to access the Algonova Indonesia online platform and complete their assignments. If you have any questions or need consultation, feel free to contact me anytime.
+
+The lesson recording can be accessed through the following link:
+%s
+
+Thank you and see you!
+%s – Algonova Indonesia`
+	}
 
 	return fmt.Sprintf(template, dateStr, timeStr, surnamesStr, lessonName, courseName, competenciesStr, recording_link, userName)
 }
@@ -245,6 +277,11 @@ func formatIndonesianDate(t time.Time) string {
 	monthName := months[t.Month()]
 	return fmt.Sprintf("%s, %d %s %d", dayName, t.Day(), monthName, t.Year())
 }
+
+func formatEnglishDate(t time.Time) string {
+	return t.Format("Monday, 2 January 2006")
+}
+
 
 func (u *sessionUsecase) TriggerAfterSessionFeedback(ctx context.Context, session *domain.Session) {
 	if session.Status == "Cancelled" {
