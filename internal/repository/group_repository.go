@@ -86,6 +86,7 @@ func (r *groupRepository) Update(ctx context.Context, group *domain.Group, stude
 		"first_lesson_date": group.FirstLessonDate,
 		"first_lesson_time": group.FirstLessonTime,
 		"is_active":         group.IsActive,
+		"language":          group.Language,
 		"user_id":           group.UserID,
 	}
 
