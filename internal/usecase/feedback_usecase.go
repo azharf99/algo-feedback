@@ -69,12 +69,7 @@ func NewFeedbackUsecase(
 	}
 }
 
-func (u *feedbackUsecase) getLanguageFromGroup(ctx context.Context, groupID uint) string {
-	if g, err := u.groupRepo.GetByID(ctx, groupID); err == nil && g.Language != "" {
-		return g.Language
-	}
-	return "Indonesia"
-}
+
 
 // -------------------------------------------------------------------------
 // 1. GENERATOR DATA FEEDBACK (SEEDER) - DENGAN AUTO ATTENDANCE SCORE!
@@ -272,12 +267,17 @@ func (u *feedbackUsecase) processPDFTasks(ctx context.Context, feedbacks []domai
 			TeacherFeedback:     teacherFeedback,
 		}
 
-		fileName := fmt.Sprintf("Rapor %s Bulan ke-%d.pdf", sanitizeFilename(f.Student.Fullname), f.Number)
+		courseName := sanitizeFilename(strVal(f.Course))
+		if courseName == "" {
+			courseName = "UnknownCourse"
+		}
+
+		fileName := fmt.Sprintf("Rapor %s - %s Bulan ke-%d.pdf", sanitizeFilename(f.Student.Fullname), courseName, f.Number)
 		groupName := sanitizeFilename(strVal(f.GroupName))
 		if groupName == "" {
 			groupName = "UnknownGroup"
 		}
-		outputPath := filepath.Join("mediafiles", fmt.Sprintf("%d", f.UserID), groupName, fileName)
+		outputPath := filepath.Join("mediafiles", fmt.Sprintf("%d", f.UserID), groupName, courseName, fileName)
 
 		// ⚡ GOROUTINE ACTION (Background Task) ⚡
 		// Kita kirim ke Worker Pool agar tidak blocking request HTTP
@@ -337,12 +337,17 @@ func (u *feedbackUsecase) SendFeedbackPDF(ctx context.Context, studentID *uint) 
 			lang = "Indonesia"
 		}
 
-		fileName := fmt.Sprintf("Rapor %s Bulan ke-%d.pdf", sanitizeFilename(f.Student.Fullname), f.Number)
+		courseName := sanitizeFilename(strVal(f.Course))
+		if courseName == "" {
+			courseName = "UnknownCourse"
+		}
+
+		fileName := fmt.Sprintf("Rapor %s - %s Bulan ke-%d.pdf", sanitizeFilename(f.Student.Fullname), courseName, f.Number)
 		groupName := sanitizeFilename(strVal(f.GroupName))
 		if groupName == "" {
 			groupName = "UnknownGroup"
 		}
-		filePath := filepath.Join("mediafiles", fmt.Sprintf("%d", f.UserID), groupName, fileName)
+		filePath := filepath.Join("mediafiles", fmt.Sprintf("%d", f.UserID), groupName, courseName, fileName)
 
 		// Persiapkan data kirim
 		to := strVal(f.Student.ParentContact)
@@ -363,13 +368,14 @@ func (u *feedbackUsecase) SendFeedbackPDF(ctx context.Context, studentID *uint) 
 		}
 
 		var caption string
-		if lang == "Russian" {
+		switch lang {
+		case "Russian":
 			caption = fmt.Sprintf("Здравствуйте, %s. Надеемся, у вас все хорошо. Вот отчет о прогрессе обучения %s по курсу %s, месяц %d.",
 				parentName, f.Student.Fullname, strVal(f.Course), f.Number)
-		} else if lang == "English" {
+		case "English":
 			caption = fmt.Sprintf("Hello %s. We hope you are doing well. Here is the progress report for %s in the %s course, month %d.",
 				parentName, f.Student.Fullname, strVal(f.Course), f.Number)
-		} else {
+		default:
 			caption = fmt.Sprintf("Halo %s. Semoga %s sehat selalu, berikut adalah laporan perkembangan belajar Ananda %s untuk %s bulan ke-%d.",
 				parentName, parentName, f.Student.Fullname, strVal(f.Course), f.Number)
 		}

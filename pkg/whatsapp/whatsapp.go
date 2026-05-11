@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 )
 
 // WhatsappConfig menyimpan konfigurasi API (Nanti diisi dari .env)
@@ -119,6 +120,7 @@ func (w *whatsappService) ScheduleMedia(apiKey, deviceID, to, caption, filePath,
 	fmt.Println("  Schedule ID:", result.Data)
 	fmt.Println("----------------------------")
 
+	time.Sleep(300 * time.Millisecond) // Respect rate limit of 4 req/sec
 	return result.Data, nil
 }
 
@@ -175,6 +177,7 @@ func (w *whatsappService) UpdateSchedule(apiKey, deviceID string, id int, to, me
 	fmt.Println("  Schedule ID:", id)
 	fmt.Println("----------------------------")
 
+	time.Sleep(300 * time.Millisecond) // Respect rate limit of 4 req/sec
 	return nil
 }
 
@@ -231,6 +234,7 @@ func (w *whatsappService) ScheduleMessage(apiKey, deviceID, to, message, runAt s
 	fmt.Println("  Schedule ID:", result.Data)
 	fmt.Println("----------------------------")
 
+	time.Sleep(300 * time.Millisecond) // Respect rate limit of 4 req/sec
 	return result.Data, nil
 }
 
@@ -266,5 +270,6 @@ func (w *whatsappService) DeleteSchedule(apiKey string, id int) error {
 	fmt.Println("  Schedule ID:", id)
 	fmt.Println("----------------------------")
 
+	time.Sleep(300 * time.Millisecond) // Respect rate limit of 4 req/sec
 	return nil
 }
