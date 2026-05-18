@@ -3,7 +3,7 @@
   <p><strong>A comprehensive platform for managing students, courses, sessions, and automated feedback generation.</strong></p>
   
   [![Go Version](https://img.shields.io/github/go-mod/go-version/azharf99/algo-feedback?style=for-the-badge&logo=go)](https://go.dev/)
-  [![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-lightgrey.svg?style=for-the-badge)](https://creativecommons.org/licenses/by-nc-nd/4.0/)
+  [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
   [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](http://makeapullrequest.com)
 </div>
 
@@ -13,7 +13,7 @@
 
 Welcome to the **Algo Feedback System**! This is a robust backend service built with Golang, crafted specifically to streamline the management of educational programs. Whether you're handling student enrollments, organizing complex course structures, or needing automated, highly-customizable feedback generation, this system provides the foundation.
 
-It offers specialized tools for tutors and administrators to track attendance, automatically generate beautiful PDF feedback reports, and seamlessly deliver them to parents or students via WhatsApp integration.
+It offers specialized tools for tutors and administrators to track attendance, automatically generate beautiful PDF feedback reports, and seamlessly deliver them to students via WhatsApp integration.
 
 ---
 
@@ -24,10 +24,12 @@ It offers specialized tools for tutors and administrators to track attendance, a
 - 📅 **Session Tracking**: Schedule classes, manage meeting/recording links, and record precise student attendance.
 - 🤖 **Automated Feedback System**:
   - **Feedback Seeder**: Automatically generates monthly feedback records based on real session history and attendance.
-  - **PDF Generation**: Asynchronously generates beautiful, branded PDF reports for students using `maroto`.
-  - **WhatsApp Integration**: Schedules and sends feedback directly to users via WhatsApp (I use my own WhatsApp Gateway, but you can use any WhatsApp Gateway service).
+  - **Asynchronous PDF Generation**: Generates branded PDF reports using `maroto` with a built-in worker pool (task queue).
+  - **WhatsApp Integration**: Schedules and sends feedback directly to users via a WhatsApp Gateway service.
 - 🔄 **Batch Import via CSV**: Quickly upload CSV files to batch create or update records for Students, Courses, Groups, and Lessons using Upsert logic.
-- 🔒 **Secure Authentication**: Robust role-based access control (Admin/Tutor) using JWT.
+- 🔒 **Secure Authentication**: Robust role-based access control (Admin/Tutor) using JWT and Google OAuth2 support.
+- 🌍 **Multi-language Support**: Built-in I18n middleware for internationalization.
+- ⚡ **Performance**: Global rate limiting and optimized database queries using GORM.
 
 ---
 
@@ -41,11 +43,12 @@ This folder contains **all example CSV import file references** (`students_data.
 
 ## 🛠️ Tech Stack
 
-- **Language**: [Go (Golang)](https://go.dev/) 1.26
+- **Language**: [Go (Golang)](https://go.dev/)
 - **Framework**: [Gin Web Framework](https://gin-gonic.com/)
 - **Database**: PostgreSQL with [GORM](https://gorm.io/)
-- **PDF Generation**: [Maroto](https://github.com/johnfercher/maroto)
-- **Authentication**: JWT (JSON Web Tokens)
+- **PDF Generation**: [Maroto V2](https://github.com/johnfercher/maroto)
+- **Authentication**: JWT & Google OAuth2
+- **Task Queue**: Internal Worker Pool for background processing
 - **Containerization**: Docker & Docker Compose
 
 ---
@@ -54,9 +57,9 @@ This folder contains **all example CSV import file references** (`students_data.
 
 ### Prerequisites
 
-- [Go](https://golang.org/doc/install) 1.26 or higher
+- [Go](https://golang.org/doc/install) 1.22+ (optimized for performance)
 - [PostgreSQL](https://www.postgresql.org/download/)
-- [Docker](https://docs.docker.com/get-docker/) (optional, for easy containerized setup)
+- [Docker](https://docs.docker.com/get-docker/) (optional)
 
 ### Installation
 
@@ -67,16 +70,13 @@ This folder contains **all example CSV import file references** (`students_data.
    ```
 
 2. **Configure the Environment**
-   Create a `.env` file in the root directory and fill in the required variables. Use the provided environment template as a reference:
+   Create a `.env` file in the root directory based on the environment variables used in `docker-compose.yml` or `cmd/api/main.go`.
    ```env
-   # Database Configuration
    DB_HOST=localhost
    DB_USER=postgres
    DB_PASSWORD=yourpassword
    DB_NAME=algo_feedback
    DB_PORT=5432
-   
-   # JWT Configuration
    JWT_SECRET=your_super_secret_key
    ```
 
@@ -91,61 +91,38 @@ This folder contains **all example CSV import file references** (`students_data.
    ```
    *The server will start on `http://localhost:8080` by default.*
 
-### Using Docker
-
-You can easily spin up the application and the PostgreSQL database using Docker Compose for a seamless development experience:
-
-```bash
-docker-compose up --build
-```
-
 ---
 
 ## 🔌 API Reference Highlights
 
-The API operates over REST and consumes/produces `application/json` (except for CSV imports which use `multipart/form-data`).
-
-- **Auth:** `POST /api/auth/login`
-- **Batch Imports:** `POST /api/students/import` (and courses, groups, lessons)
-- **Attendance:** `POST /api/sessions/:id/attendance`
+- **Auth:** `POST /api/auth/login`, `POST /api/auth/google`
 - **Feedback Automation:** 
-  - `POST /api/feedbacks/seeder`
-  - `POST /api/feedbacks/generate-pdf`
-
-*(Please refer to `frontend-implementation.md` for a comprehensive API guide.)*
+  - `POST /api/feedbacks/seeder` - Batch generate feedback data
+  - `POST /api/feedbacks/generate-pdf` - Trigger async PDF generation
+  - `GET /api/feedbacks/:id/download` - Download generated reports
+- **WhatsApp:** `POST /api/feedbacks/send-wa` - Dispatch reports via WhatsApp
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions from the open-source community! Whether it's a bug report, a new feature, or documentation improvements, please feel free to open an issue or submit a Pull Request. Let's build a better educational tool together!
+We welcome contributions! Please feel free to open an issue or submit a Pull Request.
 
 ---
 
-## 📞 Contact & Support
+## 📜 License & Attribution
 
-If you have any questions, suggestions, or want to discuss the project, feel free to reach out to me directly!
+This project is licensed under the **Apache License 2.0**.
 
-- **Email**: [azharfaturohman29@gmail.com](mailto:azharfaturohman29@gmail.com)
-- **Telegram**: [@azhar_faturohman](https://t.me/azhar_faturohman)
+**Mandatory Attribution:**
+As per Section 4 of the Apache License 2.0, any redistribution or use of this software (or its derivatives) **MUST** include clear attribution to the original author: **Azhar Faturohman Ahidin**.
 
----
+You must retain all copyright notices in the source code and include the `NOTICE` file in any distribution.
 
-## 📜 License & Copyright
-
-This project is protected and licensed under the **Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)** to protect copyright and regulate distribution.
-
-You are free to:
-- **Share** — copy and redistribute the material in any medium or format.
-
-Under the following terms:
-- **Attribution** — You must give appropriate credit, provide a link to the license, and indicate if changes were made.
-- **NonCommercial** — You may not use the material for commercial purposes.
-- **NoDerivatives** — If you remix, transform, or build upon the material, you may not distribute the modified material.
-
-For more details, please see the [LICENSE](LICENSE) file.
+For more details, see the [LICENSE](LICENSE) and [NOTICE](NOTICE) files.
 
 <br>
 <div align="center">
-  <i>Built with ❤️ for the open-source education community by Azhar Faturohman.</i>
+  <i>Built with ❤️ by <a href="https://github.com/azharf99">Azhar Faturohman Ahidin</a>.</i>
 </div>
+
