@@ -224,6 +224,9 @@ func (m *mockWhatsappService) ScheduleMessage(apiKey, deviceID, to, message, run
 func (m *mockWhatsappService) UpdateSchedule(apiKey, deviceID string, id int, to, message, runAt string, isGroup bool) error {
 	return nil
 }
+func (m *mockWhatsappService) UpdateScheduleMedia(apiKey, deviceID string, id int, to, caption, filePath, runAt string, isGroup bool) error {
+	return nil
+}
 func (m *mockWhatsappService) DeleteSchedule(apiKey string, id int) error {
 	return nil
 }

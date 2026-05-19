@@ -574,7 +574,20 @@ func (u *feedbackUsecase) Update(ctx context.Context, id uint, req *domain.Feedb
 		updateFeedback.LessonTime = req.LessonTime
 	}
 
-	// 3. Sinkronisasi dengan WhatsApp Gateway jika ada schedule_id
+	// 3. Simpan perubahan ke Database
+	err = u.feedRepo.Update(ctx, updateFeedback)
+	if err != nil {
+		return err
+	}
+
+	// 4. Regenerate PDF secara sinkronus agar file PDF di disk terupdate sebelum sync ke WA
+	err = u.generatePDFSync(ctx, existing)
+	if err != nil {
+		log.Printf("Gagal regenerate PDF secara sinkronus untuk ID %d: %v", existing.ID, err)
+		// Kita tidak return error agar response update tetap berhasil, tapi log errornya
+	}
+
+	// 5. Sinkronisasi dengan WhatsApp Gateway jika ada schedule_id menggunakan UpdateScheduleMedia
 	if existing.ScheduleID != nil && *existing.ScheduleID != "" {
 		scheduleIDInt, _ := strconv.Atoi(*existing.ScheduleID)
 		if scheduleIDInt > 0 && existing.Student != nil {
@@ -608,23 +621,35 @@ func (u *feedbackUsecase) Update(ctx context.Context, id uint, req *domain.Feedb
 					deviceID = user.WhatsappDeviceID
 				}
 
-				_ = u.waService.UpdateSchedule(apiKey, deviceID, scheduleIDInt, to, caption, newRunAt, false)
-				existing.IsSent = true
-				updateFeedback.IsSent = true
+				// Gunakan file PDF yang baru saja di-generate
+				var pdfPath string
+				if existing.URLPDF != nil && *existing.URLPDF != "" {
+					pdfPath = *existing.URLPDF
+				} else {
+					// Fallback path jika URLPDF kosong
+					courseName := sanitizeFilename(strVal(existing.Course))
+					if courseName == "" {
+						courseName = "UnknownCourse"
+					}
+					fileName := fmt.Sprintf("Rapor %s - %s Bulan ke-%d.pdf", sanitizeFilename(existing.Student.Fullname), courseName, existing.Number)
+					groupName := sanitizeFilename(strVal(existing.GroupName))
+					if groupName == "" {
+						groupName = "UnknownGroup"
+					}
+					pdfPath = filepath.Join("mediafiles", fmt.Sprintf("%d", existing.UserID), groupName, courseName, fileName)
+				}
+
+				// Panggil UpdateScheduleMedia untuk mengirim update file PDF terbaru beserta parameternya
+				err = u.waService.UpdateScheduleMedia(apiKey, deviceID, scheduleIDInt, to, caption, pdfPath, newRunAt, false)
+				if err != nil {
+					log.Printf("Gagal update schedule media di WhatsApp Gateway untuk ID %d: %v", existing.ID, err)
+				} else {
+					existing.IsSent = true
+					dbUpdate := &domain.Feedback{ID: id, IsSent: true}
+					_ = u.feedRepo.Update(ctx, dbUpdate)
+				}
 			}
 		}
-	}
-
-	err = u.feedRepo.Update(ctx, updateFeedback)
-	if err != nil {
-		return err
-	}
-
-	// Regenerate PDF synchronously for immediate download consistency
-	err = u.generatePDFSync(ctx, existing)
-	if err != nil {
-		log.Printf("Gagal regenerate PDF secara sinkronus untuk ID %d: %v", existing.ID, err)
-		// Kita tidak return error agar response update tetap berhasil, tapi log errornya
 	}
 
 	return nil

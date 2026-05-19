@@ -25,6 +25,7 @@ type WhatsappService interface {
 	ScheduleMedia(apiKey, deviceID, to, caption, filePath, runAt string, isGroup bool) (int, error)
 	ScheduleMessage(apiKey, deviceID, to, message, runAt string, isGroup bool) (int, error)
 	UpdateSchedule(apiKey, deviceID string, id int, to, message, runAt string, isGroup bool) error
+	UpdateScheduleMedia(apiKey, deviceID string, id int, to, caption, filePath, runAt string, isGroup bool) error
 	DeleteSchedule(apiKey string, id int) error
 }
 
@@ -273,3 +274,84 @@ func (w *whatsappService) DeleteSchedule(apiKey string, id int) error {
 	time.Sleep(300 * time.Millisecond) // Respect rate limit of 4 req/sec
 	return nil
 }
+
+// UpdateScheduleMedia: PUT /api/schedule/media
+func (w *whatsappService) UpdateScheduleMedia(apiKey, deviceID string, id int, to, caption, filePath, runAt string, isGroup bool) error {
+	var file *os.File
+	var err error
+	if filePath != "" {
+		file, err = os.Open(filePath)
+		if err != nil {
+			return fmt.Errorf("failed to open file: %w", err)
+		}
+		defer file.Close()
+	}
+
+	payload := &bytes.Buffer{}
+	writer := multipart.NewWriter(payload)
+
+	// Fallback device_id if empty
+	if deviceID == "" {
+		return fmt.Errorf("deviceID is required")
+	}
+
+	isGroupStr := "false"
+	if isGroup {
+		isGroupStr = "true"
+	}
+
+	_ = writer.WriteField("id", strconv.Itoa(id))
+	_ = writer.WriteField("device_id", deviceID)
+	_ = writer.WriteField("to", to)
+	_ = writer.WriteField("is_group", isGroupStr)
+	_ = writer.WriteField("caption", caption)
+	_ = writer.WriteField("media_type", "document")
+	_ = writer.WriteField("run_at", runAt)
+
+	if file != nil {
+		part, err := writer.CreateFormFile("file", filepath.Base(filePath))
+		if err != nil {
+			return err
+		}
+		_, _ = io.Copy(part, file)
+	}
+	writer.Close()
+
+	url := fmt.Sprintf("%s/api/schedule/media", w.config.BaseURL)
+	req, err := http.NewRequest("PUT", url, payload)
+	if err != nil {
+		return err
+	}
+
+	w.setAuthHeader(req, apiKey)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp, err := w.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return err
+	}
+
+	if result.Status != "success" {
+		return fmt.Errorf("gateway error: %s", result.Message)
+	}
+
+	fmt.Println("DEBUG: UpdateScheduleMedia Sent")
+	fmt.Println("  To:", to)
+	fmt.Println("  IsGroup:", isGroup)
+	fmt.Println("  Caption Length:", len(caption))
+	fmt.Println("  Schedule ID:", id)
+	fmt.Println("----------------------------")
+
+	time.Sleep(300 * time.Millisecond) // Respect rate limit of 4 req/sec
+	return nil
+}
+
