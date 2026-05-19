@@ -451,3 +451,72 @@ func TestUpdateFeedback_RegeneratesPDF(t *testing.T) {
 		assert.Contains(t, *secondUpdate.URLPDF, "Andi_Wijaya")
 	}
 }
+
+func TestUpdateFeedback_RegeneratesTutorFeedbackOnScoreChange(t *testing.T) {
+	student := &domain.Student{
+		ID:       12,
+		Fullname: "Andi Wijaya",
+	}
+
+	existingFeedback := &domain.Feedback{
+		ID:              1,
+		StudentID:       pointerToUint(12),
+		Student:         student,
+		Number:          1,
+		Course:          pointerToString("Python Start 1st year"),
+		GroupName:       pointerToString("Python-A"),
+		Level:           pointerToString("M1"),
+		AttendanceScore: "4",
+		ActivityScore:   "3",
+		TaskScore:       "2",
+		Language:        "Indonesia",
+		UserID:          100,
+	}
+
+	var updates []*domain.Feedback
+	feedRepo := &mockFeedbackRepository{
+		getByIDFn: func(ctx context.Context, id uint) (*domain.Feedback, error) {
+			return existingFeedback, nil
+		},
+		updateFn: func(ctx context.Context, f *domain.Feedback) error {
+			updates = append(updates, f)
+			return nil
+		},
+	}
+
+	pdfGen := &mockPDFGenerator{}
+	gradPdfGen := &mockGraduationPDFGenerator{}
+	groupRepo := &mockGroupRepository{}
+	sessionRepo := &mockSessionRepository{}
+	studentRepo := &mockStudentRepository{}
+	waService := &mockWhatsappService{}
+	userRepo := &mockUserRepository{}
+	pool := &mockWorkerPool{}
+
+	u := NewFeedbackUsecase(feedRepo, &mockGraduationFeedbackRepository{}, groupRepo, sessionRepo, studentRepo, pdfGen, gradPdfGen, waService, userRepo, pool)
+
+	// In this request, TutorFeedback is nil, but scores are updated.
+	req := &domain.Feedback{
+		AttendanceScore: "3",
+		ActivityScore:   "2",
+		TaskScore:       "1",
+	}
+
+	ctx := context.Background()
+	err := u.Update(ctx, 1, req)
+	assert.NoError(t, err)
+
+	assert.GreaterOrEqual(t, len(updates), 1)
+	firstUpdate := updates[0]
+	assert.Equal(t, domain.AttendanceScore("3"), firstUpdate.AttendanceScore)
+	assert.Equal(t, domain.ActivityScore("2"), firstUpdate.ActivityScore)
+	assert.Equal(t, domain.TaskScore("1"), firstUpdate.TaskScore)
+
+	// TutorFeedback should be auto-regenerated based on curriculum logic for scores "3", "2", "1"
+	assert.NotNil(t, firstUpdate.TutorFeedback)
+	assert.Contains(t, *firstUpdate.TutorFeedback, "Andi Wijaya")
+	assert.Contains(t, *firstUpdate.TutorFeedback, "mengikuti 3 dari 4")
+	assert.Contains(t, *firstUpdate.TutorFeedback, "cukup aktif")
+	assert.Contains(t, *firstUpdate.TutorFeedback, "menyelesaikan sebagian besar tugas")
+}
+
