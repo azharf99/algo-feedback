@@ -16,10 +16,15 @@ import (
 type mockFeedbackRepository struct {
 	feedbacks []domain.Feedback
 	err       error
+	getByIDFn func(ctx context.Context, id uint) (*domain.Feedback, error)
+	updateFn  func(ctx context.Context, f *domain.Feedback) error
 }
 
 func (m *mockFeedbackRepository) Create(ctx context.Context, f *domain.Feedback) error { return nil }
 func (m *mockFeedbackRepository) GetByID(ctx context.Context, id uint) (*domain.Feedback, error) {
+	if m.getByIDFn != nil {
+		return m.getByIDFn(ctx, id)
+	}
 	return nil, nil
 }
 func (m *mockFeedbackRepository) GetAll(ctx context.Context) ([]domain.Feedback, error) {
@@ -28,9 +33,14 @@ func (m *mockFeedbackRepository) GetAll(ctx context.Context) ([]domain.Feedback,
 func (m *mockFeedbackRepository) GetPaginated(ctx context.Context, params domain.PaginationParams) ([]domain.Feedback, int64, error) {
 	return nil, 0, nil
 }
-func (m *mockFeedbackRepository) Update(ctx context.Context, f *domain.Feedback) error { return nil }
-func (m *mockFeedbackRepository) Delete(ctx context.Context, id uint) error            { return nil }
-func (m *mockFeedbackRepository) BulkDelete(ctx context.Context, ids []uint) error     { return nil }
+func (m *mockFeedbackRepository) Update(ctx context.Context, f *domain.Feedback) error {
+	if m.updateFn != nil {
+		return m.updateFn(ctx, f)
+	}
+	return nil
+}
+func (m *mockFeedbackRepository) Delete(ctx context.Context, id uint) error        { return nil }
+func (m *mockFeedbackRepository) BulkDelete(ctx context.Context, ids []uint) error { return nil }
 func (m *mockFeedbackRepository) GetStats(ctx context.Context) (domain.FeedbackStats, error) {
 	return domain.FeedbackStats{}, nil
 }
@@ -112,13 +122,15 @@ func (m *mockSessionRepository) GetByGroup(ctx context.Context, groupID uint) ([
 func (m *mockSessionRepository) GetByLesson(ctx context.Context, lessonID uint) ([]domain.Session, error) {
 	return nil, nil
 }
-func (m *mockSessionRepository) GetAll(ctx context.Context) ([]domain.Session, error) { return nil, nil }
+func (m *mockSessionRepository) GetAll(ctx context.Context) ([]domain.Session, error) {
+	return nil, nil
+}
 func (m *mockSessionRepository) GetPaginated(ctx context.Context, params domain.PaginationParams) ([]domain.Session, int64, error) {
 	return nil, 0, nil
 }
 func (m *mockSessionRepository) Update(ctx context.Context, s *domain.Session) error { return nil }
-func (m *mockSessionRepository) Delete(ctx context.Context, id uint) error            { return nil }
-func (m *mockSessionRepository) BulkDelete(ctx context.Context, ids []uint) error     { return nil }
+func (m *mockSessionRepository) Delete(ctx context.Context, id uint) error           { return nil }
+func (m *mockSessionRepository) BulkDelete(ctx context.Context, ids []uint) error    { return nil }
 func (m *mockSessionRepository) Upsert(ctx context.Context, s *domain.Session) (bool, error) {
 	return false, nil
 }
@@ -150,13 +162,15 @@ func (m *mockStudentRepository) Create(ctx context.Context, s *domain.Student) e
 func (m *mockStudentRepository) GetByID(ctx context.Context, id uint) (*domain.Student, error) {
 	return m.student, m.err
 }
-func (m *mockStudentRepository) GetAll(ctx context.Context) ([]domain.Student, error) { return nil, nil }
+func (m *mockStudentRepository) GetAll(ctx context.Context) ([]domain.Student, error) {
+	return nil, nil
+}
 func (m *mockStudentRepository) GetPaginated(ctx context.Context, params domain.PaginationParams) ([]domain.Student, int64, error) {
 	return nil, 0, nil
 }
 func (m *mockStudentRepository) Update(ctx context.Context, s *domain.Student) error { return nil }
-func (m *mockStudentRepository) Delete(ctx context.Context, id uint) error            { return nil }
-func (m *mockStudentRepository) BulkDelete(ctx context.Context, ids []uint) error     { return nil }
+func (m *mockStudentRepository) Delete(ctx context.Context, id uint) error           { return nil }
+func (m *mockStudentRepository) BulkDelete(ctx context.Context, ids []uint) error    { return nil }
 func (m *mockStudentRepository) Upsert(ctx context.Context, s *domain.Student) (bool, error) {
 	return false, nil
 }
@@ -181,9 +195,12 @@ func (m *mockUserRepository) Update(ctx context.Context, u *domain.User) error {
 func (m *mockUserRepository) Delete(ctx context.Context, id uint) error        { return nil }
 func (m *mockUserRepository) BulkDelete(ctx context.Context, ids []uint) error { return nil }
 
-type mockPDFGenerator struct{}
+type mockPDFGenerator struct {
+	calledWith []pdfgen.PDFData
+}
 
 func (m *mockPDFGenerator) Generate(ctx context.Context, data pdfgen.PDFData, outputPath string) error {
+	m.calledWith = append(m.calledWith, data)
 	return nil
 }
 
@@ -359,4 +376,78 @@ func pointerToString(s string) *string {
 
 func pointerToUint(u uint) *uint {
 	return &u
+}
+
+func TestUpdateFeedback_RegeneratesPDF(t *testing.T) {
+	student := &domain.Student{
+		ID:       12,
+		Fullname: "Andi Wijaya",
+	}
+
+	existingFeedback := &domain.Feedback{
+		ID:              1,
+		StudentID:       pointerToUint(12),
+		Student:         student,
+		Number:          1,
+		Course:          pointerToString("Python Start 1st year"),
+		GroupName:       pointerToString("Python-A"),
+		Level:           pointerToString("M1"),
+		AttendanceScore: "4",
+		ActivityScore:   "3",
+		TaskScore:       "2",
+		Language:        "Indonesia",
+		UserID:          100,
+	}
+
+	var updates []*domain.Feedback
+	feedRepo := &mockFeedbackRepository{
+		getByIDFn: func(ctx context.Context, id uint) (*domain.Feedback, error) {
+			return existingFeedback, nil
+		},
+		updateFn: func(ctx context.Context, f *domain.Feedback) error {
+			updates = append(updates, f)
+			return nil
+		},
+	}
+
+	pdfGen := &mockPDFGenerator{}
+	gradPdfGen := &mockGraduationPDFGenerator{}
+	groupRepo := &mockGroupRepository{}
+	sessionRepo := &mockSessionRepository{}
+	studentRepo := &mockStudentRepository{}
+	waService := &mockWhatsappService{}
+	userRepo := &mockUserRepository{}
+	pool := &mockWorkerPool{}
+
+	u := NewFeedbackUsecase(feedRepo, &mockGraduationFeedbackRepository{}, groupRepo, sessionRepo, studentRepo, pdfGen, gradPdfGen, waService, userRepo, pool)
+
+	req := &domain.Feedback{
+		AttendanceScore: "3",
+		ActivityScore:   "2",
+		TaskScore:       "1",
+		TutorFeedback:   pointerToString("Updated tutor feedback"),
+	}
+
+	ctx := context.Background()
+	err := u.Update(ctx, 1, req)
+	assert.NoError(t, err)
+
+	assert.GreaterOrEqual(t, len(updates), 1)
+	firstUpdate := updates[0]
+	assert.Equal(t, domain.AttendanceScore("3"), firstUpdate.AttendanceScore)
+	assert.Equal(t, domain.ActivityScore("2"), firstUpdate.ActivityScore)
+	assert.Equal(t, domain.TaskScore("1"), firstUpdate.TaskScore)
+	assert.Equal(t, "Updated tutor feedback", *firstUpdate.TutorFeedback)
+
+	assert.Len(t, pdfGen.calledWith, 1)
+	calledData := pdfGen.calledWith[0]
+	assert.Equal(t, "Andi Wijaya", calledData.StudentName)
+	assert.Equal(t, uint(1), calledData.StudentMonthCourse)
+	assert.Equal(t, "Python Start 1st year", calledData.StudentClass)
+
+	if len(updates) > 1 {
+		secondUpdate := updates[1]
+		assert.NotNil(t, secondUpdate.URLPDF)
+		assert.Contains(t, *secondUpdate.URLPDF, "Andi_Wijaya")
+	}
 }

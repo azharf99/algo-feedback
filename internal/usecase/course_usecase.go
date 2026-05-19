@@ -75,7 +75,7 @@ func (u *courseUsecase) Update(ctx context.Context, id uint, req *domain.Course)
 	if req.Description != nil {
 		existing.Description = req.Description
 	}
-	
+
 	existing.IsActive = req.IsActive
 
 	return u.repo.Update(ctx, existing)

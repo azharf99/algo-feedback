@@ -64,4 +64,3 @@ func NormalizePhoneNumber(phone string) string {
 
 	return cleaned
 }
-

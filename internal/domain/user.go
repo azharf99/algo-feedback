@@ -17,12 +17,12 @@ const (
 )
 
 type User struct {
-	ID        uint           `gorm:"primaryKey" json:"id"`
-	Name      string         `gorm:"type:varchar(100);not null" json:"name"`
-	Email     string         `gorm:"type:varchar(100);uniqueIndex;not null" json:"email"`
-	Password  string         `gorm:"type:varchar(255);not null" json:"-"` // Password disembunyikan dari JSON
-	Role             Role           `gorm:"type:varchar(20);not null;default:'Siswa'" json:"role"`
-	WhatsappAPIKey   string         `gorm:"type:varchar(255)" json:"whatsapp_api_key"`
+	ID                     uint           `gorm:"primaryKey" json:"id"`
+	Name                   string         `gorm:"type:varchar(100);not null" json:"name"`
+	Email                  string         `gorm:"type:varchar(100);uniqueIndex;not null" json:"email"`
+	Password               string         `gorm:"type:varchar(255);not null" json:"-"` // Password disembunyikan dari JSON
+	Role                   Role           `gorm:"type:varchar(20);not null;default:'Siswa'" json:"role"`
+	WhatsappAPIKey         string         `gorm:"type:varchar(255)" json:"whatsapp_api_key"`
 	WhatsappDeviceID       string         `gorm:"type:varchar(50)" json:"whatsapp_device_id"`
 	ResetPasswordToken     string         `gorm:"type:varchar(255)" json:"-"`
 	ResetPasswordExpiresAt *time.Time     `json:"-"`
@@ -40,8 +40,8 @@ type LoginResponse struct {
 
 // UpdateUserRequest adalah payload untuk Create/Update User
 type UpdateUserRequest struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
+	Name             string `json:"name"`
+	Email            string `json:"email"`
 	Password         string `json:"password"` // Kosong = tidak diubah
 	Role             Role   `json:"role"`
 	WhatsappAPIKey   string `json:"whatsapp_api_key"`

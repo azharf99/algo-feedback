@@ -83,7 +83,6 @@ func (u *sessionUsecase) Update(ctx context.Context, id uint, req *domain.Sessio
 		return errors.New(i18n.T(lang, "error_session_not_found"))
 	}
 
-
 	lang = u.getLanguage(existing)
 
 	if existing.Status == "Cancelled" && req.IsDone {
@@ -323,8 +322,6 @@ func formatRussianDate(t time.Time) string {
 	monthName := months[t.Month()]
 	return fmt.Sprintf("%s, %d %s %d", dayName, t.Day(), monthName, t.Year())
 }
-
-
 
 func (u *sessionUsecase) TriggerAfterSessionFeedback(ctx context.Context, session *domain.Session) {
 	if session.Status == "Cancelled" {

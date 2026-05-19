@@ -39,7 +39,7 @@ func TestFeedbackRepository_DataIsolation(t *testing.T) {
 		// Arrange
 		userID := uint(1)
 		ctx := ctxutil.WithUserID(context.Background(), userID)
-		
+
 		// Expect query to include WHERE user_id = 1
 		mock.ExpectQuery(`SELECT \* FROM "feedbacks" WHERE user_id = \$1`).
 			WithArgs(userID).
@@ -110,7 +110,7 @@ func TestFeedbackRepository_DataIsolation(t *testing.T) {
 
 		// Arrange
 		ctx := ctxutil.WithRole(context.Background(), "Admin")
-		
+
 		// Expect query WITHOUT user_id filter
 		mock.ExpectQuery(`SELECT \* FROM "feedbacks"`).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "user_id"}).AddRow(101, 1).AddRow(102, 2))
@@ -124,4 +124,3 @@ func TestFeedbackRepository_DataIsolation(t *testing.T) {
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 }
-

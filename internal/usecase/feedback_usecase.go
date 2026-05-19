@@ -79,8 +79,6 @@ func NewFeedbackUsecase(
 	}
 }
 
-
-
 // -------------------------------------------------------------------------
 // 1. GENERATOR DATA FEEDBACK (SEEDER) - DENGAN AUTO ATTENDANCE SCORE!
 // -------------------------------------------------------------------------
@@ -547,7 +545,15 @@ func (u *feedbackUsecase) Update(ctx context.Context, id uint, req *domain.Feedb
 		}
 	}
 
-	return u.feedRepo.Update(ctx, updateFeedback)
+	err = u.feedRepo.Update(ctx, updateFeedback)
+	if err != nil {
+		return err
+	}
+
+	// Regenerate PDF in background
+	u.processPDFTasks(ctx, []domain.Feedback{*existing})
+
+	return nil
 }
 func (u *feedbackUsecase) Delete(ctx context.Context, id uint) error {
 	// 1. Ambil data feedback untuk cek URL PDF

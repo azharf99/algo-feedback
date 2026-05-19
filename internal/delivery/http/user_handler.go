@@ -105,7 +105,6 @@ func (h *UserHandler) GetByID(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": user})
 }
 
-
 // Create: POST /users
 // Membuat akun pengguna baru (oleh Admin)
 func (h *UserHandler) Create(c *gin.Context) {

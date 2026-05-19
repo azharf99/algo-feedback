@@ -206,7 +206,7 @@ func (r *sessionRepository) MarkCancelled(ctx context.Context, groupID uint, fro
 func (r *sessionRepository) GetSessionsToAutoComplete(ctx context.Context, now time.Time) ([]domain.Session, error) {
 	var sessions []domain.Session
 	dateStr := now.Format("2006-01-02")
-	
+
 	// Normalisasi waktu ke year 2000 UTC seperti yang dilakukan di TimeOnly
 	nowTime := time.Date(2000, 1, 1, now.Hour(), now.Minute(), now.Second(), 0, time.UTC)
 
@@ -218,4 +218,3 @@ func (r *sessionRepository) GetSessionsToAutoComplete(ctx context.Context, now t
 
 	return sessions, err
 }
-

@@ -220,7 +220,7 @@ func (u *lessonUsecase) ImportCompetenciesCSV(ctx context.Context, fileReader io
 
 	// Group competencies by CourseID
 	courseCompetencies := make(map[uint][]string)
-	
+
 	rowNum := 1
 	for {
 		record, err := reader.Read()
@@ -280,8 +280,8 @@ func (u *lessonUsecase) ImportCompetenciesCSV(ctx context.Context, fileReader io
 
 		if len(competencies) != len(lessons) {
 			result.Errors = append(result.Errors, map[string]interface{}{
-				"course_id": courseID, 
-				"warning": i18n.Tf(lang, "warn_count_mismatch", len(competencies), len(lessons)),
+				"course_id": courseID,
+				"warning":   i18n.Tf(lang, "warn_count_mismatch", len(competencies), len(lessons)),
 			})
 		}
 	}
