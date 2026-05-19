@@ -323,6 +323,74 @@ func (u *feedbackUsecase) processPDFTasks(ctx context.Context, feedbacks []domai
 	return response
 }
 
+// generatePDFSync men-generate PDF secara sinkronus, berguna untuk mencegah race condition
+// ketika user langsung mengunduh file setelah update.
+func (u *feedbackUsecase) generatePDFSync(ctx context.Context, f *domain.Feedback) error {
+	if f.Student == nil {
+		return errors.New("data student tidak ditemukan")
+	}
+
+	lang := f.Language
+	if lang == "" {
+		lang = "Indonesia"
+	}
+
+	teacherFeedback := curriculum.GetFeedback(
+		lang,
+		f.Student.Fullname,
+		f.AttendanceScore,
+		f.ActivityScore,
+		f.TaskScore,
+	)
+
+	pdfData := pdfgen.PDFData{
+		Lang:                lang,
+		StudentName:         f.Student.Fullname,
+		StudentMonthCourse:  f.Number,
+		StudentClass:        strVal(f.Course),
+		StudentLevel:        strVal(f.Level),
+		StudentProjectLink:  strVal(f.ProjectLink),
+		StudentReferralLink: "https://s.id/ar4C9",
+		StudentModuleLink:   "https://s.id/ytNGs",
+		ModuleTopic:         strVal(f.Topic),
+		ModuleResult:        strVal(f.Result),
+		SkillResult:         strVal(f.Competency),
+		TeacherFeedback:     teacherFeedback,
+	}
+
+	courseName := sanitizeFilename(strVal(f.Course))
+	if courseName == "" {
+		courseName = "UnknownCourse"
+	}
+
+	fileName := fmt.Sprintf("Rapor %s - %s Bulan ke-%d.pdf", sanitizeFilename(f.Student.Fullname), courseName, f.Number)
+	groupName := sanitizeFilename(strVal(f.GroupName))
+	if groupName == "" {
+		groupName = "UnknownGroup"
+	}
+	outputPath := filepath.Join("mediafiles", fmt.Sprintf("%d", f.UserID), groupName, courseName, fileName)
+
+	// Context preparation
+	isAdmin := ctxutil.IsAdmin(ctx)
+	bgCtx := ctxutil.WithUserID(context.Background(), f.UserID)
+	if isAdmin {
+		bgCtx = ctxutil.WithRole(bgCtx, "Admin")
+	}
+
+	// 1. Generate PDF
+	err := u.pdfGen.Generate(bgCtx, pdfData, outputPath)
+	if err != nil {
+		return fmt.Errorf("%s %s: %w", i18n.T(lang, "error_pdf_gen"), pdfData.StudentName, err)
+	}
+
+	// 2. Update URL PDF di Database menggunakan sparse struct
+	updateFeedback := &domain.Feedback{
+		ID:     f.ID,
+		URLPDF: &outputPath,
+	}
+	return u.feedRepo.Update(bgCtx, updateFeedback)
+}
+
 // -------------------------------------------------------------------------
 // 3. PENGIRIMAN WHATSAPP & UPDATE STATUS
 // -------------------------------------------------------------------------
@@ -552,8 +620,12 @@ func (u *feedbackUsecase) Update(ctx context.Context, id uint, req *domain.Feedb
 		return err
 	}
 
-	// Regenerate PDF in background
-	u.processPDFTasks(ctx, []domain.Feedback{*existing})
+	// Regenerate PDF synchronously for immediate download consistency
+	err = u.generatePDFSync(ctx, existing)
+	if err != nil {
+		log.Printf("Gagal regenerate PDF secara sinkronus untuk ID %d: %v", existing.ID, err)
+		// Kita tidak return error agar response update tetap berhasil, tapi log errornya
+	}
 
 	return nil
 }
