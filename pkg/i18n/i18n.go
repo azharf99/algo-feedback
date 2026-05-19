@@ -83,6 +83,20 @@ var translations = map[string]map[string]string{
 		"pdf_see_full_module":     "Lihat Modul Lengkap:",
 		"pdf_tutor_feedback":      "Tutor's Feedback",
 		"pdf_report_created_by":   "Laporan dibuat oleh:",
+
+		// Graduation PDF Labels
+		"pdf_grad_report_title":           "Algonova Student's Report",
+		"pdf_grad_student_name":           "Student Name",
+		"pdf_grad_course_name":            "Course Name",
+		"pdf_grad_lesson":                 "Lesson",
+		"pdf_grad_teacher_name":            "Teacher Name",
+		"pdf_grad_penilaian":              "Penilaian Kemampuan:",
+		"pdf_grad_tutor_feedback":         "Tutor Personal Feedbacks:",
+		"pdf_grad_kursus":                 "Kursus Kami:",
+		"pdf_grad_referral":               "Referral Link:",
+		"pdf_grad_referral_benefit":       "Dapatkan Benefit Jika Ada Teman atau Saudara yang bergabung dengan Algorithmics",
+		"pdf_grad_referral_students":       "Students = 2 class mentoring atau regular credit / pendaftar",
+		"pdf_grad_referral_new_students":  "New students = Spesial Harga Discount",
 	},
 	"English": {
 		"error_session_not_found":      "session not found",
@@ -163,6 +177,20 @@ var translations = map[string]map[string]string{
 		"pdf_see_full_module":     "See Full Module:",
 		"pdf_tutor_feedback":      "Tutor's Feedback",
 		"pdf_report_created_by":   "Report created by:",
+
+		// Graduation PDF Labels
+		"pdf_grad_report_title":           "Algonova Student's Report",
+		"pdf_grad_student_name":           "Student Name",
+		"pdf_grad_course_name":            "Course Name",
+		"pdf_grad_lesson":                 "Lesson",
+		"pdf_grad_teacher_name":            "Teacher Name",
+		"pdf_grad_penilaian":              "Ability Assessment:",
+		"pdf_grad_tutor_feedback":         "Tutor Personal Feedbacks:",
+		"pdf_grad_kursus":                 "Our Courses:",
+		"pdf_grad_referral":               "Referral Link:",
+		"pdf_grad_referral_benefit":       "Get Benefits If a Friend or Relative Joins Algorithmics",
+		"pdf_grad_referral_students":       "Students = 2 class mentoring or regular credit / registrant",
+		"pdf_grad_referral_new_students":  "New students = Special Discount Price",
 	},
 	"Russian": {
 		"error_session_not_found":      "сессия не найдена",
@@ -242,6 +270,20 @@ var translations = map[string]map[string]string{
 		"pdf_see_full_module":     "Посмотреть полный модуль:",
 		"pdf_tutor_feedback":      "Отзыв преподавателя",
 		"pdf_report_created_by":   "Отчет составлен:",
+
+		// Graduation PDF Labels
+		"pdf_grad_report_title":           "Отчет студента Algonova",
+		"pdf_grad_student_name":           "Имя студента",
+		"pdf_grad_course_name":            "Название курса",
+		"pdf_grad_lesson":                 "Урок",
+		"pdf_grad_teacher_name":            "Имя преподавателя",
+		"pdf_grad_penilaian":              "Оценка способностей:",
+		"pdf_grad_tutor_feedback":         "Персональные отзывы преподавателя:",
+		"pdf_grad_kursus":                 "Наши курсы:",
+		"pdf_grad_referral":               "Реферальная ссылка:",
+		"pdf_grad_referral_benefit":       "Получите выгоду, если друг или родственник присоединится к Algorithmics",
+		"pdf_grad_referral_students":       "Студенты = 2 менторских класса или обычный кредит за регистрацию",
+		"pdf_grad_referral_new_students":  "Новые студенты = Специальная скидка",
 	},
 }
 

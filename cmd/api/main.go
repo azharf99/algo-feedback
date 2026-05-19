@@ -96,6 +96,7 @@ func main() {
 	// 4. Inisialisasi Utilitas Pihak Ketiga (Third Party Services)
 	// Pastikan folder templates/index.html sudah ada
 	pdfService := pdfgen.NewPDFGenerator("templates")
+	gradPdfService := pdfgen.NewGraduationPDFGenerator("templates")
 
 	waConfig := whatsapp.WhatsappConfig{
 		ApiKey:  os.Getenv("API_KEY"),
@@ -133,6 +134,8 @@ func main() {
 	sessionRepo := repository.NewSessionRepository(db)
 	sessionUsecase := usecase.NewSessionUsecase(sessionRepo, waService, userRepo)
 
+	// lessonUsecase := usecase.NewLessonUsecase(lessonRepo, sessionUsecase)
+	// (Keeping the original names)
 	lessonUsecase := usecase.NewLessonUsecase(lessonRepo, sessionUsecase)
 
 	// --- Group ---
@@ -145,7 +148,9 @@ func main() {
 		feedbackRepo,
 		groupRepo,   // <-- Masukkan Group Repo
 		sessionRepo, // <-- Masukkan Session Repo
+		studentRepo, // <-- Masukkan Student Repo
 		pdfService,
+		gradPdfService, // <-- Masukkan Graduation PDF Generator
 		waService,
 		userRepo,
 		pool, // <-- Masukkan Worker Pool

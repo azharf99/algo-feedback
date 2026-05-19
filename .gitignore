@@ -12,3 +12,4 @@ walkthrough*.md
 .gemini/
 gha-creds-*.json
 test_build
+layout.txt

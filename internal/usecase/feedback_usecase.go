@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -43,7 +44,9 @@ type feedbackUsecase struct {
 	feedRepo    domain.FeedbackRepository
 	groupRepo   domain.GroupRepository   // Baru: Menggantikan LessonRepo
 	sessionRepo domain.SessionRepository // Baru: Menggantikan LessonRepo
+	studentRepo domain.StudentRepository
 	pdfGen      pdfgen.PDFGenerator
+	gradPdfGen  pdfgen.GraduationPDFGenerator
 	waService   whatsapp.WhatsappService
 	userRepo    domain.UserRepository // Tambahkan user repo
 	taskPool    taskqueue.WorkerPool  // Tambahkan worker pool
@@ -53,7 +56,9 @@ func NewFeedbackUsecase(
 	fr domain.FeedbackRepository,
 	gr domain.GroupRepository,
 	sr domain.SessionRepository,
+	str domain.StudentRepository,
 	pdf pdfgen.PDFGenerator,
+	gradPdf pdfgen.GraduationPDFGenerator,
 	wa whatsapp.WhatsappService,
 	ur domain.UserRepository, // Tambahkan parameter user repo
 	pool taskqueue.WorkerPool, // Tambahkan parameter pool
@@ -62,7 +67,9 @@ func NewFeedbackUsecase(
 		feedRepo:    fr,
 		groupRepo:   gr,
 		sessionRepo: sr,
+		studentRepo: str,
 		pdfGen:      pdf,
+		gradPdfGen:  gradPdf,
 		waService:   wa,
 		userRepo:    ur,
 		taskPool:    pool,
@@ -599,4 +606,259 @@ func (u *feedbackUsecase) GetWeeklySummary(ctx context.Context) (map[string][]do
 		"this_week": thisWeekFeedbacks,
 		"next_week": nextWeekFeedbacks,
 	}, nil
+}
+
+func parseScore(s string, def int) int {
+	if s == "" {
+		return def
+	}
+	val := 0
+	_, err := fmt.Sscanf(s, "%d", &val)
+	if err != nil {
+		return def
+	}
+	return val
+}
+
+func getGrade(pct float64) string {
+	if pct >= 80 {
+		return "A"
+	} else if pct >= 75 {
+		return "B+"
+	} else if pct >= 70 {
+		return "B"
+	} else if pct >= 60 {
+		return "C"
+	} else {
+		return "D"
+	}
+}
+
+func (u *feedbackUsecase) GenerateGraduationPDFAsync(ctx context.Context, studentID *uint, course *string) ([]map[string]interface{}, error) {
+	if studentID == nil || course == nil || *course == "" {
+		return nil, errors.New("student_id and course (module name) are required")
+	}
+
+	// 1. Fetch student
+	student, err := u.studentRepo.GetByID(ctx, *studentID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Fetch all groups, find the one containing our student and matching course name
+	groups, err := u.groupRepo.GetAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var matchedGroup *domain.Group
+	for _, g := range groups {
+		hasStudent := false
+		for _, s := range g.Students {
+			if s.ID == *studentID {
+				hasStudent = true
+				break
+			}
+		}
+		if !hasStudent {
+			continue
+		}
+
+		if g.Course != nil && (g.Course.Title == *course || g.Course.Module == *course) {
+			matchedGroup = &g
+			break
+		}
+	}
+
+	// Fallback to check sessions module if not matched directly
+	if matchedGroup == nil {
+		for _, g := range groups {
+			hasStudent := false
+			for _, s := range g.Students {
+				if s.ID == *studentID {
+					hasStudent = true
+					break
+				}
+			}
+			if !hasStudent {
+				continue
+			}
+
+			sessions, err := u.sessionRepo.GetByGroup(ctx, g.ID)
+			if err == nil {
+				for _, sess := range sessions {
+					if sess.Lesson != nil && sess.Lesson.Module == *course {
+						matchedGroup = &g
+						break
+					}
+				}
+			}
+			if matchedGroup != nil {
+				break
+			}
+		}
+	}
+
+	if matchedGroup == nil {
+		return nil, errors.New("no group found for this student and course")
+	}
+
+	// 3. Fetch sessions for the group
+	sessions, err := u.sessionRepo.GetByGroup(ctx, matchedGroup.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 4. Filter sessions for the module/course
+	var moduleSessions []domain.Session
+	for _, sess := range sessions {
+		if sess.Lesson != nil && sess.Lesson.Module == *course {
+			moduleSessions = append(moduleSessions, sess)
+		}
+	}
+
+	if len(moduleSessions) == 0 {
+		return nil, errors.New("no sessions found for this course module")
+	}
+
+	// Sort sessions by lesson number ASC
+	sort.Slice(moduleSessions, func(i, j int) bool {
+		return moduleSessions[i].Lesson.Number < moduleSessions[j].Lesson.Number
+	})
+
+	// 5. Retrieve monthly feedbacks
+	feedbacks, err := u.feedRepo.GetFeedbacks(ctx, studentID, course, nil, false)
+	if err != nil {
+		return nil, err
+	}
+
+	feedbackMap := make(map[uint]domain.Feedback)
+	var tutorFeedbacks []string
+	for _, f := range feedbacks {
+		feedbackMap[f.Number] = f
+		if f.TutorFeedback != nil && *f.TutorFeedback != "" {
+			tFb := *f.TutorFeedback
+			tutorFeedbacks = append(tutorFeedbacks, tFb)
+		}
+	}
+
+	// Aggregate tutor feedback
+	aggregatedTutorFeedback := ""
+	if len(tutorFeedbacks) > 0 {
+		aggregatedTutorFeedback = strings.Join(tutorFeedbacks, "\n\n")
+	} else {
+		// Fallback/Default intro
+		aggregatedTutorFeedback = curriculum.GetTutorIntro(matchedGroup.Language, student.Fullname)
+	}
+
+	teacherName := "Algorithmics Teacher"
+	if matchedGroup.UserID != 0 {
+		if uVal, err := u.userRepo.GetByID(ctx, matchedGroup.UserID); err == nil && uVal != nil {
+			teacherName = uVal.Name
+		}
+	}
+
+	// 6. Build the lesson reports and construct range
+	var lessonReports []pdfgen.LessonReport
+	for _, sess := range moduleSessions {
+		lesson := sess.Lesson
+		if lesson == nil {
+			continue
+		}
+
+		// Calculate Attendance score: Present = 4, Absent = 0
+		isAttended := false
+		for _, s := range sess.StudentsAttended {
+			if s.ID == *studentID {
+				isAttended = true
+				break
+			}
+		}
+		var attendanceVal int
+		if isAttended {
+			attendanceVal = 4
+		} else {
+			attendanceVal = 0
+		}
+
+		// Get monthly feedback number
+		monthNum := uint(math.Ceil(float64(lesson.Number) / 4.0))
+
+		activityVal := 3 // default
+		taskVal := 2     // default
+		if f, exists := feedbackMap[monthNum]; exists {
+			activityVal = parseScore(string(f.ActivityScore), 3)
+			taskVal = parseScore(string(f.TaskScore), 2)
+		}
+
+		totalScore := attendanceVal + activityVal + taskVal
+		pct := (float64(totalScore) / 9.0) * 100.0
+
+		lessonReports = append(lessonReports, pdfgen.LessonReport{
+			LessonNumber: fmt.Sprintf("%d", lesson.Number),
+			Topic:        strVal(lesson.Category),
+			Score:        fmt.Sprintf("%.0f%%", pct),
+			Grade:        getGrade(pct),
+			SessionTitle: lesson.Title,
+		})
+	}
+
+	// Lesson Range
+	lessonRange := ""
+	if len(moduleSessions) > 0 {
+		firstLesson := moduleSessions[0].Lesson
+		lastLesson := moduleSessions[len(moduleSessions)-1].Lesson
+		if firstLesson != nil && lastLesson != nil {
+			lessonRange = fmt.Sprintf("%s - %s", firstLesson.Level, lastLesson.Level)
+		}
+	}
+
+	pdfData := pdfgen.GraduationPDFData{
+		Lang:          matchedGroup.Language,
+		StudentName:   student.Fullname,
+		CourseName:    *course,
+		LessonRange:   lessonRange,
+		TeacherName:   teacherName,
+		TutorFeedback: aggregatedTutorFeedback,
+		ReferralLink:  "https://url.azharfa.cloud/pL3LHq",
+		Lessons:       lessonReports,
+	}
+
+	courseName := sanitizeFilename(*course)
+	fileName := fmt.Sprintf("Graduation %s - %s.pdf", sanitizeFilename(student.Fullname), courseName)
+	groupName := sanitizeFilename(matchedGroup.Name)
+	outputPath := filepath.Join("mediafiles", fmt.Sprintf("%d", student.UserID), groupName, courseName, fileName)
+
+	fUserID := student.UserID
+	isAdmin := ctxutil.IsAdmin(ctx)
+
+	u.taskPool.Submit(taskqueue.TaskFunc(func(taskCtx context.Context) error {
+		bgCtx := ctxutil.WithUserID(context.Background(), fUserID)
+		if isAdmin {
+			bgCtx = ctxutil.WithRole(bgCtx, "Admin")
+		}
+
+		// Ensure directories exist
+		if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+			log.Printf("Gagal membuat direktori untuk %s: %v", outputPath, err)
+			return err
+		}
+
+		err := u.gradPdfGen.Generate(bgCtx, pdfData, outputPath)
+		if err != nil {
+			log.Printf("Gagal generate graduation PDF untuk %s: %v", student.Fullname, err)
+			return err
+		}
+		return nil
+	}))
+
+	var response []map[string]interface{}
+	response = append(response, map[string]interface{}{
+		"student": student.Fullname,
+		"course":  *course,
+		"status":  "processing in background",
+		"path":    outputPath,
+	})
+
+	return response, nil
 }

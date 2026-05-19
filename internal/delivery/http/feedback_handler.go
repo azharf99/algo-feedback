@@ -27,6 +27,7 @@ func NewFeedbackHandler(r *gin.RouterGroup, us domain.FeedbackUsecase) {
 		// Endpoints canggih!
 		feedbackRoutes.POST("/seeder", handler.RunSeeder)
 		feedbackRoutes.POST("/generate-pdf", handler.GeneratePDF)
+		feedbackRoutes.POST("/generate-graduation-pdf", handler.GenerateGraduationPDF)
 		feedbackRoutes.POST("/generate-all-pdf", handler.GenerateAllPendingPDF)
 		feedbackRoutes.POST("/send-wa", handler.SendWhatsApp)
 
@@ -282,4 +283,28 @@ func (h *FeedbackHandler) Delete(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": i18n.T(lang, "msg_delete_success")})
+}
+
+// GenerateGraduationPDF: POST /feedbacks/generate-graduation-pdf
+func (h *FeedbackHandler) GenerateGraduationPDF(c *gin.Context) {
+	lang := h.getLang(c)
+	var req struct {
+		StudentID *uint   `json:"student_id" binding:"required"`
+		Course    *string `json:"course" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(lang, "error_invalid_data")})
+		return
+	}
+
+	result, err := h.usecase.GenerateGraduationPDFAsync(c.Request.Context(), req.StudentID, req.Course)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": i18n.T(lang, "msg_pdf_background"),
+		"tasks":   result,
+	})
 }

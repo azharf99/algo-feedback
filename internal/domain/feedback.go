@@ -102,6 +102,7 @@ type FeedbackUsecase interface {
 	GenerateFeedback(ctx context.Context, groupID *uint, all bool) (map[string]int, error)
 	GeneratePDFAsync(ctx context.Context, studentID *uint, course *string, number *uint, all bool) ([]map[string]interface{}, error)
 	GeneratePendingPDFs(ctx context.Context) ([]map[string]interface{}, error)
+	GenerateGraduationPDFAsync(ctx context.Context, studentID *uint, course *string) ([]map[string]interface{}, error)
 	SendFeedbackPDF(ctx context.Context, feedbackID *uint) ([]map[string]interface{}, error)
 	GetWeeklySummary(ctx context.Context) (map[string][]Feedback, error)
 }
