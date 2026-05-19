@@ -482,9 +482,17 @@ func (u *feedbackUsecase) Update(ctx context.Context, id uint, req *domain.Feedb
 		existing.TaskScore = req.TaskScore
 		updateFeedback.TaskScore = req.TaskScore
 	}
+
 	if req.TutorFeedback != nil {
-		existing.TutorFeedback = req.TutorFeedback
-		updateFeedback.TutorFeedback = req.TutorFeedback
+		tutorFeedback := curriculum.GetFeedback(
+			lang,
+			req.Student.Fullname,
+			req.AttendanceScore,
+			req.ActivityScore,
+			req.TaskScore,
+		)
+		existing.TutorFeedback = &tutorFeedback
+		updateFeedback.TutorFeedback = &tutorFeedback
 	}
 	if req.Result != nil {
 		existing.Result = req.Result
