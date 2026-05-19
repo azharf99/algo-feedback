@@ -560,3 +560,43 @@ func (u *feedbackUsecase) BulkDelete(ctx context.Context, ids []uint) error {
 	}
 	return u.feedRepo.BulkDelete(ctx, ids)
 }
+
+func (u *feedbackUsecase) GetWeeklySummary(ctx context.Context) (map[string][]domain.Feedback, error) {
+	now := time.Now()
+
+	// Get current Monday
+	offset := int(now.Weekday()) - 1
+	if offset < 0 {
+		offset = 6 // Sunday
+	}
+	thisMonday := now.AddDate(0, 0, -offset)
+	thisMonday = time.Date(thisMonday.Year(), thisMonday.Month(), thisMonday.Day(), 0, 0, 0, 0, thisMonday.Location())
+
+	lastMonday := thisMonday.AddDate(0, 0, -7)
+	nextMonday := thisMonday.AddDate(0, 0, 7)
+
+	lastSunday := thisMonday.AddDate(0, 0, -1)
+	thisSunday := thisMonday.AddDate(0, 0, 6)
+	nextSunday := thisMonday.AddDate(0, 0, 13)
+
+	lastWeekFeedbacks, err := u.feedRepo.GetByDateRange(ctx, lastMonday, lastSunday)
+	if err != nil {
+		return nil, err
+	}
+
+	thisWeekFeedbacks, err := u.feedRepo.GetByDateRange(ctx, thisMonday, thisSunday)
+	if err != nil {
+		return nil, err
+	}
+
+	nextWeekFeedbacks, err := u.feedRepo.GetByDateRange(ctx, nextMonday, nextSunday)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string][]domain.Feedback{
+		"last_week": lastWeekFeedbacks,
+		"this_week": thisWeekFeedbacks,
+		"next_week": nextWeekFeedbacks,
+	}, nil
+}

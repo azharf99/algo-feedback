@@ -88,6 +88,7 @@ type FeedbackRepository interface {
 	GetUnsentFeedbacks(ctx context.Context, studentID *uint, course *string, number *uint) ([]Feedback, error)
 	GetFeedbacks(ctx context.Context, studentID *uint, course *string, number *uint, onlyUnsent bool) ([]Feedback, error)
 	GetPendingPDFFeedbacks(ctx context.Context) ([]Feedback, error)
+	GetByDateRange(ctx context.Context, startDate, endDate time.Time) ([]Feedback, error)
 }
 
 type FeedbackUsecase interface {
@@ -102,4 +103,5 @@ type FeedbackUsecase interface {
 	GeneratePDFAsync(ctx context.Context, studentID *uint, course *string, number *uint, all bool) ([]map[string]interface{}, error)
 	GeneratePendingPDFs(ctx context.Context) ([]map[string]interface{}, error)
 	SendFeedbackPDF(ctx context.Context, feedbackID *uint) ([]map[string]interface{}, error)
+	GetWeeklySummary(ctx context.Context) (map[string][]Feedback, error)
 }

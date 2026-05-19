@@ -3,6 +3,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/ctxutil"
@@ -151,3 +152,13 @@ func (r *feedbackRepository) GetPendingPDFFeedbacks(ctx context.Context) ([]doma
 		Where("url_pdf IS NULL OR url_pdf = ?", "").Find(&feedbacks).Error
 	return feedbacks, err
 }
+
+func (r *feedbackRepository) GetByDateRange(ctx context.Context, startDate, endDate time.Time) ([]domain.Feedback, error) {
+	var feedbacks []domain.Feedback
+	err := r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).
+		Where("lesson_date >= ? AND lesson_date <= ?", startDate.Format("2006-01-02"), endDate.Format("2006-01-02")).
+		Preload("Student").
+		Find(&feedbacks).Error
+	return feedbacks, err
+}
+

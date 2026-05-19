@@ -31,6 +31,7 @@ func NewFeedbackHandler(r *gin.RouterGroup, us domain.FeedbackUsecase) {
 		feedbackRoutes.POST("/send-wa", handler.SendWhatsApp)
 
 		feedbackRoutes.GET("", handler.GetAll)
+		feedbackRoutes.GET("/summary", handler.GetWeeklySummary)
 		feedbackRoutes.GET("/:id", handler.GetByID)
 		feedbackRoutes.GET("/:id/download", handler.DownloadPDF)
 		feedbackRoutes.POST("", handler.Create)
@@ -56,6 +57,15 @@ func (h *FeedbackHandler) BulkDelete(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": i18n.T(lang, "msg_delete_success")})
+}
+
+func (h *FeedbackHandler) GetWeeklySummary(c *gin.Context) {
+	result, err := h.usecase.GetWeeklySummary(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": result})
 }
 
 // RunSeeder: POST /feedbacks/seeder?group_id=1&all=true
