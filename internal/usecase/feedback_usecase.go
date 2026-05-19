@@ -41,19 +41,21 @@ func sanitizeFilename(s string) string {
 }
 
 type feedbackUsecase struct {
-	feedRepo    domain.FeedbackRepository
-	groupRepo   domain.GroupRepository   // Baru: Menggantikan LessonRepo
-	sessionRepo domain.SessionRepository // Baru: Menggantikan LessonRepo
-	studentRepo domain.StudentRepository
-	pdfGen      pdfgen.PDFGenerator
-	gradPdfGen  pdfgen.GraduationPDFGenerator
-	waService   whatsapp.WhatsappService
-	userRepo    domain.UserRepository // Tambahkan user repo
-	taskPool    taskqueue.WorkerPool  // Tambahkan worker pool
+	feedRepo     domain.FeedbackRepository
+	gradFeedRepo domain.GraduationFeedbackRepository
+	groupRepo    domain.GroupRepository   // Baru: Menggantikan LessonRepo
+	sessionRepo  domain.SessionRepository // Baru: Menggantikan LessonRepo
+	studentRepo  domain.StudentRepository
+	pdfGen       pdfgen.PDFGenerator
+	gradPdfGen   pdfgen.GraduationPDFGenerator
+	waService    whatsapp.WhatsappService
+	userRepo     domain.UserRepository // Tambahkan user repo
+	taskPool     taskqueue.WorkerPool  // Tambahkan worker pool
 }
 
 func NewFeedbackUsecase(
 	fr domain.FeedbackRepository,
+	gfr domain.GraduationFeedbackRepository,
 	gr domain.GroupRepository,
 	sr domain.SessionRepository,
 	str domain.StudentRepository,
@@ -64,15 +66,16 @@ func NewFeedbackUsecase(
 	pool taskqueue.WorkerPool, // Tambahkan parameter pool
 ) domain.FeedbackUsecase {
 	return &feedbackUsecase{
-		feedRepo:    fr,
-		groupRepo:   gr,
-		sessionRepo: sr,
-		studentRepo: str,
-		pdfGen:      pdf,
-		gradPdfGen:  gradPdf,
-		waService:   wa,
-		userRepo:    ur,
-		taskPool:    pool,
+		feedRepo:     fr,
+		gradFeedRepo: gfr,
+		groupRepo:    gr,
+		sessionRepo:  sr,
+		studentRepo:  str,
+		pdfGen:       pdf,
+		gradPdfGen:   gradPdf,
+		waService:    wa,
+		userRepo:     ur,
+		taskPool:     pool,
 	}
 }
 
@@ -832,6 +835,19 @@ func (u *feedbackUsecase) GenerateGraduationPDFAsync(ctx context.Context, studen
 	fUserID := student.UserID
 	isAdmin := ctxutil.IsAdmin(ctx)
 
+	// Calculate overall grade
+	var overallPctSum float64
+	for _, lr := range lessonReports {
+		var p float64
+		fmt.Sscanf(lr.Score, "%f%%", &p)
+		overallPctSum += p
+	}
+	overallPct := 0.0
+	if len(lessonReports) > 0 {
+		overallPct = overallPctSum / float64(len(lessonReports))
+	}
+	overallGrade := getGrade(overallPct)
+
 	u.taskPool.Submit(taskqueue.TaskFunc(func(taskCtx context.Context) error {
 		bgCtx := ctxutil.WithUserID(context.Background(), fUserID)
 		if isAdmin {
@@ -849,6 +865,20 @@ func (u *feedbackUsecase) GenerateGraduationPDFAsync(ctx context.Context, studen
 			log.Printf("Gagal generate graduation PDF untuk %s: %v", student.Fullname, err)
 			return err
 		}
+
+		// Simpan histori ke database setelah PDF sukses digenerate
+		gf := &domain.GraduationFeedback{
+			StudentID:     student.ID,
+			Course:        *course,
+			Grade:         overallGrade,
+			TutorFeedback: aggregatedTutorFeedback,
+			URLPDF:        &outputPath,
+		}
+		if err := u.gradFeedRepo.Create(bgCtx, gf); err != nil {
+			log.Printf("Gagal menyimpan histori kelulusan untuk %s ke db: %v", student.Fullname, err)
+			return err
+		}
+
 		return nil
 	}))
 
@@ -861,4 +891,49 @@ func (u *feedbackUsecase) GenerateGraduationPDFAsync(ctx context.Context, studen
 	})
 
 	return response, nil
+}
+
+func (u *feedbackUsecase) GetPaginatedGraduationFeedbacks(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedResult[domain.GraduationFeedback], error) {
+	params = pagination.Normalize(params)
+	gfs, totalRows, err := u.gradFeedRepo.GetPaginated(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	totalPages := int(math.Ceil(float64(totalRows) / float64(params.Limit)))
+	return &domain.PaginatedResult[domain.GraduationFeedback]{
+		Data: gfs, Total: totalRows, TotalPages: totalPages, Page: params.Page, Limit: params.Limit,
+	}, nil
+}
+
+func (u *feedbackUsecase) GetGraduationFeedbackByID(ctx context.Context, id uint) (*domain.GraduationFeedback, error) {
+	return u.gradFeedRepo.GetByID(ctx, id)
+}
+
+func (u *feedbackUsecase) UpdateGraduationFeedback(ctx context.Context, id uint, req *domain.GraduationFeedback) error {
+	lang := ctxutil.GetLanguage(ctx)
+	existing, err := u.gradFeedRepo.GetByID(ctx, id)
+	if err != nil {
+		return errors.New(i18n.T(lang, "error_feedback_not_found"))
+	}
+
+	if req.Grade != "" {
+		existing.Grade = req.Grade
+	}
+	if req.TutorFeedback != "" {
+		existing.TutorFeedback = req.TutorFeedback
+	}
+	return u.gradFeedRepo.Update(ctx, existing)
+}
+
+func (u *feedbackUsecase) DeleteGraduationFeedback(ctx context.Context, id uint) error {
+	gf, err := u.gradFeedRepo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if gf.URLPDF != nil && *gf.URLPDF != "" {
+		_ = os.Remove(*gf.URLPDF)
+	}
+
+	return u.gradFeedRepo.Delete(ctx, id)
 }

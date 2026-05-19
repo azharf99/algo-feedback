@@ -39,6 +39,12 @@ func NewFeedbackHandler(r *gin.RouterGroup, us domain.FeedbackUsecase) {
 		feedbackRoutes.PUT("/:id", handler.Update)
 		feedbackRoutes.DELETE("/:id", handler.Delete)
 		feedbackRoutes.DELETE("/bulk", handler.BulkDelete)
+
+		// Graduation Feedbacks
+		feedbackRoutes.GET("/graduation", handler.GetGraduationFeedbacks)
+		feedbackRoutes.GET("/graduation/:id/download", handler.DownloadGraduationPDF)
+		feedbackRoutes.PUT("/graduation/:id", handler.UpdateGraduationFeedback)
+		feedbackRoutes.DELETE("/graduation/:id", handler.DeleteGraduationFeedback)
 	}
 }
 
@@ -307,4 +313,80 @@ func (h *FeedbackHandler) GenerateGraduationPDF(c *gin.Context) {
 		"message": i18n.T(lang, "msg_pdf_background"),
 		"tasks":   result,
 	})
+}
+
+// GetGraduationFeedbacks: GET /feedbacks/graduation
+func (h *FeedbackHandler) GetGraduationFeedbacks(c *gin.Context) {
+	lang := h.getLang(c)
+	var params domain.PaginationParams
+	if err := c.ShouldBindQuery(&params); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(lang, "error_invalid_data")})
+		return
+	}
+	result, err := h.usecase.GetPaginatedGraduationFeedbacks(c.Request.Context(), params)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"data": result.Data,
+		"meta": result,
+	})
+}
+
+// DownloadGraduationPDF: GET /feedbacks/graduation/:id/download
+func (h *FeedbackHandler) DownloadGraduationPDF(c *gin.Context) {
+	lang := h.getLang(c)
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(lang, "error_invalid_id")})
+		return
+	}
+
+	gf, err := h.usecase.GetGraduationFeedbackByID(c.Request.Context(), uint(id))
+	if err != nil || gf.URLPDF == nil || *gf.URLPDF == "" {
+		c.JSON(http.StatusNotFound, gin.H{"error": i18n.T(lang, "error_file_not_found")})
+		return
+	}
+
+	c.File(*gf.URLPDF)
+}
+
+// UpdateGraduationFeedback: PUT /feedbacks/graduation/:id
+func (h *FeedbackHandler) UpdateGraduationFeedback(c *gin.Context) {
+	lang := h.getLang(c)
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(lang, "error_invalid_id")})
+		return
+	}
+
+	var req domain.GraduationFeedback
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.usecase.UpdateGraduationFeedback(c.Request.Context(), uint(id), &req); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": i18n.T(lang, "msg_update_success")})
+}
+
+// DeleteGraduationFeedback: DELETE /feedbacks/graduation/:id
+func (h *FeedbackHandler) DeleteGraduationFeedback(c *gin.Context) {
+	lang := h.getLang(c)
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(lang, "error_invalid_id")})
+		return
+	}
+
+	if err := h.usecase.DeleteGraduationFeedback(c.Request.Context(), uint(id)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": i18n.T(lang, "msg_delete_success")})
 }

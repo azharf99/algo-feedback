@@ -54,6 +54,7 @@ func main() {
 		&domain.Lesson{},
 		&domain.Session{},
 		&domain.Feedback{},
+		&domain.GraduationFeedback{},
 	)
 
 	// 1.6. Seed Data & Final Cleanup
@@ -144,8 +145,10 @@ func main() {
 
 	// --- Feedback ---
 	feedbackRepo := repository.NewFeedbackRepository(db)
+	gradFeedbackRepo := repository.NewGraduationFeedbackRepository(db)
 	feedbackUsecase := usecase.NewFeedbackUsecase(
 		feedbackRepo,
+		gradFeedbackRepo,
 		groupRepo,   // <-- Masukkan Group Repo
 		sessionRepo, // <-- Masukkan Session Repo
 		studentRepo, // <-- Masukkan Student Repo

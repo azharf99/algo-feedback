@@ -50,6 +50,27 @@ func (m *mockFeedbackRepository) GetByDateRange(ctx context.Context, start, end 
 	return nil, nil
 }
 
+type mockGraduationFeedbackRepository struct {
+	created []*domain.GraduationFeedback
+}
+
+func (m *mockGraduationFeedbackRepository) Create(ctx context.Context, gf *domain.GraduationFeedback) error {
+	m.created = append(m.created, gf)
+	return nil
+}
+func (m *mockGraduationFeedbackRepository) GetPaginated(ctx context.Context, params domain.PaginationParams) ([]domain.GraduationFeedback, int64, error) {
+	return nil, 0, nil
+}
+func (m *mockGraduationFeedbackRepository) GetByID(ctx context.Context, id uint) (*domain.GraduationFeedback, error) {
+	return nil, nil
+}
+func (m *mockGraduationFeedbackRepository) Update(ctx context.Context, gf *domain.GraduationFeedback) error {
+	return nil
+}
+func (m *mockGraduationFeedbackRepository) Delete(ctx context.Context, id uint) error {
+	return nil
+}
+
 type mockGroupRepository struct {
 	groups []domain.Group
 	err    error
@@ -282,6 +303,7 @@ func TestGenerateGraduationPDFAsync(t *testing.T) {
 	}
 
 	feedRepo := &mockFeedbackRepository{feedbacks: feedbacks}
+	gradFeedRepo := &mockGraduationFeedbackRepository{}
 	groupRepo := &mockGroupRepository{groups: []domain.Group{group}}
 	sessionRepo := &mockSessionRepository{sessions: sessions}
 	studentRepo := &mockStudentRepository{student: student}
@@ -291,7 +313,7 @@ func TestGenerateGraduationPDFAsync(t *testing.T) {
 	userRepo := &mockUserRepository{}
 	pool := &mockWorkerPool{}
 
-	u := NewFeedbackUsecase(feedRepo, groupRepo, sessionRepo, studentRepo, pdfGen, gradPdfGen, waService, userRepo, pool)
+	u := NewFeedbackUsecase(feedRepo, gradFeedRepo, groupRepo, sessionRepo, studentRepo, pdfGen, gradPdfGen, waService, userRepo, pool)
 
 	ctx := context.Background()
 	studentID := uint(12)
@@ -321,6 +343,14 @@ func TestGenerateGraduationPDFAsync(t *testing.T) {
 	assert.Equal(t, "2", calledData.Lessons[1].LessonNumber)
 	assert.Equal(t, "56%", calledData.Lessons[1].Score)
 	assert.Equal(t, "D", calledData.Lessons[1].Grade)
+
+	// Verify database record was created
+	assert.Len(t, gradFeedRepo.created, 1)
+	assert.Equal(t, uint(12), gradFeedRepo.created[0].StudentID)
+	assert.Equal(t, "Python Start 1st year", gradFeedRepo.created[0].Course)
+	assert.Equal(t, "B+", gradFeedRepo.created[0].Grade)
+	assert.Equal(t, "Great job in month 1!", gradFeedRepo.created[0].TutorFeedback)
+	assert.NotNil(t, gradFeedRepo.created[0].URLPDF)
 }
 
 func pointerToString(s string) *string {

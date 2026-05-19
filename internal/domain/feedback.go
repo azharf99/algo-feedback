@@ -105,4 +105,8 @@ type FeedbackUsecase interface {
 	GenerateGraduationPDFAsync(ctx context.Context, studentID *uint, course *string) ([]map[string]interface{}, error)
 	SendFeedbackPDF(ctx context.Context, feedbackID *uint) ([]map[string]interface{}, error)
 	GetWeeklySummary(ctx context.Context) (map[string][]Feedback, error)
+	GetPaginatedGraduationFeedbacks(ctx context.Context, params PaginationParams) (*PaginatedResult[GraduationFeedback], error)
+	GetGraduationFeedbackByID(ctx context.Context, id uint) (*GraduationFeedback, error)
+	UpdateGraduationFeedback(ctx context.Context, id uint, req *GraduationFeedback) error
+	DeleteGraduationFeedback(ctx context.Context, id uint) error
 }
