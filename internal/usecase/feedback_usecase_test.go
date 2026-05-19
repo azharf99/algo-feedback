@@ -512,11 +512,12 @@ func TestUpdateFeedback_RegeneratesTutorFeedbackOnScoreChange(t *testing.T) {
 	assert.Equal(t, domain.ActivityScore("2"), firstUpdate.ActivityScore)
 	assert.Equal(t, domain.TaskScore("1"), firstUpdate.TaskScore)
 
-	// TutorFeedback should be auto-regenerated based on curriculum logic for scores "3", "2", "1"
-	assert.NotNil(t, firstUpdate.TutorFeedback)
-	assert.Contains(t, *firstUpdate.TutorFeedback, "Andi Wijaya")
-	assert.Contains(t, *firstUpdate.TutorFeedback, "mengikuti 3 dari 4")
-	assert.Contains(t, *firstUpdate.TutorFeedback, "cukup aktif")
-	assert.Contains(t, *firstUpdate.TutorFeedback, "menyelesaikan sebagian besar tugas")
+	// Since TutorFeedback auto-regeneration was removed by the user in Update method,
+	// we verify that the PDF is still regenerated with the correct score-based feedback.
+	assert.Len(t, pdfGen.calledWith, 1)
+	calledData := pdfGen.calledWith[0]
+	assert.Contains(t, calledData.TeacherFeedback, "mengikuti 3 dari 4")
+	assert.Contains(t, calledData.TeacherFeedback, "cukup aktif")
+	assert.Contains(t, calledData.TeacherFeedback, "menyelesaikan sebagian besar tugas")
 }
 
