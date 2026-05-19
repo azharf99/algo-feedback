@@ -100,7 +100,7 @@ func (g *graduationPDFGenerator) Generate(ctx context.Context, data GraduationPD
 	m.AddRows(
 		row.New(25).Add(
 			col.New(12).Add(
-				image.NewFromFile(filepath.Join(g.assetDir, "header.png"), props.Rect{
+				image.NewFromFile(filepath.Join(g.assetDir, "algonova.png"), props.Rect{
 					Center:  false,
 					Percent: 100,
 				}),
