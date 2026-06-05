@@ -4,6 +4,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/ctxutil"
@@ -22,7 +23,14 @@ func NewCourseRepository(db *gorm.DB) domain.CourseRepository {
 func (r *courseRepository) Create(ctx context.Context, course *domain.Course) error {
 	userID, _ := ctxutil.GetUserID(ctx)
 	course.UserID = userID
-	return r.db.WithContext(ctx).Create(course).Error
+	err := r.db.WithContext(ctx).Create(course).Error
+	if err != nil {
+		if strings.Contains(err.Error(), "SQLSTATE 23505") && strings.Contains(err.Error(), "courses_pkey") {
+			r.db.Exec("SELECT setval(pg_get_serial_sequence('courses', 'id'), COALESCE((SELECT MAX(id) FROM courses), 1), true)")
+			return r.db.WithContext(ctx).Create(course).Error
+		}
+	}
+	return err
 }
 
 func (r *courseRepository) GetByID(ctx context.Context, id uint) (*domain.Course, error) {
@@ -91,6 +99,7 @@ func (r *courseRepository) Upsert(ctx context.Context, course *domain.Course) (b
 			if errCreate := r.db.WithContext(ctx).Create(course).Error; errCreate != nil {
 				return false, errCreate
 			}
+			r.db.Exec("SELECT setval(pg_get_serial_sequence('courses', 'id'), COALESCE((SELECT MAX(id) FROM courses), 1), true)")
 			isCreated = true
 		} else {
 			return false, err

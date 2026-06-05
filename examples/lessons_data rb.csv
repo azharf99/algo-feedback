@@ -1,0 +1,26 @@
+id,course_id,title,category,module,level,number,description,is_active,competency
+533,14,Roblox Studio ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M1L1,1,,TRUE,Navigate Roblox Studio interface;Understand Workspace and Explorer;Basic game environment setup
+534,14,Coordinates of objects ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M1L2,2,,TRUE,Manipulate 3D coordinates;Translate scale and rotate objects;Understand spatial positioning
+535,14,Creating a game for professional e-athletes (Part 1) ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M1L3,3,,TRUE,Design competitive gameplay mechanics;Balance player abilities;Structure multiplayer environments
+536,14,Creating a game for professional esports players (Part 2) ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M1L4,4,,TRUE,Implement advanced game logic;Optimize game performance for esports;Test and refine competitive balance
+537,14,Expanding game functionality with scripts ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M1L5,5,,TRUE,Write basic Lua scripts;Attach scripts to game objects;Control game flow programmatically
+538,14,M1L6 Finalizing the game ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M1L6,6,,TRUE,Conduct final game testing;Publish game to Roblox platform;Review and debug game mechanics
+539,14,M2L1 Creating our world: landscape and plants. Part 1 ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M2L1,7,,TRUE,Utilize terrain editor tools;Generate natural landscapes;Place foliage and plant assets
+540,14,M2L2 Creating our world: landscape and plants. Part 2 ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M2L2,8,,TRUE,Refine terrain details;Create custom environmental textures;Integrate complex natural structures
+541,14,M2L3 Creating our world: buildings ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M2L3,9,,TRUE,Construct architectural structures using parts;Apply materials and textures to buildings;Group and anchor building components
+542,14,M2L4 Creating our world: lighting ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M2L4,10,,TRUE,Configure global lighting properties;Add point lights and spotlights;Create atmospheric day and night cycles
+543,14,M2L5 Adding scripts. Practice ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M2L5,11,,TRUE,Apply Lua scripting concepts in practice;Debug custom scripts;Enhance world interactivity programmatically
+544,14,M2L6 Creating our world: surprises and obstacles ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M2L6,12,,TRUE,Design environmental hazards;Implement trap mechanics using scripts;Create interactive obstacles for players
+545,14,M2L7 The world I live in: presentation of worlds ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M2L7,13,,TRUE,Showcase level design;Present interactive world features;Evaluate peer creations
+546,14,M3L1 What is Game Design? ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M3L1,14,,TRUE,Define core game design principles;Analyze player engagement strategies;Understand the game development life cycle
+547,14,M3L2 Adding dialogs to the game ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M3L2,15,,TRUE,Create NPC dialog trees;Implement GUI text displays;Script interactive conversations
+548,14,M3L3 Transitions between levels ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M3L3,16,,TRUE,Script level teleporters;Manage player data across levels;Design seamless game transitions
+549,14,M3L4 Adding riddles and puzzles to the quest. Part 1 ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M3L4,17,,TRUE,Design logic puzzles;Implement interactive puzzle mechanics;Script puzzle triggers and conditions
+550,14,M3L5 Adding riddles and puzzles to the quest. Part 2 ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M3L5,18,,TRUE,Integrate complex puzzle chains;Balance puzzle difficulty;Provide player feedback for puzzle solutions
+551,14,M3L6 Using the AI Assistant ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M3L6,19,,TRUE,Integrate AI tools for game development;Generate game assets using AI;Optimize workflows with AI assistants
+552,14,M3L7 Finalizing the quest game ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M3L7,20,,TRUE,Test complete quest loops;Debug interactive quest elements;Publish polished quest game
+553,14,M4L1 Introduction to characters creation ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M4L1,21,,TRUE,Understand character modeling basics;Explore Roblox avatar structures;Plan character attributes
+554,14,M4L2 Working with characters ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M4L2,22,,TRUE,Customize character meshes;Rig custom characters;Animate character movements
+555,14,M4L3 Creating an attack in the game ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M4L3,23,,TRUE,Script combat mechanics;Implement hitboxes and damage detection;Create attack visual effects
+556,14,M4L4 Creating the main boss and a quest ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M4L4,24,,TRUE,Design complex boss behaviors;Script boss attack patterns;Integrate boss fights into quest lines
+557,14,M4L5 Designing player achievements ENG,"Game Design 2.0 ENG","Game Design 2.0 ENG",M4L5,25,,TRUE,Create achievement badge systems;Script condition tracking for achievements;Award digital rewards to players
