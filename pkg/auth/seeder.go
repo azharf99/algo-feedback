@@ -23,7 +23,7 @@ func SeedAdmin(db *gorm.DB) {
 		if err := db.Create(&adminUser).Error; err != nil {
 			fmt.Println("Gagal membuat akun admin:", err)
 		} else {
-			fmt.Printf("✅ SEEDER: Akun Admin berhasil dibuat (%s / %s)!", os.Getenv("ADMIN_USERNAME"), os.Getenv("ADMIN_PASSWORD"))
+			fmt.Printf("✅ SEEDER: Akun Admin berhasil dibuat (%s)!", os.Getenv("ADMIN_USERNAME"))
 		}
 	} else {
 		fmt.Println("✅ SEEDER: Akun Admin sudah eksis.")
