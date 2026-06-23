@@ -73,11 +73,11 @@ func (u *groupUsecase) Update(ctx context.Context, id uint, req *domain.Group, s
 			req.GroupPhone = &normalized
 		}
 	}
-	// err := u.repo.Update(ctx, req, studentIDs)
-	// if err != nil {
-	// 	return err
-	// }
-	// return u.seedSessions(ctx, req)
+	err := u.repo.Update(ctx, req, studentIDs)
+	if err != nil {
+		return err
+	}
+	return u.seedSessions(ctx, req)
 
 	return u.repo.Update(ctx, req, studentIDs)
 }

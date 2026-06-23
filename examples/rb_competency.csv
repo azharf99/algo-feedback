@@ -1,0 +1,26 @@
+ID,competencies
+14,Navigate Roblox Studio interface;Understand Workspace and Explorer;Basic game environment setup
+14,Manipulate 3D coordinates;Translate scale and rotate objects;Understand spatial positioning
+14,Design competitive gameplay mechanics;Balance player abilities;Structure multiplayer environments
+14,Implement advanced game logic;Optimize game performance for esports;Test and refine competitive balance
+14,Write basic Lua scripts;Attach scripts to game objects;Control game flow programmatically
+14,Conduct final game testing;Publish game to Roblox platform;Review and debug game mechanics
+14,Utilize terrain editor tools;Generate natural landscapes;Place foliage and plant assets
+14,Refine terrain details;Create custom environmental textures;Integrate complex natural structures
+14,Construct architectural structures using parts;Apply materials and textures to buildings;Group and anchor building components
+14,Configure global lighting properties;Add point lights and spotlights;Create atmospheric day and night cycles
+14,Apply Lua scripting concepts in practice;Debug custom scripts;Enhance world interactivity programmatically
+14,Design environmental hazards;Implement trap mechanics using scripts;Create interactive obstacles for players
+14,Showcase level design;Present interactive world features;Evaluate peer creations
+14,Define core game design principles;Analyze player engagement strategies;Understand the game development life cycle
+14,Create NPC dialog trees;Implement GUI text displays;Script interactive conversations
+14,Script level teleporters;Manage player data across levels;Design seamless game transitions
+14,Design logic puzzles;Implement interactive puzzle mechanics;Script puzzle triggers and conditions
+14,Integrate complex puzzle chains;Balance puzzle difficulty;Provide player feedback for puzzle solutions
+14,Integrate AI tools for game development;Generate game assets using AI;Optimize workflows with AI assistants
+14,Test complete quest loops;Debug interactive quest elements;Publish polished quest game
+14,Understand character modeling basics;Explore Roblox avatar structures;Plan character attributes
+14,Customize character meshes;Rig custom characters;Animate character movements
+14,Script combat mechanics;Implement hitboxes and damage detection;Create attack visual effects
+14,Design complex boss behaviors;Script boss attack patterns;Integrate boss fights into quest lines
+14,Create achievement badge systems;Script condition tracking for achievements;Award digital rewards to players
