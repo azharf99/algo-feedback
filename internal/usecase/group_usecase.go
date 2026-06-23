@@ -78,8 +78,6 @@ func (u *groupUsecase) Update(ctx context.Context, id uint, req *domain.Group, s
 		return err
 	}
 	return u.seedSessions(ctx, req)
-
-	return u.repo.Update(ctx, req, studentIDs)
 }
 func (u *groupUsecase) Delete(ctx context.Context, id uint) error {
 	return u.repo.Delete(ctx, id)

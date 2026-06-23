@@ -181,6 +181,7 @@ func (u *lessonUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*d
 			Category:    &category,
 			Module:      record[headerMap["module"]],
 			Level:       record[headerMap["level"]],
+			Competency:  record[headerMap["competency"]],
 			Number:      uint(num),
 			Description: &desc,
 			IsActive:    strings.ToLower(record[headerMap["is_active"]]) != "false",
