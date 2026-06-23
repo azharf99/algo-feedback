@@ -524,3 +524,101 @@ func TestUpdateFeedback_RegeneratesTutorFeedbackOnScoreChange(t *testing.T) {
 	assert.Contains(t, calledData.TeacherFeedback, "menyelesaikan sebagian besar tugas")
 }
 
+func TestGenerateGraduationPDFAsync_TitleModuleMismatch(t *testing.T) {
+	student := &domain.Student{
+		ID:       100271455,
+		Fullname: "Azhar",
+	}
+
+	course := &domain.Course{
+		ID:     3,
+		Title:  "Python Pro 1 ENG",
+		Module: "Python Pro 1",
+	}
+
+	group := domain.Group{
+		ID:       10,
+		UserID:   5,
+		Name:     "Python-A",
+		Language: "Indonesia",
+		Students: []domain.Student{*student},
+		Course:   course,
+		CourseID: 3,
+	}
+
+	sessions := []domain.Session{
+		{
+			ID:       101,
+			GroupID:  10,
+			LessonID: 1,
+			Lesson: &domain.Lesson{
+				ID:       1,
+				Number:   1,
+				CourseID: 3,
+				Module:   "Python Pro 1",
+				Level:    "M1L1",
+				Title:    "Linear Algorithm Intro",
+				Category: pointerToString("Introduction"),
+			},
+			StudentsAttended: []domain.Student{*student},
+		},
+		{
+			ID:       102,
+			GroupID:  10,
+			LessonID: 2,
+			Lesson: &domain.Lesson{
+				ID:       2,
+				Number:   2,
+				CourseID: 3,
+				Module:   "Python Pro 1",
+				Level:    "M1L2",
+				Title:    "Variables and Types",
+				Category: pointerToString("Data Types"),
+			},
+			StudentsAttended: []domain.Student{},
+		},
+	}
+
+	feedbacks := []domain.Feedback{
+		{
+			StudentID:       pointerToUint(100271455),
+			Number:          1,
+			Course:          pointerToString("Python Pro 1"),
+			ActivityScore:   "3",
+			TaskScore:       "2",
+			TutorFeedback:   pointerToString("Great job in month 1!"),
+			AttendanceScore: "3",
+		},
+	}
+
+	feedRepo := &mockFeedbackRepository{feedbacks: feedbacks}
+	gradFeedRepo := &mockGraduationFeedbackRepository{}
+	groupRepo := &mockGroupRepository{groups: []domain.Group{group}}
+	sessionRepo := &mockSessionRepository{sessions: sessions}
+	studentRepo := &mockStudentRepository{student: student}
+	pdfGen := &mockPDFGenerator{}
+	gradPdfGen := &mockGraduationPDFGenerator{}
+	waService := &mockWhatsappService{}
+	userRepo := &mockUserRepository{}
+	pool := &mockWorkerPool{}
+
+	u := NewFeedbackUsecase(feedRepo, gradFeedRepo, groupRepo, sessionRepo, studentRepo, pdfGen, gradPdfGen, waService, userRepo, pool)
+
+	ctx := context.Background()
+	studentID := uint(100271455)
+	courseName := "Python Pro 1 ENG"
+
+	resp, err := u.GenerateGraduationPDFAsync(ctx, &studentID, &courseName)
+	assert.NoError(t, err)
+	assert.Len(t, resp, 1)
+	assert.Equal(t, "Azhar", resp[0]["student"])
+	assert.Equal(t, "processing in background", resp[0]["status"])
+
+	// Verify graduation PDF data passed to generator
+	calledData := gradPdfGen.calledWith
+	assert.Equal(t, "Azhar", calledData.StudentName)
+	assert.Equal(t, "Python Pro 1 ENG", calledData.CourseName)
+	assert.Equal(t, "M1L1 - M1L2", calledData.LessonRange)
+}
+
+

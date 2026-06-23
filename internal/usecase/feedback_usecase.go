@@ -823,9 +823,15 @@ func (u *feedbackUsecase) GenerateGraduationPDFAsync(ctx context.Context, studen
 			sessions, err := u.sessionRepo.GetByGroup(ctx, g.ID)
 			if err == nil {
 				for _, sess := range sessions {
-					if sess.Lesson != nil && sess.Lesson.Module == *course {
-						matchedGroup = &g
-						break
+					if sess.Lesson != nil {
+						isMatch := sess.Lesson.CourseID != 0 && g.CourseID != 0 && sess.Lesson.CourseID == g.CourseID
+						if !isMatch {
+							isMatch = sess.Lesson.Module == *course || (g.Course != nil && (sess.Lesson.Module == g.Course.Module || sess.Lesson.Module == g.Course.Title))
+						}
+						if isMatch {
+							matchedGroup = &g
+							break
+						}
 					}
 				}
 			}
@@ -848,8 +854,14 @@ func (u *feedbackUsecase) GenerateGraduationPDFAsync(ctx context.Context, studen
 	// 4. Filter sessions for the module/course
 	var moduleSessions []domain.Session
 	for _, sess := range sessions {
-		if sess.Lesson != nil && sess.Lesson.Module == *course {
-			moduleSessions = append(moduleSessions, sess)
+		if sess.Lesson != nil {
+			isMatch := sess.Lesson.CourseID != 0 && matchedGroup.CourseID != 0 && sess.Lesson.CourseID == matchedGroup.CourseID
+			if !isMatch {
+				isMatch = sess.Lesson.Module == *course || (matchedGroup.Course != nil && (sess.Lesson.Module == matchedGroup.Course.Module || sess.Lesson.Module == matchedGroup.Course.Title))
+			}
+			if isMatch {
+				moduleSessions = append(moduleSessions, sess)
+			}
 		}
 	}
 
