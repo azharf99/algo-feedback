@@ -655,11 +655,25 @@ func (u *feedbackUsecase) Update(ctx context.Context, id uint, req *domain.Feedb
 	return nil
 }
 func (u *feedbackUsecase) Delete(ctx context.Context, id uint) error {
-	// 1. Ambil data feedback untuk cek URL PDF
+	// 1. Ambil data feedback untuk cek URL PDF dan ScheduleID
 	existing, err := u.feedRepo.GetByID(ctx, id)
-	if err == nil && existing.URLPDF != nil && *existing.URLPDF != "" {
-		// 2. Hapus file fisik jika ada
-		_ = os.Remove(*existing.URLPDF)
+	if err == nil {
+		if existing.URLPDF != nil && *existing.URLPDF != "" {
+			// 2. Hapus file fisik jika ada
+			_ = os.Remove(*existing.URLPDF)
+		}
+		if existing.ScheduleID != nil && *existing.ScheduleID != "" {
+			scheduleIDInt, err := strconv.Atoi(*existing.ScheduleID)
+			if err == nil && scheduleIDInt > 0 {
+				var apiKey string
+				if user, err := u.userRepo.GetByID(ctx, existing.UserID); err == nil {
+					apiKey = user.WhatsappAPIKey
+				}
+				if errDel := u.waService.DeleteSchedule(apiKey, scheduleIDInt); errDel != nil {
+					log.Printf("Gagal menghapus schedule %d di WhatsApp Gateway untuk Feedback %d: %v", scheduleIDInt, id, errDel)
+				}
+			}
+		}
 	}
 
 	return u.feedRepo.Delete(ctx, id)
@@ -669,8 +683,22 @@ func (u *feedbackUsecase) BulkDelete(ctx context.Context, ids []uint) error {
 	// Kita hapus file fisiknya satu-satu (optional, tapi bagus untuk kebersihan storage)
 	for _, id := range ids {
 		existing, err := u.feedRepo.GetByID(ctx, id)
-		if err == nil && existing.URLPDF != nil && *existing.URLPDF != "" {
-			_ = os.Remove(*existing.URLPDF)
+		if err == nil {
+			if existing.URLPDF != nil && *existing.URLPDF != "" {
+				_ = os.Remove(*existing.URLPDF)
+			}
+			if existing.ScheduleID != nil && *existing.ScheduleID != "" {
+				scheduleIDInt, err := strconv.Atoi(*existing.ScheduleID)
+				if err == nil && scheduleIDInt > 0 {
+					var apiKey string
+					if user, err := u.userRepo.GetByID(ctx, existing.UserID); err == nil {
+						apiKey = user.WhatsappAPIKey
+					}
+					if errDel := u.waService.DeleteSchedule(apiKey, scheduleIDInt); errDel != nil {
+						log.Printf("Gagal menghapus schedule %d di WhatsApp Gateway untuk Feedback %d: %v", scheduleIDInt, id, errDel)
+					}
+				}
+			}
 		}
 	}
 	return u.feedRepo.BulkDelete(ctx, ids)
