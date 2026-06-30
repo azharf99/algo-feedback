@@ -197,6 +197,7 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 	isSecure := os.Getenv("GIN_MODE") == "release"
 
 	// Simpan state di HttpOnly Cookie — tidak bisa diakses via JavaScript (XSS-safe)
+	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie(
 		"oauth_state", // nama cookie
 		state,         // nilai state
@@ -238,6 +239,7 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 
 	// Hapus cookie state setelah digunakan (one-time use)
 	isSecure := os.Getenv("GIN_MODE") == "release"
+	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie("oauth_state", "", -1, "/", "", isSecure, true)
 
 	// 2. Tukar authorization code dengan access token
