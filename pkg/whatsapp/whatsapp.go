@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -22,6 +23,7 @@ type WhatsappConfig struct {
 
 // WhatsappService mendefinisikan kontrak fungsi WhatsApp
 type WhatsappService interface {
+	SendMessage(apiKey, deviceID, to, message string, isGroup bool) error
 	ScheduleMedia(apiKey, deviceID, to, caption, filePath, runAt string, isGroup bool) (int, error)
 	ScheduleMessage(apiKey, deviceID, to, message, runAt string, isGroup bool) (int, error)
 	UpdateSchedule(apiKey, deviceID string, id int, to, message, runAt string, isGroup bool) error
@@ -354,4 +356,70 @@ func (w *whatsappService) UpdateScheduleMedia(apiKey, deviceID string, id int, t
 	time.Sleep(300 * time.Millisecond) // Respect rate limit of 4 req/sec
 	return nil
 }
+
+// SendMessage: POST /api/whatsapp/send
+func (w *whatsappService) SendMessage(apiKey, deviceID, to, message string, isGroup bool) error {
+	if deviceID == "" {
+		return fmt.Errorf("deviceID is required")
+	}
+
+	deviceIDInt, _ := strconv.Atoi(deviceID)
+
+	toFormatted := to
+	if !strings.Contains(to, "@") {
+		if isGroup {
+			toFormatted = to + "@g.us"
+		} else {
+			toFormatted = to + "@s.whatsapp.net"
+		}
+	}
+
+	payloadData := map[string]interface{}{
+		"device_id":        deviceIDInt,
+		"to":               toFormatted,
+		"message":          message,
+		"is_group":         isGroup,
+		"is_contact_group": false,
+	}
+	jsonData, _ := json.Marshal(payloadData)
+
+	url := fmt.Sprintf("%s/api/whatsapp/send", w.config.BaseURL)
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+
+	w.setAuthHeader(req, apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := w.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+		Data    string `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return err
+	}
+
+	if result.Status != "success" {
+		return fmt.Errorf("gateway error: %s", result.Message)
+	}
+
+	fmt.Println("DEBUG: SendMessage Sent")
+	fmt.Println("  To:", toFormatted)
+	fmt.Println("  IsGroup:", isGroup)
+	fmt.Println("  Message Length:", len(message))
+	fmt.Println("  Message ID:", result.Data)
+	fmt.Println("----------------------------")
+
+	time.Sleep(300 * time.Millisecond) // Respect rate limit of 4 req/sec
+	return nil
+}
+
 

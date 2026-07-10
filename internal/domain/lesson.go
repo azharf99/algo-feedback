@@ -21,10 +21,11 @@ type Lesson struct {
 	Number      uint           `json:"number"`
 	Description *string        `gorm:"type:text" json:"description"`
 	Competency  string         `gorm:"type:text" json:"competency"`
-	IsActive    bool           `json:"is_active" gorm:"default:true"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+	IsActive        bool           `json:"is_active" gorm:"default:true"`
+	IsProjectLesson bool           `json:"is_project_lesson" gorm:"default:false"`
+	CreatedAt       time.Time      `json:"created_at"`
+	UpdatedAt       time.Time      `json:"updated_at"`
+	DeletedAt       gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 type LessonRepository interface {

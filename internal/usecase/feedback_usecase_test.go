@@ -215,6 +215,9 @@ func (m *mockGraduationPDFGenerator) Generate(ctx context.Context, data pdfgen.G
 
 type mockWhatsappService struct{}
 
+func (m *mockWhatsappService) SendMessage(apiKey, deviceID, to, message string, isGroup bool) error {
+	return nil
+}
 func (m *mockWhatsappService) ScheduleMedia(apiKey, deviceID, to, caption, filePath, runAt string, isGroup bool) (int, error) {
 	return 0, nil
 }
@@ -620,5 +623,3 @@ func TestGenerateGraduationPDFAsync_TitleModuleMismatch(t *testing.T) {
 	assert.Equal(t, "Python Pro 1 ENG", calledData.CourseName)
 	assert.Equal(t, "M1L1 - M1L2", calledData.LessonRange)
 }
-
-

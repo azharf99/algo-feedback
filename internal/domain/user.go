@@ -24,6 +24,7 @@ type User struct {
 	Role                   Role           `gorm:"type:varchar(20);not null;default:'Siswa'" json:"role"`
 	WhatsappAPIKey         string         `gorm:"type:varchar(255)" json:"whatsapp_api_key"`
 	WhatsappDeviceID       string         `gorm:"type:varchar(50)" json:"whatsapp_device_id"`
+	PhoneNumber            string         `gorm:"type:varchar(20)" json:"phone_number"`
 	ResetPasswordToken     string         `gorm:"type:varchar(255)" json:"-"`
 	ResetPasswordExpiresAt *time.Time     `json:"-"`
 	CreatedAt              time.Time      `json:"created_at"`
@@ -46,6 +47,7 @@ type UpdateUserRequest struct {
 	Role             Role   `json:"role"`
 	WhatsappAPIKey   string `json:"whatsapp_api_key"`
 	WhatsappDeviceID string `json:"whatsapp_device_id"`
+	PhoneNumber      string `json:"phone_number"`
 }
 
 // Kontrak untuk User Repository

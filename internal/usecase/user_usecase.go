@@ -8,6 +8,7 @@ import (
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/auth"
 	"github.com/azharf99/algo-feedback/pkg/ctxutil"
+	"github.com/azharf99/algo-feedback/pkg/formatter"
 	"github.com/azharf99/algo-feedback/pkg/i18n"
 )
 
@@ -91,6 +92,7 @@ func (u *userUsecase) Create(ctx context.Context, req *domain.UpdateUserRequest)
 		Role:             role,
 		WhatsappAPIKey:   req.WhatsappAPIKey,
 		WhatsappDeviceID: req.WhatsappDeviceID,
+		PhoneNumber:      formatter.NormalizePhoneNumber(req.PhoneNumber),
 	}
 
 	if err := u.userRepo.Create(ctx, user); err != nil {
@@ -133,6 +135,9 @@ func (u *userUsecase) Update(ctx context.Context, id uint, req *domain.UpdateUse
 	if req.WhatsappDeviceID != "" {
 		user.WhatsappDeviceID = req.WhatsappDeviceID
 	}
+	if req.PhoneNumber != "" {
+		user.PhoneNumber = formatter.NormalizePhoneNumber(req.PhoneNumber)
+	}
 
 	if err := u.userRepo.Update(ctx, user); err != nil {
 		return nil, errors.New(i18n.T(lang, "msg_save_failed"))
@@ -167,6 +172,9 @@ func (u *userUsecase) UpdateProfile(ctx context.Context, id uint, req *domain.Up
 	}
 	if req.WhatsappDeviceID != "" {
 		user.WhatsappDeviceID = req.WhatsappDeviceID
+	}
+	if req.PhoneNumber != "" {
+		user.PhoneNumber = formatter.NormalizePhoneNumber(req.PhoneNumber)
 	}
 
 	// Email dan Role sengaja tidak diupdate di sini untuk keamanan

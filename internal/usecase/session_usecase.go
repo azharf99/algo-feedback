@@ -538,8 +538,53 @@ func (u *sessionUsecase) processSessionBot(ctx context.Context) error {
 		err := u.UpdateAttendance(botCtx, s.ID, studentIDs)
 		if err != nil {
 			log.Printf("[SESSION-BOT] Failed to process session %d: %v", s.ID, err)
+		} else {
+			// Kirim notifikasi project jika pelajaran memiliki project
+			u.sendProjectNotification(botCtx, &s)
 		}
 	}
 
 	return nil
+}
+
+func (u *sessionUsecase) sendProjectNotification(ctx context.Context, session *domain.Session) {
+	if session.Lesson == nil || !session.Lesson.IsProjectLesson {
+		return
+	}
+
+	user, err := u.userRepo.GetByID(ctx, session.UserID)
+	if err != nil {
+		log.Printf("[SESSION-BOT] Failed to get user for session %d: %v", session.ID, err)
+		return
+	}
+
+	if user.PhoneNumber == "" {
+		log.Printf("[SESSION-BOT] Skipping project notification for session %d: user has no phone number", session.ID)
+		return
+	}
+
+	if user.WhatsappAPIKey == "" || user.WhatsappDeviceID == "" {
+		log.Printf("[SESSION-BOT] Skipping project notification for session %d: user has no whatsapp credentials", session.ID)
+		return
+	}
+
+	lessonTitle := session.Lesson.Title
+	lessonNumber := session.Lesson.Number
+	courseName := "-"
+	if session.Lesson != nil {
+		courseName = session.Lesson.Module
+	}
+
+	msg := fmt.Sprintf(
+		"Halo %s, sesi Anda \"%d %s\" (kursus: %s) memiliki Project yang harus diselesaikan. Harap segera menyelesaikannya. Terima kasih!",
+		user.Name, lessonNumber, lessonTitle, courseName,
+	)
+
+	// Send message directly
+	err = u.waService.SendMessage(user.WhatsappAPIKey, user.WhatsappDeviceID, user.PhoneNumber, msg, false)
+	if err != nil {
+		log.Printf("[SESSION-BOT] Failed to send project notification for session %d: %v", session.ID, err)
+	} else {
+		log.Printf("[SESSION-BOT] Project notification sent for session %d to %s", session.ID, user.PhoneNumber)
+	}
 }
