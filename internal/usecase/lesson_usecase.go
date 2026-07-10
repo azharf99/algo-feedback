@@ -86,6 +86,10 @@ func (u *lessonUsecase) Update(ctx context.Context, id uint, req *domain.Lesson)
 		existing.CourseID = req.CourseID
 	}
 
+	if req.IsProjectLesson != existing.IsProjectLesson {
+		existing.IsProjectLesson = req.IsProjectLesson
+	}
+
 	err = u.repo.Update(ctx, existing)
 	if err != nil {
 		return err
@@ -175,16 +179,17 @@ func (u *lessonUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*d
 		desc := record[headerMap["description"]]
 
 		lesson := &domain.Lesson{
-			ID:          uint(idUint),
-			CourseID:    uint(courseID),
-			Title:       record[headerMap["title"]],
-			Category:    &category,
-			Module:      record[headerMap["module"]],
-			Level:       record[headerMap["level"]],
-			Competency:  record[headerMap["competency"]],
-			Number:      uint(num),
-			Description: &desc,
-			IsActive:    strings.ToLower(record[headerMap["is_active"]]) != "false",
+			ID:              uint(idUint),
+			CourseID:        uint(courseID),
+			Title:           record[headerMap["title"]],
+			Category:        &category,
+			Module:          record[headerMap["module"]],
+			Level:           record[headerMap["level"]],
+			Competency:      record[headerMap["competency"]],
+			IsProjectLesson: strings.ToLower(record[headerMap["is_project_lesson"]]) == "true",
+			Number:          uint(num),
+			Description:     &desc,
+			IsActive:        strings.ToLower(record[headerMap["is_active"]]) != "false",
 		}
 
 		// Panggil Upsert TANPA studentIDs
