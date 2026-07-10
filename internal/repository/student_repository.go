@@ -76,7 +76,7 @@ func (r *studentRepository) Update(ctx context.Context, student *domain.Student)
 	// Auto-set user_id dari context
 	userID, _ := ctxutil.GetUserID(ctx)
 	student.UserID = userID
-	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Where("id = ?", student.ID).Updates(student).Error
+	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Where("id = ?", student.ID).Select("*").Updates(student).Error
 }
 
 // Delete: Menghapus data siswa (Bisa Hard Delete atau Soft Delete)

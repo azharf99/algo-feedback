@@ -82,13 +82,24 @@ func (u *lessonUsecase) Update(ctx context.Context, id uint, req *domain.Lesson)
 	if req.Level != "" {
 		existing.Level = req.Level
 	}
+	if req.Module != "" {
+		existing.Module = req.Module
+	}
 	if req.CourseID != 0 {
 		existing.CourseID = req.CourseID
 	}
-
-	if req.IsProjectLesson != existing.IsProjectLesson {
-		existing.IsProjectLesson = req.IsProjectLesson
+	if req.Number != 0 {
+		existing.Number = req.Number
 	}
+	if req.Category != nil {
+		existing.Category = req.Category
+	}
+	if req.Description != nil {
+		existing.Description = req.Description
+	}
+
+	existing.IsActive = req.IsActive
+	existing.IsProjectLesson = req.IsProjectLesson
 
 	err = u.repo.Update(ctx, existing)
 	if err != nil {

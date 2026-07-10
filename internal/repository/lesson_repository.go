@@ -68,7 +68,7 @@ func (r *lessonRepository) GetPaginated(ctx context.Context, params domain.Pagin
 func (r *lessonRepository) Update(ctx context.Context, lesson *domain.Lesson) error {
 	userID, _ := ctxutil.GetUserID(ctx)
 	lesson.UserID = userID
-	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Where("id = ?", lesson.ID).Updates(lesson).Error
+	return r.db.WithContext(ctx).Scopes(scopeByUser(ctx)).Where("id = ?", lesson.ID).Select("*").Updates(lesson).Error
 }
 
 func (r *lessonRepository) Delete(ctx context.Context, id uint) error {
@@ -100,7 +100,7 @@ func (r *lessonRepository) Upsert(ctx context.Context, lesson *domain.Lesson) (b
 		}
 	} else {
 		// Perbarui Data yang ada
-		if errUpdate := r.db.WithContext(ctx).Model(&existing).Updates(lesson).Error; errUpdate != nil {
+		if errUpdate := r.db.WithContext(ctx).Model(&existing).Select("*").Updates(lesson).Error; errUpdate != nil {
 			return false, errUpdate
 		}
 		lesson.ID = existing.ID
