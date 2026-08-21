@@ -128,7 +128,7 @@ func (u *feedbackUsecase) GenerateFeedback(ctx context.Context, groupID *uint, a
 			}
 
 			// Reset counter jika modul kembali ke Modul 1 Lesson 1
-			if session.Lesson.Level == "M1L1" {
+			if session.Lesson.Level == "M1L1" || session.Lesson.Level == "M1P1" {
 				counter = 1
 				monthSessions = nil
 			}
