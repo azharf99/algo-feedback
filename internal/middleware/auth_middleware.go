@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/ctxutil"
@@ -13,8 +14,11 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// AuthMiddleware memvalidasi JWT Token
-func AuthMiddleware() gin.HandlerFunc {
+// AuthMiddleware memvalidasi JWT Token. userRepo dipakai untuk mengecek PasswordChangedAt,
+// sehingga access token yang diterbitkan (iat) sebelum password terakhir diubah otomatis
+// ditolak — tanpa ini, token yang bocor tetap valid sampai masa berlakunya habis (7 hari)
+// walau korban sudah mereset password lewat "Lupa Password".
+func AuthMiddleware(userRepo domain.UserRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
@@ -42,12 +46,30 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		// Menyimpan data pengguna ke dalam context (untuk digunakan di handler selanjutnya)
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
+			userIDFloat, _ := claims["user_id"].(float64)
+			userID := uint(userIDFloat)
+
+			// Tolak token yang diterbitkan sebelum password terakhir diubah (session
+			// revocation). Ini juga otomatis menolak token milik user yang sudah dihapus.
+			if user, errUser := userRepo.GetByID(c.Request.Context(), userID); errUser != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Token tidak valid atau sudah kedaluwarsa"})
+				c.Abort()
+				return
+			} else if user.PasswordChangedAt != nil {
+				iatFloat, _ := claims["iat"].(float64)
+				issuedAt := time.Unix(int64(iatFloat), 0)
+				if issuedAt.Before(*user.PasswordChangedAt) {
+					c.JSON(http.StatusUnauthorized, gin.H{"error": "Sesi tidak valid, silakan login ulang"})
+					c.Abort()
+					return
+				}
+			}
+
 			c.Set("user_id", claims["user_id"])
 			c.Set("role", claims["role"])
 
 			// Inject ke standard context agar bisa diakses di repository layer
-			userIDFloat, _ := claims["user_id"].(float64)
-			ctx := ctxutil.WithUserID(c.Request.Context(), uint(userIDFloat))
+			ctx := ctxutil.WithUserID(c.Request.Context(), userID)
 			roleStr, _ := claims["role"].(string)
 			ctx = ctxutil.WithRole(ctx, roleStr)
 			c.Request = c.Request.WithContext(ctx)

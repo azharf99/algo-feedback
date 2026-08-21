@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,6 +20,7 @@ import (
 	"github.com/azharf99/algo-feedback/pkg/oauth"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
+	"gorm.io/gorm"
 )
 
 type AuthHandler struct {
@@ -52,10 +54,13 @@ func NewAuthHandler(r *gin.RouterGroup, us domain.AuthUsecase) {
 
 // Request Body Structs
 type RegisterRequest struct {
-	Name         string      `json:"name" binding:"required"`
-	Email        string      `json:"email" binding:"required,email"`
-	Password     string      `json:"password" binding:"required,min=6"`
-	Role         domain.Role `json:"role" binding:"required"`
+	Name     string `json:"name" binding:"required"`
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=6"`
+	// Registrasi publik hanya boleh membuat akun Tutor/Siswa. "Admin" sengaja tidak masuk
+	// daftar yang diizinkan di sini — akun Admin hanya dibuat lewat seeder atau oleh Admin
+	// lain via /api/users (RoleAdmin only).
+	Role         domain.Role `json:"role" binding:"required,oneof=Tutor Siswa"`
 	CaptchaToken string      `json:"captcha_token" binding:"required"`
 }
 
@@ -104,15 +109,16 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	// Validasi Email apakah sudah ada?
+	// Validasi Email apakah sudah ada? GetUserByEmail mengembalikan gorm.ErrRecordNotFound
+	// (bukan registeredUser == nil) untuk email yang belum terdaftar — itu kondisi normal,
+	// bukan error. Hanya anggap sebagai konflik jika user-nya benar-benar ditemukan.
 	registeredUser, err := h.usecase.GetUserByEmail(c.Request.Context(), req.Email)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(lang, "error_user_not_found")})
+	if err == nil && registeredUser != nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Email already registered"})
 		return
 	}
-
-	if registeredUser != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "Email already registered"})
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(lang, "error_user_not_found")})
 		return
 	}
 

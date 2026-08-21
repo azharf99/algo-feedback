@@ -56,7 +56,7 @@ func (r *studentRepository) GetPaginated(ctx context.Context, params domain.Pagi
 	var students []domain.Student
 	var total int64
 
-	query := r.db.WithContext(ctx).Model(&domain.Student{}).Scopes(scopeByUser(ctx))
+	query := r.db.WithContext(ctx).Model(&domain.Student{}).Scopes(scopeByUser(ctx), pagination.StatusFilter(params, "is_active"))
 	if params.Search != "" {
 		query = query.Where("fullname ILIKE ? OR surname ILIKE ? OR parent_contact ILIKE ?", "%"+params.Search+"%", "%"+params.Search+"%", "%"+params.Search+"%")
 	}

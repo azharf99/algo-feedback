@@ -53,7 +53,7 @@ func (r *courseRepository) GetPaginated(ctx context.Context, params domain.Pagin
 	var courses []domain.Course
 	var totalRows int64
 
-	query := r.db.WithContext(ctx).Model(&domain.Course{}).Scopes(scopeByUser(ctx))
+	query := r.db.WithContext(ctx).Model(&domain.Course{}).Scopes(scopeByUser(ctx), pagination.StatusFilter(params, "is_active"))
 
 	// Fitur Pencarian berdasarkan Judul atau Modul
 	if params.Search != "" {

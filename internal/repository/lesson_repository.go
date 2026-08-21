@@ -51,7 +51,7 @@ func (r *lessonRepository) GetPaginated(ctx context.Context, params domain.Pagin
 	var lessons []domain.Lesson
 	var totalRows int64
 
-	query := r.db.WithContext(ctx).Model(&domain.Lesson{}).Scopes(scopeByUser(ctx))
+	query := r.db.WithContext(ctx).Model(&domain.Lesson{}).Scopes(scopeByUser(ctx), pagination.StatusFilter(params, "is_active"))
 	if params.Search != "" {
 		query = query.Where("title ILIKE ? OR module ILIKE ?", "%"+params.Search+"%", "%"+params.Search+"%")
 	}

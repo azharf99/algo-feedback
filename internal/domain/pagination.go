@@ -9,6 +9,7 @@ type PaginationParams struct {
 	Search  string `form:"search"`
 	SortBy  string `form:"sort_by"`
 	SortDir string `form:"sort_dir"` // "asc" atau "desc"
+	Status  string `form:"status"`   // "active", "inactive", atau "all" (default: "active" di frontend)
 }
 
 // PaginatedResult adalah wrapper response standar untuk semua endpoint yang mendukung pagination.

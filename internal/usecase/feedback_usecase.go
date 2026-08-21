@@ -501,6 +501,17 @@ func (u *feedbackUsecase) SendFeedbackPDF(ctx context.Context, studentID *uint) 
 // 4. CRUD STANDAR
 // -------------------------------------------------------------------------
 func (u *feedbackUsecase) Create(ctx context.Context, feedback *domain.Feedback) error {
+	lang := ctxutil.GetLanguage(ctx)
+
+	// Cegah IDOR: pastikan StudentID yang dikirim benar-benar milik user yang login.
+	// studentRepo.GetByID sudah menerapkan scopeByUser, jadi StudentID milik tenant lain
+	// akan gagal (not found) di sini alih-alih dipakai begitu saja.
+	if feedback.StudentID != nil {
+		if _, err := u.studentRepo.GetByID(ctx, *feedback.StudentID); err != nil {
+			return errors.New(i18n.T(lang, "error_student_not_found"))
+		}
+	}
+
 	return u.feedRepo.Create(ctx, feedback)
 }
 func (u *feedbackUsecase) GetByID(ctx context.Context, id uint) (*domain.Feedback, error) {
@@ -555,7 +566,7 @@ func (u *feedbackUsecase) Update(ctx context.Context, id uint, req *domain.Feedb
 		existing.TutorFeedback = req.TutorFeedback
 		updateFeedback.TutorFeedback = req.TutorFeedback
 	}
-	
+
 	if req.Result != nil {
 		existing.Result = req.Result
 		updateFeedback.Result = req.Result

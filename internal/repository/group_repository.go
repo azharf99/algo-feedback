@@ -56,7 +56,7 @@ func (r *groupRepository) GetPaginated(ctx context.Context, params domain.Pagina
 	var groups []domain.Group
 	var totalRows int64
 
-	query := r.db.WithContext(ctx).Model(&domain.Group{}).Scopes(scopeByUser(ctx))
+	query := r.db.WithContext(ctx).Model(&domain.Group{}).Scopes(scopeByUser(ctx), pagination.StatusFilter(params, "is_active"))
 	if params.Search != "" {
 		query = query.Where("name ILIKE ?", "%"+params.Search+"%")
 	}

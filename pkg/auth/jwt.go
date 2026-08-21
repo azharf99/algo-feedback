@@ -37,12 +37,15 @@ type JwtCustomClaims struct {
 
 // GenerateTokens membuat Access Token (7 hari) & Refresh Token (14 hari)
 func GenerateTokens(user *domain.User) (string, string, error) {
+	now := time.Now()
+
 	// 1. Access Token (Diperpanjang ke 7 hari sesuai permintaan user)
 	claims := &JwtCustomClaims{
 		UserID: user.ID,
 		Role:   user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(7 * 24 * time.Hour)),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -54,7 +57,8 @@ func GenerateTokens(user *domain.User) (string, string, error) {
 	// 2. Refresh Token (Diperpanjang ke 14 hari)
 	refreshClaims := jwt.RegisteredClaims{
 		Subject:   fmt.Sprintf("%d", user.ID), // Simpan ID sebagai string
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(14 * 24 * time.Hour)),
+		IssuedAt:  jwt.NewNumericDate(now),
+		ExpiresAt: jwt.NewNumericDate(now.Add(14 * 24 * time.Hour)),
 	}
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
 	refreshTokenStr, err := refreshToken.SignedString(GetJWTRefreshSecret())

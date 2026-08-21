@@ -49,6 +49,40 @@ func Normalize(params domain.PaginationParams) domain.PaginationParams {
 	return params
 }
 
+// StatusFilter adalah GORM Scope untuk memfilter data berdasarkan kolom boolean is_active.
+// params.Status bernilai "active" (is_active = true), "inactive" (is_active = false),
+// atau "all"/kosong (tidak difilter, menampilkan semua data).
+// `column` adalah nama kolom boolean yang sudah dipastikan aman (dipanggil dengan literal, bukan input user).
+func StatusFilter(params domain.PaginationParams, column string) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		switch strings.ToLower(strings.TrimSpace(params.Status)) {
+		case "active":
+			return db.Where(column+" = ?", true)
+		case "inactive":
+			return db.Where(column+" = ?", false)
+		default:
+			return db
+		}
+	}
+}
+
+// SessionStatusFilter adalah GORM Scope khusus untuk Session, yang kolom statusnya berupa
+// string ("Active" / "Cancelled") alih-alih boolean is_active seperti entitas lain.
+// params.Status "active" -> status = 'Active', "inactive" -> status = 'Cancelled',
+// "all"/kosong -> tidak difilter.
+func SessionStatusFilter(params domain.PaginationParams, column string) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		switch strings.ToLower(strings.TrimSpace(params.Status)) {
+		case "active":
+			return db.Where(column+" = ?", "Active")
+		case "inactive":
+			return db.Where(column+" = ?", "Cancelled")
+		default:
+			return db
+		}
+	}
+}
+
 // Sort adalah GORM Scope yang mengaplikasikan ORDER BY ke query secara aman, mencegah SQL Injection.
 func Sort(params domain.PaginationParams, defaultSort string) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {

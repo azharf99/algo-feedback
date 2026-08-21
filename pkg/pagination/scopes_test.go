@@ -92,3 +92,89 @@ func TestSort(t *testing.T) {
 		})
 	}
 }
+
+func TestStatusFilter(t *testing.T) {
+	db, _ := gorm.Open(postgres.Open("host=localhost"), &gorm.Config{
+		DryRun: true,
+	})
+
+	tests := []struct {
+		name    string
+		status  string
+		wantSQL string
+	}{
+		{
+			name:    "active maps to is_active = true",
+			status:  "active",
+			wantSQL: `SELECT * FROM "dummies" WHERE is_active = $1`,
+		},
+		{
+			name:    "inactive maps to is_active = false",
+			status:  "inactive",
+			wantSQL: `SELECT * FROM "dummies" WHERE is_active = $1`,
+		},
+		{
+			name:    "all applies no filter",
+			status:  "all",
+			wantSQL: `SELECT * FROM "dummies"`,
+		},
+		{
+			name:    "empty applies no filter",
+			status:  "",
+			wantSQL: `SELECT * FROM "dummies"`,
+		},
+		{
+			name:    "case-insensitive and trims whitespace",
+			status:  " ACTIVE ",
+			wantSQL: `SELECT * FROM "dummies" WHERE is_active = $1`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stmt := db.Model(&Dummy{}).Scopes(StatusFilter(domain.PaginationParams{Status: tt.status}, "is_active")).Find(&[]Dummy{}).Statement
+			sql := stmt.SQL.String()
+			sql = regexp.MustCompile(`"|'`).ReplaceAllString(sql, "")
+			expected := regexp.MustCompile(`"|'`).ReplaceAllString(tt.wantSQL, "")
+			assert.Equal(t, expected, sql)
+		})
+	}
+}
+
+func TestSessionStatusFilter(t *testing.T) {
+	db, _ := gorm.Open(postgres.Open("host=localhost"), &gorm.Config{
+		DryRun: true,
+	})
+
+	tests := []struct {
+		name    string
+		status  string
+		wantSQL string
+	}{
+		{
+			name:    "active maps to status = Active",
+			status:  "active",
+			wantSQL: `SELECT * FROM "dummies" WHERE status = $1`,
+		},
+		{
+			name:    "inactive maps to status = Cancelled",
+			status:  "inactive",
+			wantSQL: `SELECT * FROM "dummies" WHERE status = $1`,
+		},
+		{
+			name:    "all applies no filter",
+			status:  "all",
+			wantSQL: `SELECT * FROM "dummies"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stmt := db.Model(&Dummy{}).Scopes(SessionStatusFilter(domain.PaginationParams{Status: tt.status}, "status")).Find(&[]Dummy{}).Statement
+			sql := stmt.SQL.String()
+			sql = regexp.MustCompile(`"|'`).ReplaceAllString(sql, "")
+			expected := regexp.MustCompile(`"|'`).ReplaceAllString(tt.wantSQL, "")
+			assert.Equal(t, expected, sql)
+		})
+	}
+}

@@ -23,7 +23,9 @@ func SeedAdmin(db *gorm.DB) {
 		if err := db.Create(&adminUser).Error; err != nil {
 			fmt.Println("Gagal membuat akun admin:", err)
 		} else {
-			fmt.Printf("✅ SEEDER: Akun Admin berhasil dibuat (%s / %s)!", os.Getenv("ADMIN_USERNAME"), os.Getenv("ADMIN_PASSWORD"))
+			// Jangan pernah mencetak password (walau admin) dalam bentuk plaintext ke log/stdout —
+			// log aggregator, output CI/CD, atau dashboard ops bisa membocorkannya.
+			fmt.Printf("✅ SEEDER: Akun Admin berhasil dibuat (%s). Silakan login dengan password dari ADMIN_PASSWORD.\n", os.Getenv("ADMIN_USERNAME"))
 		}
 	} else {
 		fmt.Println("✅ SEEDER: Akun Admin sudah eksis.")

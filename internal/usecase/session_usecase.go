@@ -18,17 +18,41 @@ import (
 )
 
 type sessionUsecase struct {
-	repo      domain.SessionRepository
-	waService whatsapp.WhatsappService
-	userRepo  domain.UserRepository
+	repo       domain.SessionRepository
+	waService  whatsapp.WhatsappService
+	userRepo   domain.UserRepository
+	groupRepo  domain.GroupRepository
+	lessonRepo domain.LessonRepository
 }
 
-func NewSessionUsecase(repo domain.SessionRepository, waService whatsapp.WhatsappService, userRepo domain.UserRepository) domain.SessionUsecase {
+func NewSessionUsecase(repo domain.SessionRepository, waService whatsapp.WhatsappService, userRepo domain.UserRepository, groupRepo domain.GroupRepository, lessonRepo domain.LessonRepository) domain.SessionUsecase {
 	return &sessionUsecase{
-		repo:      repo,
-		waService: waService,
-		userRepo:  userRepo,
+		repo:       repo,
+		waService:  waService,
+		userRepo:   userRepo,
+		groupRepo:  groupRepo,
+		lessonRepo: lessonRepo,
 	}
+}
+
+// checkGroupOwnership memastikan groupID yang dikirim client benar-benar milik user yang
+// login. groupRepo.GetByID sudah menerapkan scopeByUser, jadi GroupID milik tenant lain
+// akan gagal (not found) di sini alih-alih dipakai begitu saja lewat FK yang tidak divalidasi.
+func (u *sessionUsecase) checkGroupOwnership(ctx context.Context, groupID uint) error {
+	lang := ctxutil.GetLanguage(ctx)
+	if _, err := u.groupRepo.GetByID(ctx, groupID); err != nil {
+		return errors.New(i18n.T(lang, "error_group_not_found"))
+	}
+	return nil
+}
+
+// checkLessonOwnership sama seperti checkGroupOwnership, tapi untuk LessonID.
+func (u *sessionUsecase) checkLessonOwnership(ctx context.Context, lessonID uint) error {
+	lang := ctxutil.GetLanguage(ctx)
+	if _, err := u.lessonRepo.GetByID(ctx, lessonID); err != nil {
+		return errors.New(i18n.T(lang, "error_lesson_not_found"))
+	}
+	return nil
 }
 
 func (u *sessionUsecase) getLanguage(session *domain.Session) string {
@@ -39,6 +63,12 @@ func (u *sessionUsecase) getLanguage(session *domain.Session) string {
 }
 
 func (u *sessionUsecase) Create(ctx context.Context, session *domain.Session) error {
+	if err := u.checkGroupOwnership(ctx, session.GroupID); err != nil {
+		return err
+	}
+	if err := u.checkLessonOwnership(ctx, session.LessonID); err != nil {
+		return err
+	}
 	return u.repo.Create(ctx, session)
 }
 
@@ -96,10 +126,16 @@ func (u *sessionUsecase) Update(ctx context.Context, id uint, req *domain.Sessio
 		daysShift = int(req.DateStart.Time.Sub(oldDate).Hours() / 24)
 	}
 
-	if req.GroupID != 0 {
+	if req.GroupID != 0 && req.GroupID != existing.GroupID {
+		if err := u.checkGroupOwnership(ctx, req.GroupID); err != nil {
+			return err
+		}
 		existing.GroupID = req.GroupID
 	}
-	if req.LessonID != 0 {
+	if req.LessonID != 0 && req.LessonID != existing.LessonID {
+		if err := u.checkLessonOwnership(ctx, req.LessonID); err != nil {
+			return err
+		}
 		existing.LessonID = req.LessonID
 	}
 	if !req.DateStart.Time.IsZero() {

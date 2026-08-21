@@ -95,6 +95,13 @@ func (u *authUsecase) RefreshToken(ctx context.Context, refreshTokenStr string) 
 		return nil, errors.New(i18n.T(lang, "error_user_not_found"))
 	}
 
+	// Tolak refresh token yang diterbitkan sebelum password terakhir diubah — sama seperti
+	// AuthMiddleware untuk access token, agar refresh token yang bocor tidak bisa dipakai
+	// memperpanjang sesi setelah password direset.
+	if user.PasswordChangedAt != nil && claims.IssuedAt != nil && claims.IssuedAt.Time.Before(*user.PasswordChangedAt) {
+		return nil, errors.New(i18n.T(lang, "error_unauthorized"))
+	}
+
 	// 4. Buat pasangan token baru
 	newAccessToken, newRefreshToken, err := auth.GenerateTokens(user)
 	if err != nil {
@@ -265,9 +272,13 @@ func (u *authUsecase) ResetPassword(ctx context.Context, token, newPassword stri
 	}
 
 	// 4. Update User & Bersihkan Token
+	now := time.Now()
 	user.Password = hashedPassword
 	user.ResetPasswordToken = ""
 	user.ResetPasswordExpiresAt = nil
+	// Revoke semua access/refresh token yang sudah terlanjur diterbitkan sebelum reset ini
+	// (lihat AuthMiddleware) — mencegah token yang bocor tetap valid setelah password diganti.
+	user.PasswordChangedAt = &now
 
 	return u.userRepo.Update(ctx, user)
 }

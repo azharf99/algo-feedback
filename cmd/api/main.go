@@ -131,17 +131,19 @@ func main() {
 	// --- Lesson ---
 	lessonRepo := repository.NewLessonRepository(db)
 
+	// --- Group --- (dideklarasikan lebih awal karena dibutuhkan sessionUsecase untuk
+	// validasi kepemilikan GroupID)
+	groupRepo := repository.NewGroupRepository(db)
+
 	// --- Modul Session ---
 	sessionRepo := repository.NewSessionRepository(db)
-	sessionUsecase := usecase.NewSessionUsecase(sessionRepo, waService, userRepo)
+	sessionUsecase := usecase.NewSessionUsecase(sessionRepo, waService, userRepo, groupRepo, lessonRepo)
 
 	// lessonUsecase := usecase.NewLessonUsecase(lessonRepo, sessionUsecase)
 	// (Keeping the original names)
-	lessonUsecase := usecase.NewLessonUsecase(lessonRepo, sessionUsecase)
+	lessonUsecase := usecase.NewLessonUsecase(lessonRepo, sessionUsecase, courseRepo)
 
-	// --- Group ---
-	groupRepo := repository.NewGroupRepository(db)
-	groupUsecase := usecase.NewGroupUsecase(groupRepo, lessonRepo, sessionRepo)
+	groupUsecase := usecase.NewGroupUsecase(groupRepo, lessonRepo, sessionRepo, courseRepo)
 
 	// --- Feedback ---
 	feedbackRepo := repository.NewFeedbackRepository(db)
@@ -175,7 +177,7 @@ func main() {
 
 		// Grouping Endpoint yang Butuh Login (Protected)
 		protected := api.Group("/")
-		protected.Use(middleware.AuthMiddleware())
+		protected.Use(middleware.AuthMiddleware(userRepo))
 		{
 			// Student Module (Admin & Tutor)
 			studentGroup := protected.Group("/")

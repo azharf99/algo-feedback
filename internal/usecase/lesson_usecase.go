@@ -20,21 +20,36 @@ import (
 type lessonUsecase struct {
 	repo           domain.LessonRepository
 	sessionUsecase domain.SessionUsecase
+	courseRepo     domain.CourseRepository
 }
 
 func (u *lessonUsecase) getLang(ctx context.Context) string {
 	return ctxutil.GetLanguage(ctx)
 }
 
-func NewLessonUsecase(repo domain.LessonRepository, sessionUsecase domain.SessionUsecase) domain.LessonUsecase {
+func NewLessonUsecase(repo domain.LessonRepository, sessionUsecase domain.SessionUsecase, courseRepo domain.CourseRepository) domain.LessonUsecase {
 	return &lessonUsecase{
 		repo:           repo,
 		sessionUsecase: sessionUsecase,
+		courseRepo:     courseRepo,
 	}
+}
+
+// checkCourseOwnership memastikan courseID yang dikirim client benar-benar milik user yang
+// login. courseRepo.GetByID sudah menerapkan scopeByUser, jadi CourseID milik tenant lain
+// akan gagal (not found) di sini alih-alih dipakai begitu saja lewat FK yang tidak divalidasi.
+func (u *lessonUsecase) checkCourseOwnership(ctx context.Context, courseID uint) error {
+	if _, err := u.courseRepo.GetByID(ctx, courseID); err != nil {
+		return errors.New(i18n.T(u.getLang(ctx), "error_course_not_found"))
+	}
+	return nil
 }
 
 // ... (Metode CRUD Create, GetByID, GetAll, GetPaginated, Update, Delete tetap sama) ...
 func (u *lessonUsecase) Create(ctx context.Context, lesson *domain.Lesson) error {
+	if err := u.checkCourseOwnership(ctx, lesson.CourseID); err != nil {
+		return err
+	}
 	return u.repo.Create(ctx, lesson)
 }
 func (u *lessonUsecase) GetByID(ctx context.Context, id uint) (*domain.Lesson, error) {
@@ -85,7 +100,10 @@ func (u *lessonUsecase) Update(ctx context.Context, id uint, req *domain.Lesson)
 	if req.Module != "" {
 		existing.Module = req.Module
 	}
-	if req.CourseID != 0 {
+	if req.CourseID != 0 && req.CourseID != existing.CourseID {
+		if err := u.checkCourseOwnership(ctx, req.CourseID); err != nil {
+			return err
+		}
 		existing.CourseID = req.CourseID
 	}
 	if req.Number != 0 {

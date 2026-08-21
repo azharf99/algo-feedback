@@ -72,6 +72,8 @@ func (r *sessionRepository) GetPaginated(ctx context.Context, params domain.Pagi
 		query = query.Where("sessions.user_id = ?", userID)
 	}
 
+	query = query.Scopes(pagination.SessionStatusFilter(params, "sessions.status"))
+
 	if params.Search != "" {
 		searchText := "%" + params.Search + "%"
 		query = query.Where("groups.name ILIKE ? OR lessons.title ILIKE ?", searchText, searchText)

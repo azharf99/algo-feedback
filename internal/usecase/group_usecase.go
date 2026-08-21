@@ -4,6 +4,7 @@ package usecase
 import (
 	"context"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -23,20 +24,36 @@ type groupUsecase struct {
 	repo        domain.GroupRepository
 	lessonRepo  domain.LessonRepository
 	sessionRepo domain.SessionRepository
+	courseRepo  domain.CourseRepository
 }
 
 func (u *groupUsecase) getLang(ctx context.Context) string {
 	return ctxutil.GetLanguage(ctx)
 }
 
-func NewGroupUsecase(repo domain.GroupRepository, lessonRepo domain.LessonRepository, sessionRepo domain.SessionRepository) domain.GroupUsecase {
+func NewGroupUsecase(repo domain.GroupRepository, lessonRepo domain.LessonRepository, sessionRepo domain.SessionRepository, courseRepo domain.CourseRepository) domain.GroupUsecase {
 	return &groupUsecase{
 		repo:        repo,
 		lessonRepo:  lessonRepo,
 		sessionRepo: sessionRepo,
+		courseRepo:  courseRepo,
 	}
 }
+
+// checkCourseOwnership memastikan courseID yang dikirim client benar-benar milik user yang
+// login. courseRepo.GetByID sudah menerapkan scopeByUser, jadi CourseID milik tenant lain
+// akan gagal (not found) di sini alih-alih dipakai begitu saja lewat FK yang tidak divalidasi.
+func (u *groupUsecase) checkCourseOwnership(ctx context.Context, courseID uint) error {
+	if _, err := u.courseRepo.GetByID(ctx, courseID); err != nil {
+		return errors.New(i18n.T(u.getLang(ctx), "error_course_not_found"))
+	}
+	return nil
+}
+
 func (u *groupUsecase) Create(ctx context.Context, group *domain.Group, studentIDs []uint) error {
+	if err := u.checkCourseOwnership(ctx, group.CourseID); err != nil {
+		return err
+	}
 	if group.GroupPhone != nil {
 		if !isLikelyGroupJID(*group.GroupPhone) {
 			normalized := formatter.NormalizePhoneNumber(*group.GroupPhone)
@@ -67,6 +84,11 @@ func (u *groupUsecase) GetPaginated(ctx context.Context, params domain.Paginatio
 }
 func (u *groupUsecase) Update(ctx context.Context, id uint, req *domain.Group, studentIDs []uint) error {
 	req.ID = id
+	if req.CourseID != 0 {
+		if err := u.checkCourseOwnership(ctx, req.CourseID); err != nil {
+			return err
+		}
+	}
 	if req.GroupPhone != nil {
 		if !isLikelyGroupJID(*req.GroupPhone) {
 			normalized := formatter.NormalizePhoneNumber(*req.GroupPhone)

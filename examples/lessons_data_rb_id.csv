@@ -1,0 +1,26 @@
+id,course_id,title,category,module,level,number,description,is_active,competency
+594,16,Roblox Studio,Desain Game 2.0,Desain Game 2.0,M1L1,1,,True,Menavigasi antarmuka Roblox Studio;Memahami Workspace dan Explorer;Pengaturan dasar lingkungan game
+595,16,Koordinat Objek,Desain Game 2.0,Desain Game 2.0,M1L2,2,,True,"Memanipulasi koordinat 3D;Mentranslasi, mengubah skala, dan memutar objek;Memahami pemosisian spasial"
+596,16,Membuat Game untuk Atlet E-sports Profesional (Bagian 1),Desain Game 2.0,Desain Game 2.0,M1L3,3,,True,Merancang mekanika gameplay kompetitif;Menyeimbangkan kemampuan pemain;Menyusun lingkungan multipemain
+597,16,Membuat Game untuk Pemain E-sports Profesional (Bagian 2),Desain Game 2.0,Desain Game 2.0,M1L4,4,,True,Menerapkan logika game tingkat lanjut;Mengoptimalkan performa game untuk esports;Menguji dan menyempurnakan keseimbangan kompetitif
+598,16,Memperluas Fungsi Game dengan Skrip,Desain Game 2.0,Desain Game 2.0,M1L5,5,,True,Menulis skrip Lua dasar;Menyematkan skrip pada objek game;Mengontrol alur game secara terprogram
+599,16,M1L6 Penyelesaian Game,Desain Game 2.0,Desain Game 2.0,M1L6,6,,True,Melakukan pengujian akhir game;Mempublikasikan game ke platform Roblox;Meninjau dan men-debug mekanika game
+600,16,M2L1 Membuat Dunia Kita: Lanskap dan Tanaman. Bagian 1,Desain Game 2.0,Desain Game 2.0,M2L1,7,,True,Memanfaatkan alat editor medan (terrain);Membuat lanskap alami;Menempatkan dedaunan dan aset tanaman
+601,16,M2L2 Membuat Dunia Kita: Lanskap dan Tanaman. Bagian 2,Desain Game 2.0,Desain Game 2.0,M2L2,8,,True,Menyempurnakan detail medan;Membuat tekstur lingkungan kustom;Mengintegrasikan struktur alam yang kompleks
+602,16,M2L3 Membuat Dunia Kita: Bangunan,Desain Game 2.0,Desain Game 2.0,M2L3,9,,True,Membangun struktur arsitektur menggunakan parts;Menerapkan material dan tekstur pada bangunan;Mengelompokkan (group) dan menambatkan (anchor) komponen bangunan
+603,16,M2L4 Membuat Dunia Kita: Pencahayaan,Desain Game 2.0,Desain Game 2.0,M2L4,10,,True,Mengonfigurasi properti pencahayaan global;Menambahkan point light dan spotlight;Membuat siklus siang dan malam yang atmosferik
+604,16,M2L5 Menambahkan Skrip. Latihan,Desain Game 2.0,Desain Game 2.0,M2L5,11,,True,Menerapkan konsep skrip Lua dalam praktik;Men-debug skrip kustom;Meningkatkan interaktivitas dunia secara terprogram
+605,16,M2L6 Membuat Dunia Kita: Kejutan dan Rintangan,Desain Game 2.0,Desain Game 2.0,M2L6,12,,True,Merancang bahaya lingkungan;Menerapkan mekanika jebakan menggunakan skrip;Membuat rintangan interaktif untuk pemain
+606,16,M2L7 Dunia Tempatku Tinggal: Presentasi Dunia,Desain Game 2.0,Desain Game 2.0,M2L7,13,,True,Menampilkan desain level;Mempresentasikan fitur dunia interaktif;Mengevaluasi karya teman
+607,16,M3L1 Apa itu Desain Game?,Desain Game 2.0,Desain Game 2.0,M3L1,14,,True,Mendefinisikan prinsip inti desain game;Menganalisis strategi keterlibatan pemain;Memahami siklus hidup pengembangan game
+608,16,M3L2 Menambahkan Dialog ke dalam Game,Desain Game 2.0,Desain Game 2.0,M3L2,15,,True,Membuat pohon dialog NPC;Menerapkan tampilan teks GUI;Membuat skrip percakapan interaktif
+609,16,M3L3 Transisi Antar Level,Desain Game 2.0,Desain Game 2.0,M3L3,16,,True,Membuat skrip teleporter level;Mengelola data pemain antar level;Merancang transisi game yang mulus
+610,16,M3L4 Menambahkan Teka-teki dan Puzzle ke dalam Quest. Bagian 1,Desain Game 2.0,Desain Game 2.0,M3L4,17,,True,Merancang puzzle logika;Menerapkan mekanika puzzle interaktif;Membuat skrip pemicu dan kondisi puzzle
+611,16,M3L5 Menambahkan Teka-teki dan Puzzle ke dalam Quest. Bagian 2,Desain Game 2.0,Desain Game 2.0,M3L5,18,,True,Mengintegrasikan rantai puzzle yang kompleks;Menyeimbangkan tingkat kesulitan puzzle;Memberikan umpan balik pemain untuk solusi puzzle
+612,16,M3L6 Menggunakan Asisten AI,Desain Game 2.0,Desain Game 2.0,M3L6,19,,True,Mengintegrasikan alat AI untuk pengembangan game;Menghasilkan aset game menggunakan AI;Mengoptimalkan alur kerja dengan asisten AI
+613,16,M3L7 Penyelesaian Game Quest,Desain Game 2.0,Desain Game 2.0,M3L7,20,,True,Menguji loop quest secara lengkap;Men-debug elemen quest interaktif;Mempublikasikan game quest yang sudah disempurnakan
+614,16,M4L1 Pengenalan Pembuatan Karakter,Desain Game 2.0,Desain Game 2.0,M4L1,21,,True,Memahami dasar pemodelan karakter;Mengeksplorasi struktur avatar Roblox;Merencanakan atribut karakter
+615,16,M4L2 Bekerja dengan Karakter,Desain Game 2.0,Desain Game 2.0,M4L2,22,,True,Menyesuaikan mesh karakter;Menge-rig karakter kustom;Menganimasikan gerakan karakter
+616,16,M4L3 Membuat Serangan di dalam Game,Desain Game 2.0,Desain Game 2.0,M4L3,23,,True,Membuat skrip mekanika pertarungan;Menerapkan hitbox dan deteksi kerusakan;Membuat efek visual serangan
+617,16,M4L4 Membuat Bos Utama dan Quest,Desain Game 2.0,Desain Game 2.0,M4L4,24,,True,Merancang perilaku bos yang kompleks;Membuat skrip pola serangan bos;Mengintegrasikan pertarungan bos ke dalam alur quest
+618,16,M4L5 Merancang Pencapaian Pemain,Desain Game 2.0,Desain Game 2.0,M4L5,25,,True,Membuat sistem lencana pencapaian;Membuat skrip pelacakan kondisi untuk pencapaian;Memberikan hadiah digital kepada pemain

@@ -4,6 +4,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/auth"
@@ -127,6 +128,9 @@ func (u *userUsecase) Update(ctx context.Context, id uint, req *domain.UpdateUse
 			return nil, errors.New(i18n.T(lang, "error_password_process"))
 		}
 		user.Password = hashedPassword
+		// Revoke token lama milik user ini (lihat AuthMiddleware/PasswordChangedAt).
+		now := time.Now()
+		user.PasswordChangedAt = &now
 	}
 
 	if req.WhatsappAPIKey != "" {
@@ -165,6 +169,9 @@ func (u *userUsecase) UpdateProfile(ctx context.Context, id uint, req *domain.Up
 			return nil, errors.New(i18n.T(lang, "error_password_process"))
 		}
 		user.Password = hashedPassword
+		// Revoke token lama milik user ini (lihat AuthMiddleware/PasswordChangedAt).
+		now := time.Now()
+		user.PasswordChangedAt = &now
 	}
 
 	if req.WhatsappAPIKey != "" {

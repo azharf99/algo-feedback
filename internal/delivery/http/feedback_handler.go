@@ -251,6 +251,18 @@ func (h *FeedbackHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// Field-field berikut hanya boleh diisi/dihasilkan oleh server (repo.Create juga
+	// mengisi ulang UserID dari context), jangan pernah percaya nilai dari client di
+	// sini. Tanpa ini, client bisa menyetel url_pdf ke path sembarang, yang kemudian
+	// dipakai apa adanya oleh DownloadPDF (c.File) dan Delete/BulkDelete (os.Remove) —
+	// arbitrary file read/delete.
+	req.ID = 0
+	req.UserID = 0
+	req.URLPDF = nil
+	req.IsSent = false
+	req.ScheduleID = nil
+	req.TaskID = nil
+
 	if err := h.usecase.Create(c.Request.Context(), &req); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(lang, "msg_save_failed")})
 		return

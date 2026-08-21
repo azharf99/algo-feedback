@@ -17,19 +17,25 @@ const (
 )
 
 type User struct {
-	ID                     uint           `gorm:"primaryKey" json:"id"`
-	Name                   string         `gorm:"type:varchar(100);not null" json:"name"`
-	Email                  string         `gorm:"type:varchar(100);uniqueIndex;not null" json:"email"`
-	Password               string         `gorm:"type:varchar(255);not null" json:"-"` // Password disembunyikan dari JSON
-	Role                   Role           `gorm:"type:varchar(20);not null;default:'Siswa'" json:"role"`
-	WhatsappAPIKey         string         `gorm:"type:varchar(255)" json:"whatsapp_api_key"`
-	WhatsappDeviceID       string         `gorm:"type:varchar(50)" json:"whatsapp_device_id"`
-	PhoneNumber            string         `gorm:"type:varchar(20)" json:"phone_number"`
-	ResetPasswordToken     string         `gorm:"type:varchar(255)" json:"-"`
-	ResetPasswordExpiresAt *time.Time     `json:"-"`
-	CreatedAt              time.Time      `json:"created_at"`
-	UpdatedAt              time.Time      `json:"updated_at"`
-	DeletedAt              gorm.DeletedAt `gorm:"index" json:"-"`
+	ID                     uint       `gorm:"primaryKey" json:"id"`
+	Name                   string     `gorm:"type:varchar(100);not null" json:"name"`
+	Email                  string     `gorm:"type:varchar(100);uniqueIndex;not null" json:"email"`
+	Password               string     `gorm:"type:varchar(255);not null" json:"-"` // Password disembunyikan dari JSON
+	Role                   Role       `gorm:"type:varchar(20);not null;default:'Siswa'" json:"role"`
+	WhatsappAPIKey         string     `gorm:"type:varchar(255)" json:"whatsapp_api_key"`
+	WhatsappDeviceID       string     `gorm:"type:varchar(50)" json:"whatsapp_device_id"`
+	PhoneNumber            string     `gorm:"type:varchar(20)" json:"phone_number"`
+	ResetPasswordToken     string     `gorm:"type:varchar(255)" json:"-"`
+	ResetPasswordExpiresAt *time.Time `json:"-"`
+	// PasswordChangedAt menandai kapan password terakhir diubah (reset password, ganti
+	// password lewat profil, atau diubah Admin). AuthMiddleware menolak access/refresh
+	// token yang diterbitkan (iat) sebelum waktu ini, sehingga token lama otomatis
+	// ter-revoke begitu password diganti — tanpa ini, token yang bocor tetap valid
+	// sampai masa berlakunya habis (7/14 hari) meski password sudah direset.
+	PasswordChangedAt *time.Time     `json:"-"`
+	CreatedAt         time.Time      `json:"created_at"`
+	UpdatedAt         time.Time      `json:"updated_at"`
+	DeletedAt         gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // Struktur untuk Response Login
