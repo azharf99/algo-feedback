@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/csvutil"
 	"github.com/azharf99/algo-feedback/pkg/ctxutil"
 	"github.com/azharf99/algo-feedback/pkg/i18n"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
@@ -623,4 +625,64 @@ func (u *sessionUsecase) sendProjectNotification(ctx context.Context, session *d
 	} else {
 		log.Printf("[SESSION-BOT] Project notification sent for session %d to %s", session.ID, user.PhoneNumber)
 	}
+}
+
+// ExportCSV mengekspor seluruh data sesi pembelajaran ke dalam format CSV.
+func (u *sessionUsecase) ExportCSV(ctx context.Context) ([]byte, error) {
+	sessions, err := u.repo.GetAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	headers := []string{
+		"id", "group_id", "group_name", "lesson_id", "lesson_title",
+		"date_start", "time_start", "is_done", "status",
+		"after_session_feedback", "students_attended", "created_at", "updated_at",
+	}
+
+	rows := make([][]string, 0, len(sessions))
+	for _, s := range sessions {
+		groupName := ""
+		if s.Group != nil {
+			groupName = s.Group.Name
+		}
+
+		lessonTitle := ""
+		if s.Lesson != nil {
+			lessonTitle = s.Lesson.Title
+		}
+
+		dateStart := ""
+		if !s.DateStart.Time.IsZero() {
+			dateStart = s.DateStart.Time.Format("2006-01-02")
+		}
+
+		timeStart := ""
+		if !s.TimeStart.Time.IsZero() {
+			timeStart = s.TimeStart.Time.Format("15:04")
+		}
+
+		studentNames := make([]string, 0, len(s.StudentsAttended))
+		for _, st := range s.StudentsAttended {
+			studentNames = append(studentNames, st.Fullname)
+		}
+
+		rows = append(rows, []string{
+			strconv.FormatUint(uint64(s.ID), 10),
+			strconv.FormatUint(uint64(s.GroupID), 10),
+			groupName,
+			strconv.FormatUint(uint64(s.LessonID), 10),
+			lessonTitle,
+			dateStart,
+			timeStart,
+			strconv.FormatBool(s.IsDone),
+			s.Status,
+			strPtr(s.AfterSessionFeedback),
+			strings.Join(studentNames, ", "),
+			s.CreatedAt.Format("2006-01-02 15:04:05"),
+			s.UpdatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+
+	return csvutil.Generate(headers, rows)
 }

@@ -13,6 +13,7 @@ import (
 
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/auth"
+	"github.com/azharf99/algo-feedback/pkg/csvutil"
 	"github.com/azharf99/algo-feedback/pkg/ctxutil"
 	"github.com/azharf99/algo-feedback/pkg/formatter"
 	"github.com/azharf99/algo-feedback/pkg/i18n"
@@ -241,4 +242,44 @@ func (u *studentUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*
 	}
 
 	return result, nil
+}
+
+// ExportCSV mengekspor seluruh data siswa ke dalam format CSV.
+// Kolom password sengaja tidak disertakan demi keamanan.
+func (u *studentUsecase) ExportCSV(ctx context.Context) ([]byte, error) {
+	students, err := u.repo.GetAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	headers := []string{
+		"id", "fullname", "surname", "username", "phone_number",
+		"parent_name", "parent_contact", "is_active", "created_at", "updated_at",
+	}
+
+	rows := make([][]string, 0, len(students))
+	for _, s := range students {
+		rows = append(rows, []string{
+			strconv.FormatUint(uint64(s.ID), 10),
+			s.Fullname,
+			s.Surname,
+			s.Username,
+			strPtr(s.PhoneNumber),
+			strPtr(s.ParentName),
+			strPtr(s.ParentContact),
+			strconv.FormatBool(s.IsActive),
+			s.CreatedAt.Format("2006-01-02 15:04:05"),
+			s.UpdatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+
+	return csvutil.Generate(headers, rows)
+}
+
+// strPtr mengembalikan nilai string dari pointer, atau string kosong jika nil.
+func strPtr(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

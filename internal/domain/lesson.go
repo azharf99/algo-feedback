@@ -51,4 +51,5 @@ type LessonUsecase interface {
 	BulkDelete(ctx context.Context, ids []uint) error
 	ImportCSV(ctx context.Context, fileReader io.Reader) (*ImportResult, error)
 	ImportCompetenciesCSV(ctx context.Context, fileReader io.Reader) (*ImportResult, error)
+	ExportCSV(ctx context.Context) ([]byte, error)
 }

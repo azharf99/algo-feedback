@@ -43,4 +43,5 @@ type CourseUsecase interface {
 	Delete(ctx context.Context, id uint) error
 	BulkDelete(ctx context.Context, ids []uint) error
 	ImportCSV(ctx context.Context, fileReader io.Reader) (*ImportResult, error)
+	ExportCSV(ctx context.Context) ([]byte, error)
 }

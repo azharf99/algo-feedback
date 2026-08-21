@@ -2,8 +2,10 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/ctxutil"
@@ -35,6 +37,7 @@ func NewStudentHandler(r *gin.RouterGroup, us domain.StudentUsecase) {
 		studentRoutes.DELETE("/:id", handler.Delete)
 		studentRoutes.DELETE("/bulk", handler.BulkDelete)
 		studentRoutes.POST("/import", handler.ImportCSV)
+		studentRoutes.GET("/export", handler.ExportCSV)
 	}
 }
 
@@ -193,4 +196,18 @@ func (h *StudentHandler) ImportCSV(c *gin.Context) {
 		"updated": result.Updated,
 		"errors":  result.Errors,
 	})
+}
+
+// ExportCSV: GET /students/export
+// Mengunduh seluruh data siswa dalam format CSV.
+func (h *StudentHandler) ExportCSV(c *gin.Context) {
+	data, err := h.usecase.ExportCSV(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	filename := fmt.Sprintf("students_%s.csv", time.Now().Format("20060102_150405"))
+	c.Header("Content-Disposition", "attachment; filename="+filename)
+	c.Data(http.StatusOK, "text/csv; charset=utf-8", data)
 }

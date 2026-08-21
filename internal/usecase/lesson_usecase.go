@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/csvutil"
 	"github.com/azharf99/algo-feedback/pkg/ctxutil"
 	"github.com/azharf99/algo-feedback/pkg/i18n"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
@@ -236,6 +237,47 @@ func (u *lessonUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*d
 	}
 
 	return result, nil
+}
+
+// ExportCSV mengekspor seluruh data materi pembelajaran (lesson) ke dalam format CSV.
+func (u *lessonUsecase) ExportCSV(ctx context.Context) ([]byte, error) {
+	lessons, err := u.repo.GetAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	headers := []string{
+		"id", "course_id", "course_title", "title", "category", "module", "level",
+		"number", "description", "competency", "is_active", "is_project_lesson",
+		"created_at", "updated_at",
+	}
+
+	rows := make([][]string, 0, len(lessons))
+	for _, l := range lessons {
+		courseTitle := ""
+		if l.Course != nil {
+			courseTitle = l.Course.Title
+		}
+
+		rows = append(rows, []string{
+			strconv.FormatUint(uint64(l.ID), 10),
+			strconv.FormatUint(uint64(l.CourseID), 10),
+			courseTitle,
+			l.Title,
+			strPtr(l.Category),
+			l.Module,
+			l.Level,
+			strconv.FormatUint(uint64(l.Number), 10),
+			strPtr(l.Description),
+			l.Competency,
+			strconv.FormatBool(l.IsActive),
+			strconv.FormatBool(l.IsProjectLesson),
+			l.CreatedAt.Format("2006-01-02 15:04:05"),
+			l.UpdatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+
+	return csvutil.Generate(headers, rows)
 }
 
 func (u *lessonUsecase) ImportCompetenciesCSV(ctx context.Context, fileReader io.Reader) (*domain.ImportResult, error) {

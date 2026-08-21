@@ -2,8 +2,10 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/ctxutil"
@@ -33,6 +35,7 @@ func NewLessonHandler(r *gin.RouterGroup, us domain.LessonUsecase) {
 		routes.DELETE("/bulk", handler.BulkDelete)
 		routes.POST("/import", handler.ImportCSV)
 		routes.POST("/import-competencies", handler.ImportCompetenciesCSV)
+		routes.GET("/export", handler.ExportCSV)
 	}
 }
 
@@ -168,6 +171,20 @@ func (h *LessonHandler) ImportCSV(c *gin.Context) {
 		"updated": result.Updated,
 		"errors":  result.Errors,
 	})
+}
+
+// ExportCSV: GET /lessons/export
+// Mengunduh seluruh data materi pembelajaran dalam format CSV.
+func (h *LessonHandler) ExportCSV(c *gin.Context) {
+	data, err := h.usecase.ExportCSV(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	filename := fmt.Sprintf("lessons_%s.csv", time.Now().Format("20060102_150405"))
+	c.Header("Content-Disposition", "attachment; filename="+filename)
+	c.Data(http.StatusOK, "text/csv; charset=utf-8", data)
 }
 
 func (h *LessonHandler) ImportCompetenciesCSV(c *gin.Context) {

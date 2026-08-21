@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/csvutil"
 	"github.com/azharf99/algo-feedback/pkg/ctxutil"
 	"github.com/azharf99/algo-feedback/pkg/formatter"
 	"github.com/azharf99/algo-feedback/pkg/i18n"
@@ -264,6 +265,62 @@ func (u *groupUsecase) seedSessions(ctx context.Context, group *domain.Group) er
 	}
 
 	return nil
+}
+
+// ExportCSV mengekspor seluruh data grup/kelas ke dalam format CSV.
+func (u *groupUsecase) ExportCSV(ctx context.Context) ([]byte, error) {
+	groups, err := u.repo.GetAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	headers := []string{
+		"id", "course_id", "course_title", "name", "type", "description",
+		"group_phone", "meeting_link", "recordings_link",
+		"first_lesson_date", "first_lesson_time", "is_active", "language", "students",
+	}
+
+	rows := make([][]string, 0, len(groups))
+	for _, g := range groups {
+		courseTitle := ""
+		if g.Course != nil {
+			courseTitle = g.Course.Title
+		}
+
+		firstLessonDate := ""
+		if g.FirstLessonDate != nil && !g.FirstLessonDate.Time.IsZero() {
+			firstLessonDate = g.FirstLessonDate.Time.Format("2006-01-02")
+		}
+
+		firstLessonTime := ""
+		if g.FirstLessonTime != nil && !g.FirstLessonTime.Time.IsZero() {
+			firstLessonTime = g.FirstLessonTime.Time.Format("15:04")
+		}
+
+		studentNames := make([]string, 0, len(g.Students))
+		for _, s := range g.Students {
+			studentNames = append(studentNames, s.Fullname)
+		}
+
+		rows = append(rows, []string{
+			strconv.FormatUint(uint64(g.ID), 10),
+			strconv.FormatUint(uint64(g.CourseID), 10),
+			courseTitle,
+			g.Name,
+			g.Type,
+			strPtr(g.Description),
+			strPtr(g.GroupPhone),
+			strPtr(g.MeetingLink),
+			strPtr(g.RecordingsLink),
+			firstLessonDate,
+			firstLessonTime,
+			strconv.FormatBool(g.IsActive),
+			g.Language,
+			strings.Join(studentNames, ", "),
+		})
+	}
+
+	return csvutil.Generate(headers, rows)
 }
 
 func isLikelyGroupJID(s string) bool {

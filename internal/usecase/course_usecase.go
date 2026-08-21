@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/csvutil"
 	"github.com/azharf99/algo-feedback/pkg/ctxutil"
 	"github.com/azharf99/algo-feedback/pkg/i18n"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
@@ -151,4 +152,31 @@ func (u *courseUsecase) ImportCSV(ctx context.Context, fileReader io.Reader) (*d
 	}
 
 	return result, nil
+}
+
+// ExportCSV mengekspor seluruh data kursus (blueprint kurikulum) ke dalam format CSV.
+func (u *courseUsecase) ExportCSV(ctx context.Context) ([]byte, error) {
+	courses, err := u.repo.GetAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	headers := []string{
+		"id", "title", "module", "description", "is_active", "created_at", "updated_at",
+	}
+
+	rows := make([][]string, 0, len(courses))
+	for _, c := range courses {
+		rows = append(rows, []string{
+			strconv.FormatUint(uint64(c.ID), 10),
+			c.Title,
+			c.Module,
+			strPtr(c.Description),
+			strconv.FormatBool(c.IsActive),
+			c.CreatedAt.Format("2006-01-02 15:04:05"),
+			c.UpdatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+
+	return csvutil.Generate(headers, rows)
 }

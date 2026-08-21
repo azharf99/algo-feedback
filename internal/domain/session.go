@@ -213,4 +213,5 @@ type SessionUsecase interface {
 	GetWeeklySummary(ctx context.Context) (map[string][]Session, error)
 	MarkCancelled(ctx context.Context, groupID uint, fromDate, beforeDate time.Time) error
 	StartSessionBot(ctx context.Context)
+	ExportCSV(ctx context.Context) ([]byte, error)
 }

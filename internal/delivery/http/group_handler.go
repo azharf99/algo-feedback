@@ -2,8 +2,10 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
 	"github.com/azharf99/algo-feedback/pkg/i18n"
@@ -34,6 +36,7 @@ func NewGroupHandler(r *gin.RouterGroup, us domain.GroupUsecase) {
 		groupRoutes.DELETE("/:id", handler.Delete)
 		groupRoutes.DELETE("/bulk", handler.BulkDelete)
 		groupRoutes.POST("/import", handler.ImportCSV)
+		groupRoutes.GET("/export", handler.ExportCSV)
 	}
 }
 
@@ -196,4 +199,18 @@ func (h *GroupHandler) ImportCSV(c *gin.Context) {
 		"updated": result.Updated,
 		"errors":  result.Errors,
 	})
+}
+
+// ExportCSV: GET /groups/export
+// Mengunduh seluruh data grup/kelas dalam format CSV.
+func (h *GroupHandler) ExportCSV(c *gin.Context) {
+	data, err := h.usecase.ExportCSV(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	filename := fmt.Sprintf("groups_%s.csv", time.Now().Format("20060102_150405"))
+	c.Header("Content-Disposition", "attachment; filename="+filename)
+	c.Data(http.StatusOK, "text/csv; charset=utf-8", data)
 }

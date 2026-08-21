@@ -2,6 +2,7 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -27,6 +28,7 @@ func NewSessionHandler(r *gin.RouterGroup, us domain.SessionUsecase) {
 	{
 		routes.GET("", handler.GetAll)
 		routes.GET("/summary", handler.GetWeeklySummary)
+		routes.GET("/export", handler.ExportCSV)
 		routes.GET("/:id", handler.GetByID)
 		routes.GET("/group/:group_id", handler.GetByGroup)
 		routes.POST("", handler.Create)
@@ -40,6 +42,20 @@ func NewSessionHandler(r *gin.RouterGroup, us domain.SessionUsecase) {
 		routes.POST("/mark-cancelled", handler.MarkCancelled)
 		routes.POST("/auto-fill-attendance", handler.AutoFillAttendance)
 	}
+}
+
+// ExportCSV: GET /sessions/export
+// Mengunduh seluruh data sesi pembelajaran dalam format CSV.
+func (h *SessionHandler) ExportCSV(c *gin.Context) {
+	data, err := h.usecase.ExportCSV(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	filename := fmt.Sprintf("sessions_%s.csv", time.Now().Format("20060102_150405"))
+	c.Header("Content-Disposition", "attachment; filename="+filename)
+	c.Data(http.StatusOK, "text/csv; charset=utf-8", data)
 }
 
 func (h *SessionHandler) GetWeeklySummary(c *gin.Context) {
