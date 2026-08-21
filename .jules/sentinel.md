@@ -1,4 +1,15 @@
-## 2025-05-06 - Add Rate Limiting and ReCaptcha
-**Vulnerability:** Added Rate Limiting and ReCaptcha to the application for enhanced security.
-**Learning:** Rate Limiting and ReCaptcha help prevent brute force attacks and abuse by limiting the number of requests from a single IP address and verifying that the user is not a bot.
+Sebelum membuat Pull Request baru, periksa daftar Pull Request yang berstatus 'Open'. Jika sudah ada PR yang memperbaiki masalah di file atau baris kode yang sama, abaikan masalah tersebut dan jangan buat PR duplikat.
 
+If there is an existing open pull request that addresses the same file,
+same vulnerability,
+same feature,
+or same issue,
+
+DO NOT create another pull request.
+
+Instead:
+
+- explain why no action is needed
+- or work on another unrelated improvement
+
+Never duplicate an existing open pull request.
