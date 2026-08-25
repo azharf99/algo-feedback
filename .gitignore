@@ -1,5 +1,6 @@
 .env*
 mediafiles/*.pdf
+mediafiles/help_attachments/
 app/mediafiles/
 python_legacy_code/
 implementation_plan*

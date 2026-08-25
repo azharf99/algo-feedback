@@ -4,14 +4,23 @@ package usecase
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"math"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/azharf99/algo-feedback/internal/domain"
+	"github.com/azharf99/algo-feedback/pkg/attachment"
 	"github.com/azharf99/algo-feedback/pkg/ctxutil"
 	"github.com/azharf99/algo-feedback/pkg/i18n"
 	"github.com/azharf99/algo-feedback/pkg/pagination"
 )
+
+// attachmentStorageRoot adalah folder dasar penyimpanan attachment Help Center di disk
+// server, mengikuti konvensi folder "mediafiles" yang sudah dipakai fitur PDF di aplikasi ini.
+const attachmentStorageRoot = "mediafiles/help_attachments"
 
 type helpCenterUsecase struct {
 	convRepo domain.HelpConversationRepository
@@ -102,14 +111,16 @@ func (u *helpCenterUsecase) GetMessages(ctx context.Context, conversationID uint
 	}, nil
 }
 
-// SendMessage mengirim satu pesan chat baru dan memperbarui ringkasan conversation.
-// Dipakai bersama oleh REST handler dan WebSocket hub agar behaviour selalu konsisten.
-func (u *helpCenterUsecase) SendMessage(ctx context.Context, conversationID uint, body string) (*domain.HelpMessage, *domain.HelpConversation, error) {
+// resolveTargetConversation menentukan conversation tujuan pengiriman pesan, dipakai
+// bersama oleh SendMessage dan SendAttachment agar aturan otorisasinya selalu identik:
+// non-Admin hanya bisa mengirim ke percakapannya sendiri (dibuat otomatis jika belum ada),
+// Admin wajib menunjuk conversationID yang valid.
+func (u *helpCenterUsecase) resolveTargetConversation(ctx context.Context, conversationID uint) (*domain.HelpConversation, uint, string, bool, error) {
 	lang := u.getLang(ctx)
 
 	userID, err := ctxutil.GetUserID(ctx)
 	if err != nil {
-		return nil, nil, errors.New(i18n.T(lang, "error_unauthorized"))
+		return nil, 0, "", false, errors.New(i18n.T(lang, "error_unauthorized"))
 	}
 	role, _ := ctxutil.GetRole(ctx)
 	isAdmin := ctxutil.IsAdmin(ctx)
@@ -117,7 +128,7 @@ func (u *helpCenterUsecase) SendMessage(ctx context.Context, conversationID uint
 	var conv *domain.HelpConversation
 	if isAdmin {
 		if conversationID == 0 {
-			return nil, nil, errors.New(i18n.T(lang, "error_conversation_not_found"))
+			return nil, 0, "", false, errors.New(i18n.T(lang, "error_conversation_not_found"))
 		}
 		conv, err = u.convRepo.GetByID(ctx, conversationID)
 	} else {
@@ -125,7 +136,35 @@ func (u *helpCenterUsecase) SendMessage(ctx context.Context, conversationID uint
 		conv, err = u.convRepo.GetOrCreateForUser(ctx, userID)
 	}
 	if err != nil {
-		return nil, nil, errors.New(i18n.T(lang, "error_conversation_not_found"))
+		return nil, 0, "", false, errors.New(i18n.T(lang, "error_conversation_not_found"))
+	}
+
+	return conv, userID, role, isAdmin, nil
+}
+
+// touchConversation memperbarui ringkasan conversation setelah sebuah pesan baru terkirim.
+func (u *helpCenterUsecase) touchConversation(ctx context.Context, conv *domain.HelpConversation, preview string, isAdmin bool) error {
+	now := time.Now()
+	conv.LastMessageAt = &now
+	conv.LastMessage = preview
+	conv.Status = "open" // pesan baru otomatis membuka kembali percakapan yang sudah ditutup
+
+	if isAdmin {
+		conv.UnreadByUser++
+	} else {
+		conv.UnreadByAdmin++
+	}
+	return u.convRepo.Update(ctx, conv)
+}
+
+// SendMessage mengirim satu pesan chat teks baru dan memperbarui ringkasan conversation.
+// Dipakai bersama oleh REST handler dan WebSocket hub agar behaviour selalu konsisten.
+func (u *helpCenterUsecase) SendMessage(ctx context.Context, conversationID uint, body string) (*domain.HelpMessage, *domain.HelpConversation, error) {
+	lang := u.getLang(ctx)
+
+	conv, userID, role, isAdmin, err := u.resolveTargetConversation(ctx, conversationID)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	msg := &domain.HelpMessage{
@@ -143,21 +182,108 @@ func (u *helpCenterUsecase) SendMessage(ctx context.Context, conversationID uint
 		msg.Sender = nil
 	}
 
-	now := time.Now()
-	conv.LastMessageAt = &now
-	conv.LastMessage = body
-	conv.Status = "open" // pesan baru otomatis membuka kembali percakapan yang sudah ditutup
-
-	if isAdmin {
-		conv.UnreadByUser++
-	} else {
-		conv.UnreadByAdmin++
-	}
-	if err := u.convRepo.Update(ctx, conv); err != nil {
+	if err := u.touchConversation(ctx, conv, body, isAdmin); err != nil {
 		return nil, nil, err
 	}
 
 	return msg, conv, nil
+}
+
+// SendAttachment mengirim satu pesan chat yang membawa file lampiran (mis. foto bukti
+// atau dokumen). File SUDAH HARUS divalidasi (magic bytes) oleh handler lewat
+// pkg/attachment.Validate sebelum method ini dipanggil — usecase ini hanya bertanggung
+// jawab menyimpannya dengan aman:
+//   - nama file di disk selalu di-generate ulang (RandomStorageName), TIDAK PERNAH memakai
+//     nama asli dari user, sehingga path traversal/penimpaan file lain tidak mungkin terjadi;
+//   - isi file dibatasi ulang dengan io.LimitReader sebagai lapisan pertahanan kedua,
+//     independen dari pengecekan Content-Length di layer HTTP handler.
+func (u *helpCenterUsecase) SendAttachment(ctx context.Context, conversationID uint, body string, in domain.HelpAttachmentInput) (*domain.HelpMessage, *domain.HelpConversation, error) {
+	lang := u.getLang(ctx)
+
+	conv, userID, role, isAdmin, err := u.resolveTargetConversation(ctx, conversationID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	dir := filepath.Join(attachmentStorageRoot, fmt.Sprintf("%d", conv.ID))
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return nil, nil, errors.New(i18n.T(lang, "msg_save_failed"))
+	}
+
+	storageName, err := attachment.RandomStorageName(in.Extension)
+	if err != nil {
+		return nil, nil, errors.New(i18n.T(lang, "msg_save_failed"))
+	}
+	fullPath := filepath.Join(dir, storageName)
+
+	dst, err := os.OpenFile(fullPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return nil, nil, errors.New(i18n.T(lang, "msg_save_failed"))
+	}
+	defer dst.Close()
+
+	// Lapisan pertahanan kedua terhadap ukuran file: independen dari pengecekan
+	// Content-Length yang bisa dipalsukan/berbeda dari isi body sesungguhnya.
+	written, copyErr := io.Copy(dst, io.LimitReader(in.Content, attachment.MaxSize+1))
+	if copyErr == nil && written > attachment.MaxSize {
+		os.Remove(fullPath)
+		return nil, nil, errors.New(i18n.T(lang, "error_attachment_too_large"))
+	}
+	if copyErr != nil {
+		os.Remove(fullPath)
+		return nil, nil, errors.New(i18n.T(lang, "msg_save_failed"))
+	}
+
+	displayName := attachment.SanitizeDisplayName(in.OriginalFilename)
+	msg := &domain.HelpMessage{
+		ConversationID:     conv.ID,
+		SenderID:           userID,
+		SenderRole:         domain.Role(role),
+		Body:               body,
+		AttachmentPath:     fullPath,
+		AttachmentName:     displayName,
+		AttachmentMimeType: in.MimeType,
+		AttachmentSize:     written,
+	}
+	if err := u.msgRepo.Create(ctx, msg); err != nil {
+		os.Remove(fullPath)
+		return nil, nil, errors.New(i18n.T(lang, "msg_save_failed"))
+	}
+	msg.Sender = conv.User
+	if isAdmin {
+		msg.Sender = nil
+	}
+
+	preview := body
+	if preview == "" {
+		preview = "📎 " + displayName
+	}
+	if err := u.touchConversation(ctx, conv, preview, isAdmin); err != nil {
+		return nil, nil, err
+	}
+
+	return msg, conv, nil
+}
+
+// GetMessageForDownload mengambil satu pesan untuk keperluan penyajian ulang file
+// lampirannya, sekaligus memvalidasi caller berhak mengakses conversation pemilik pesan
+// tersebut (pemilik conversation atau Admin) lewat GetByID (dijaga scopeByUser di
+// repository) — mencegah user membaca attachment milik percakapan orang lain hanya
+// dengan menebak message ID.
+func (u *helpCenterUsecase) GetMessageForDownload(ctx context.Context, messageID uint) (*domain.HelpMessage, error) {
+	lang := u.getLang(ctx)
+
+	msg, err := u.msgRepo.GetByID(ctx, messageID)
+	if err != nil {
+		return nil, errors.New(i18n.T(lang, "error_file_not_found"))
+	}
+	if !msg.HasAttachment() {
+		return nil, errors.New(i18n.T(lang, "error_file_not_found"))
+	}
+	if _, err := u.convRepo.GetByID(ctx, msg.ConversationID); err != nil {
+		return nil, errors.New(i18n.T(lang, "error_conversation_not_found"))
+	}
+	return msg, nil
 }
 
 // MarkRead mereset unread count pada sisi pemanggil (Admin atau pemilik conversation).

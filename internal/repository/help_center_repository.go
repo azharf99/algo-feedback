@@ -121,3 +121,13 @@ func (r *helpMessageRepository) ListByConversation(ctx context.Context, conversa
 	}
 	return msgs, total, nil
 }
+
+// GetByID: mengambil satu pesan (dipakai saat menyajikan attachment-nya). Otorisasi
+// terhadap conversation pemilik pesan dilakukan terpisah di layer usecase.
+func (r *helpMessageRepository) GetByID(ctx context.Context, id uint) (*domain.HelpMessage, error) {
+	var msg domain.HelpMessage
+	if err := r.db.WithContext(ctx).First(&msg, id).Error; err != nil {
+		return nil, err
+	}
+	return &msg, nil
+}
