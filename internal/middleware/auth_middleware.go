@@ -2,6 +2,7 @@
 package middleware
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -29,53 +30,95 @@ func AuthMiddleware(userRepo domain.UserRepository) gin.HandlerFunc {
 
 		// Token biasanya dikirim dalam format: "Bearer <token>"
 		tokenString := strings.Replace(authHeader, "Bearer ", "", 1)
-		secretKey := []byte(os.Getenv("JWT_SECRET"))
 
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("metode penandatanganan tidak valid")
-			}
-			return secretKey, nil
-		})
-
-		if err != nil || !token.Valid {
+		userID, role, err := ValidateAccessToken(c.Request.Context(), userRepo, tokenString)
+		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token tidak valid atau sudah kedaluwarsa"})
 			c.Abort()
 			return
 		}
 
-		// Menyimpan data pengguna ke dalam context (untuk digunakan di handler selanjutnya)
-		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			userIDFloat, _ := claims["user_id"].(float64)
-			userID := uint(userIDFloat)
+		c.Set("user_id", userID)
+		c.Set("role", role)
 
-			// Tolak token yang diterbitkan sebelum password terakhir diubah (session
-			// revocation). Ini juga otomatis menolak token milik user yang sudah dihapus.
-			if user, errUser := userRepo.GetByID(c.Request.Context(), userID); errUser != nil {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Token tidak valid atau sudah kedaluwarsa"})
-				c.Abort()
-				return
-			} else if user.PasswordChangedAt != nil {
-				iatFloat, _ := claims["iat"].(float64)
-				issuedAt := time.Unix(int64(iatFloat), 0)
-				if issuedAt.Before(*user.PasswordChangedAt) {
-					c.JSON(http.StatusUnauthorized, gin.H{"error": "Sesi tidak valid, silakan login ulang"})
-					c.Abort()
-					return
-				}
-			}
-
-			c.Set("user_id", claims["user_id"])
-			c.Set("role", claims["role"])
-
-			// Inject ke standard context agar bisa diakses di repository layer
-			ctx := ctxutil.WithUserID(c.Request.Context(), userID)
-			roleStr, _ := claims["role"].(string)
-			ctx = ctxutil.WithRole(ctx, roleStr)
-			c.Request = c.Request.WithContext(ctx)
-		}
+		// Inject ke standard context agar bisa diakses di repository layer
+		ctx := ctxutil.WithUserID(c.Request.Context(), userID)
+		ctx = ctxutil.WithRole(ctx, role)
+		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 	}
+}
+
+// WSAuthMiddleware memvalidasi JWT yang dikirim lewat query param ?token=, karena Browser
+// WebSocket API (`new WebSocket(url)`) tidak bisa mengirim header Authorization kustom.
+// Validasi (termasuk revocation berbasis PasswordChangedAt) identik dengan AuthMiddleware.
+func WSAuthMiddleware(userRepo domain.UserRepository) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tokenString := c.Query("token")
+		if tokenString == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token tidak ditemukan"})
+			c.Abort()
+			return
+		}
+
+		userID, role, err := ValidateAccessToken(c.Request.Context(), userRepo, tokenString)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token tidak valid atau sudah kedaluwarsa"})
+			c.Abort()
+			return
+		}
+
+		c.Set("user_id", userID)
+		c.Set("role", role)
+
+		ctx := ctxutil.WithUserID(c.Request.Context(), userID)
+		ctx = ctxutil.WithRole(ctx, role)
+		c.Request = c.Request.WithContext(ctx)
+		c.Next()
+	}
+}
+
+// ValidateAccessToken memvalidasi signature, expiry, dan revocation (PasswordChangedAt)
+// sebuah access token JWT, lalu mengembalikan user_id dan role di dalamnya.
+// Dipakai bersama oleh AuthMiddleware (header) dan WSAuthMiddleware (query param) agar
+// kedua jalur autentikasi selalu punya aturan validasi yang sama persis.
+func ValidateAccessToken(ctx context.Context, userRepo domain.UserRepository, tokenString string) (uint, string, error) {
+	secretKey := []byte(os.Getenv("JWT_SECRET"))
+
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("metode penandatanganan tidak valid")
+		}
+		return secretKey, nil
+	})
+	if err != nil || !token.Valid {
+		return 0, "", fmt.Errorf("token tidak valid")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return 0, "", fmt.Errorf("token tidak valid")
+	}
+
+	userIDFloat, _ := claims["user_id"].(float64)
+	userID := uint(userIDFloat)
+
+	// Tolak token yang diterbitkan sebelum password terakhir diubah (session revocation).
+	// Ini juga otomatis menolak token milik user yang sudah dihapus.
+	user, errUser := userRepo.GetByID(ctx, userID)
+	if errUser != nil {
+		return 0, "", fmt.Errorf("token tidak valid")
+	}
+	if user.PasswordChangedAt != nil {
+		iatFloat, _ := claims["iat"].(float64)
+		issuedAt := time.Unix(int64(iatFloat), 0)
+		if issuedAt.Before(*user.PasswordChangedAt) {
+			return 0, "", fmt.Errorf("sesi tidak valid, silakan login ulang")
+		}
+	}
+
+	roleStr, _ := claims["role"].(string)
+	return userID, roleStr, nil
 }
 
 // RoleMiddleware membatasi akses berdasarkan Role (RBAC)

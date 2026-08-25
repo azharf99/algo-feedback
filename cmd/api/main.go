@@ -19,6 +19,7 @@ import (
 	"github.com/azharf99/algo-feedback/pkg/pdfgen"
 	"github.com/azharf99/algo-feedback/pkg/taskqueue"
 	"github.com/azharf99/algo-feedback/pkg/whatsapp"
+	"github.com/azharf99/algo-feedback/pkg/ws"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -55,6 +56,8 @@ func main() {
 		&domain.Session{},
 		&domain.Feedback{},
 		&domain.GraduationFeedback{},
+		&domain.HelpConversation{},
+		&domain.HelpMessage{},
 	)
 
 	// 1.6. Seed Data & Final Cleanup
@@ -161,6 +164,12 @@ func main() {
 		pool, // <-- Masukkan Worker Pool
 	)
 
+	// --- Help Center (live chat) ---
+	helpConvRepo := repository.NewHelpConversationRepository(db)
+	helpMsgRepo := repository.NewHelpMessageRepository(db)
+	helpUsecase := usecase.NewHelpCenterUsecase(helpConvRepo, helpMsgRepo)
+	helpHub := ws.NewHub()
+
 	// Start Session Bot
 	sessionUsecase.StartSessionBot(context.Background())
 
@@ -216,6 +225,15 @@ func main() {
 
 			// Profile Module (All authenticated users)
 			handler.NewProfileHandler(protected, userUsecase)
+
+			// Help Center Module (All authenticated users: Admin balas semua percakapan,
+			// Tutor/Siswa chat dengan Admin)
+			helpHandler := handler.NewHelpCenterHandler(protected, helpUsecase, helpHub)
+
+			// WebSocket chat real-time. Didaftarkan di luar `protected` karena Browser
+			// WebSocket API tidak bisa mengirim header Authorization — otentikasi memakai
+			// token lewat query param (?token=...), ditangani WSAuthMiddleware.
+			api.GET("/help/ws", middleware.WSAuthMiddleware(userRepo), helpHandler.ServeWS)
 		}
 	}
 
