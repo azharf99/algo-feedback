@@ -122,16 +122,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	hashPassword, err := auth.HashPassword(req.Password)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(lang, "msg_save_failed")})
-		return
-	}
-
+	// Password dikirim apa adanya (plaintext) ke usecase — AuthUsecase.Register yang
+	// bertanggung jawab meng-hash sebelum menyimpan (sama seperti UserUsecase/StudentUsecase.Create).
+	// Menghash di sini juga akan menyebabkan password ter-hash dua kali sehingga user tidak
+	// akan pernah bisa login.
 	user := domain.User{
 		Name:     req.Name,
 		Email:    req.Email,
-		Password: hashPassword,
+		Password: req.Password,
 		Role:     req.Role,
 	}
 
