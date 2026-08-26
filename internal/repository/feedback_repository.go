@@ -44,7 +44,11 @@ func (r *feedbackRepository) GetPaginated(ctx context.Context, params domain.Pag
 
 	query := r.db.WithContext(ctx).Model(&domain.Feedback{}).Scopes(scopeByUser(ctx))
 	if params.Search != "" {
-		query = query.Where("course ILIKE ? OR group_name ILIKE ?", "%"+params.Search+"%", "%"+params.Search+"%")
+		search := "%" + params.Search + "%"
+		query = query.Where(
+			"course ILIKE ? OR group_name ILIKE ? OR student_id IN (SELECT id FROM students WHERE fullname ILIKE ?)",
+			search, search, search,
+		)
 	}
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err

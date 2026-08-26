@@ -30,7 +30,11 @@ func (r *graduationFeedbackRepository) GetPaginated(ctx context.Context, params 
 
 	query := r.db.WithContext(ctx).Model(&domain.GraduationFeedback{}).Scopes(scopeByUser(ctx))
 	if params.Search != "" {
-		query = query.Where("course ILIKE ?", "%"+params.Search+"%")
+		search := "%" + params.Search + "%"
+		query = query.Where(
+			"course ILIKE ? OR student_id IN (SELECT id FROM students WHERE fullname ILIKE ?)",
+			search, search,
+		)
 	}
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
