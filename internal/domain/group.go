@@ -44,7 +44,7 @@ type GroupUsecase interface {
 	GetByID(ctx context.Context, id uint) (*Group, error)
 	GetAll(ctx context.Context) ([]Group, error)
 	GetPaginated(ctx context.Context, params PaginationParams) (*PaginatedResult[Group], error)
-	Update(ctx context.Context, id uint, req *Group, studentIDs []uint) error
+	Update(ctx context.Context, id uint, req *Group, studentIDs []uint, seedSessions bool) error
 	Delete(ctx context.Context, id uint) error
 	BulkDelete(ctx context.Context, ids []uint) error
 	ImportCSV(ctx context.Context, fileReader io.Reader) (*ImportResult, error)

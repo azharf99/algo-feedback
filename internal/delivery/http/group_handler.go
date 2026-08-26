@@ -138,6 +138,10 @@ func (h *GroupHandler) Update(c *gin.Context) {
 	var payload struct {
 		domain.Group
 		StudentIDs []uint `json:"student_ids"`
+		// SeedSessions mengontrol apakah seeder sessions dijalankan ulang setelah
+		// group diperbarui. Default true (perilaku lama) jika client tidak mengirimkannya,
+		// supaya konsumen API lama tidak berubah perilakunya.
+		SeedSessions *bool `json:"seed_sessions"`
 	}
 
 	if err := c.ShouldBindJSON(&payload); err != nil {
@@ -145,7 +149,12 @@ func (h *GroupHandler) Update(c *gin.Context) {
 		return
 	}
 
-	if err := h.usecase.Update(c.Request.Context(), uint(id), &payload.Group, payload.StudentIDs); err != nil {
+	seedSessions := true
+	if payload.SeedSessions != nil {
+		seedSessions = *payload.SeedSessions
+	}
+
+	if err := h.usecase.Update(c.Request.Context(), uint(id), &payload.Group, payload.StudentIDs, seedSessions); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

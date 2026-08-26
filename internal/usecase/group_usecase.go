@@ -83,7 +83,7 @@ func (u *groupUsecase) GetPaginated(ctx context.Context, params domain.Paginatio
 		Data: groups, Total: total, TotalPages: totalPages, Page: params.Page, Limit: params.Limit,
 	}, nil
 }
-func (u *groupUsecase) Update(ctx context.Context, id uint, req *domain.Group, studentIDs []uint) error {
+func (u *groupUsecase) Update(ctx context.Context, id uint, req *domain.Group, studentIDs []uint, seedSessions bool) error {
 	req.ID = id
 	if req.CourseID != 0 {
 		if err := u.checkCourseOwnership(ctx, req.CourseID); err != nil {
@@ -99,6 +99,11 @@ func (u *groupUsecase) Update(ctx context.Context, id uint, req *domain.Group, s
 	err := u.repo.Update(ctx, req, studentIDs)
 	if err != nil {
 		return err
+	}
+	if !seedSessions {
+		// User opted out of re-running the session seeder to avoid shifting
+		// the schedule of sessions that have already been arranged.
+		return nil
 	}
 	return u.seedSessions(ctx, req)
 }
