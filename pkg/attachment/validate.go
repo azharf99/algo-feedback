@@ -127,7 +127,14 @@ var unsafeFilenameChars = regexp.MustCompile(`[\x00-\x1f\x7f/\\"]`)
 // path traversal (mis. "../../etc/passwd") atau penimpaan file lain sama sekali tidak
 // mungkin terjadi lewat input ini.
 func SanitizeDisplayName(original string) string {
-	name := filepath.Base(strings.TrimSpace(original))
+	name := strings.TrimSpace(original)
+	// Ambil segmen terakhir path secara manual (bukan filepath.Base) karena
+	// filepath.Base bergantung OS: di Linux (runner CI/VPS produksi) "\" bukan
+	// separator sehingga "..\..\windows\passwd" tidak akan terpotong. Di sini
+	// "/" dan "\" sama-sama diperlakukan sebagai separator apa pun OS-nya.
+	if idx := strings.LastIndexAny(name, `/\`); idx != -1 {
+		name = name[idx+1:]
+	}
 	name = unsafeFilenameChars.ReplaceAllString(name, "_")
 	if name == "" || name == "." || name == ".." {
 		name = "attachment"
