@@ -34,6 +34,7 @@ var levels = map[string]string{
 	"Frontend Development_ENG":                 "Frontend Development",
 	"Frontend Development_IND":                 "Frontend Development",
 	"Fundamental Frontend Development 2.0 ENG": "Frontend Development",
+	"Fundamental Frontend Development 2.0 IND": "Frontend Development",
 	"Matematika Junior":                        "Algo Math",
 	"Matematika Senior":                        "Algo Math",
 	"Minecraft IND":                            "Minecraft",
